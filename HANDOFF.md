@@ -89,6 +89,10 @@ A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 
   - an accidental civilian casualty in a fight should never turn you evil
   - the karma meter is always on screen
 - **Saves:** localStorage (`SAVE_KEY`, v2) plus settings under `kc_settings`.
+- **Watchtowers:** one per hideout (`tower` entity, static, 120 hp). A lookout on the deck shoots while you're on the turf and can't be hit up there; destroy the tower and he falls out. The hideout gate opens only when the guards **and** the tower are down. Destroyed towers are saved (`DS[d].towers`) and shown on both maps.
+- **Settings (pause → Settings, or title → Settings):** music/effects volume, fullscreen, HUD size (70–110%), screen shake, rumble, stick dead zone, aim assist (Off/Low/Normal/High), delete saved game (title only).
+- **Rebinding (Controls screen):** every action except movement, aim, pause and menu navigation can be rebound per device; a binding already in use swaps. Stored in `SETTINGS.binds`; glyphs everywhere follow the bindings (`Input.glyph`).
+- **Traffic:** streamed onto lanes inside the simulated area (`ACTIVE_R`) but off screen; `CAR_TARGET` (09b_street.js) is the density knob.
 
 ---
 
@@ -150,6 +154,7 @@ The tests are Playwright scripts in `test/` (`node test/<name>.js`). They load `
 
 **Quick regression set** (run after changes):
 `mech` (movement/powers/pause), `assault` (hideout waves → clear), `terr` (territories), `street` (street life), `chaos` (save/load), `kbm` (mouse grab/throw), `props`, `cars`.
+Also: `tower` (watchtower, lookout, gate, save), `fixes` (bug-fix checks), `rebind` (rebinding), `audit_ui` (screenshots of every menu into `screenshots/ui/`). Older tests hardcode `/home/claude/kc`; symlink that path to the repo.
 
 **Visual checks:**
 - `iso`, `iso2`: street, hideout and Tower screenshots

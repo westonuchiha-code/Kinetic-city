@@ -8,7 +8,7 @@
    Controller layout (standard mapping):
      LS move  RS aim  RT telekinesis (hold grab, release throw)  LT absorb (hold, release = blast)
      RB repulse  LB gravity well  A dash  X heal (hold)  Y drain (hold)  B drop  Start pause  Back map */
-const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1 };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale
+const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1, binds: { key: {}, pad: {} } };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale
 try { const s = JSON.parse(localStorage.getItem('kc_settings') || 'null'); if (s) Object.assign(SETTINGS, s); } catch (e) { }
 function saveSettings() { try { localStorage.setItem('kc_settings', JSON.stringify(SETTINGS)); } catch (e) { } }
 
@@ -22,8 +22,35 @@ const Input = (() => {
     tabL: ['KeyQ'], tabR: ['KeyE']
   };
   const PADMAP = { dash: 0, drop: 1, heal: 2, drain: 3, well: 4, rep: 5, abs: 6, tk: 7, map: 8, menu: 9, confirm: 0, back: 1, tabL: 4, tabR: 5, uup: 12, udown: 13, uleft: 14, uright: 15 };
+  /* Rebinding. Each of these actions has one changeable binding per device; mouse buttons are the key codes Mouse0-2.
+     SETTINGS.binds holds only what the player changed. Movement, menu navigation and pause are fixed. */
+  const REBIND = ['tk', 'drop', 'rep', 'well', 'abs', 'dash', 'heal', 'drain', 'map'];
+  const DEF_KEY = { tk: 'Mouse0', abs: 'KeyQ', rep: 'Mouse2', well: 'KeyE', dash: 'Space', heal: 'KeyF', drain: 'KeyV', drop: 'KeyC', map: 'KeyM' };
+  const DEF_PAD = { dash: 0, drop: 1, heal: 2, drain: 3, well: 4, rep: 5, abs: 6, tk: 7, map: 8 };
+  const ALT_KEY = { tk: ['KeyJ'], rep: ['KeyR'], dash: ['ShiftLeft', 'ShiftRight'] };   // extra default keys, dropped when bound to something else
+  const KEY_FIXED = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', 'Tab', 'KeyP', 'Enter'];
+  const PAD_OK = [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11];
   const keyToActs = {};
-  for (const a in KEYMAP) for (const k of KEYMAP[a]) (keyToActs[k] = keyToActs[k] || []).push(a);
+  function applyBinds() {
+    const b = SETTINGS.binds && typeof SETTINGS.binds === 'object' ? SETTINGS.binds : (SETTINGS.binds = {}); b.key = b.key || {}; b.pad = b.pad || {};
+    const used = new Set(REBIND.map(a => b.key[a] || DEF_KEY[a]));
+    for (const a of REBIND) { KEYMAP[a] = [b.key[a] || DEF_KEY[a]].concat((ALT_KEY[a] || []).filter(k => !used.has(k))); PADMAP[a] = b.pad[a] !== undefined ? b.pad[a] : DEF_PAD[a]; }
+    for (const k in keyToActs) delete keyToActs[k];
+    for (const a in KEYMAP) for (const k of KEYMAP[a]) (keyToActs[k] = keyToActs[k] || []).push(a);
+  }
+  applyBinds();
+  const getBind = (dev, a) => dev === 'pad' ? PADMAP[a] : KEYMAP[a][0];
+  function setBind(dev, a, code) {   // returns false if that key/button can't be used; a binding already in use swaps with this one
+    if (!REBIND.includes(a) || (dev === 'pad' ? !PAD_OK.includes(code) : KEY_FIXED.includes(code))) return false;
+    const map = dev === 'pad' ? SETTINGS.binds.pad : SETTINGS.binds.key, old = getBind(dev, a);
+    for (const o of REBIND) if (o !== a && getBind(dev, o) === code) map[o] = old;
+    map[a] = code; applyBinds(); saveSettings(); for (const f of st.listeners) f(); return true;
+  }
+  function resetBinds(dev) { SETTINGS.binds[dev === 'pad' ? 'pad' : 'key'] = {}; applyBinds(); saveSettings(); for (const f of st.listeners) f(); }
+  let cap = null, swallowClick = 0;   // cap: waiting for the next key/button to bind
+  function capture(dev, cb) { cap = { dev, cb }; }
+  function capDone(code) { const c = cap; cap = null; c.cb(code); }
+  addEventListener('click', e => { if (performance.now() < swallowClick) { e.stopPropagation(); e.preventDefault(); swallowClick = 0; } }, true);
 
   const keys = {};
   const mouse = { sx: 0, sy: 0, down: [false, false, false] };
@@ -40,6 +67,7 @@ const Input = (() => {
   function edge(a) { tickEdges.add(a); uiPending.add(a); }
 
   addEventListener('keydown', e => {
+    if (cap) { e.preventDefault(); if (!e.repeat && cap.dev === 'kbm') capDone(e.code === 'Escape' ? null : e.code); else if (!e.repeat && e.code === 'Escape') capDone(null); return; }
     if (e.repeat) { if (keyToActs[e.code] && /^(Arrow|Tab|Space)/.test(e.code)) e.preventDefault(); return; }
     keys[e.code] = true; setDevice('kbm');
     for (const a of keyToActs[e.code] || []) edge(a);
@@ -53,12 +81,13 @@ const Input = (() => {
     if (Math.abs(e.movementX) + Math.abs(e.movementY) > 3) setDevice('kbm');
   });
   addEventListener('mousedown', e => {
+    if (cap) { if (cap.dev === 'kbm') { e.preventDefault(); swallowClick = performance.now() + 400; capDone('Mouse' + e.button); } return; }
     if (e.target && e.target.id !== 'game') return;
-    mouse.sx = e.clientX; mouse.sy = e.clientY; mouse.down[e.button] = true; setDevice('kbm');
-    if (e.button === 0) edge('tk'); if (e.button === 2) edge('rep');
+    mouse.sx = e.clientX; mouse.sy = e.clientY; mouse.down[e.button] = true; keys['Mouse' + e.button] = true; setDevice('kbm');
+    for (const a of keyToActs['Mouse' + e.button] || []) edge(a);
     Audio2.unlock();
   });
-  addEventListener('mouseup', e => { mouse.down[e.button] = false; });
+  addEventListener('mouseup', e => { mouse.down[e.button] = false; keys['Mouse' + e.button] = false; });
   addEventListener('contextmenu', e => e.preventDefault());
   addEventListener('gamepadconnected', e => { st.padSeen = true; for (const f of st.listeners) f(); });
   addEventListener('gamepaddisconnected', () => { pad.idx = -1; pad.btn.fill(0); pad.on.fill(0); pad.axes = [0, 0, 0, 0]; for (const f of st.listeners) f(); });
@@ -91,14 +120,14 @@ const Input = (() => {
     const gp = readPads();
     if (gp) {
       if (pad.idx !== gp.index || pad.id !== gp.id) { pad.idx = gp.index; pad.id = gp.id; pad.style = styleOf(gp.id); pad.mapping = gp.mapping; st.padSeen = true; for (const f of st.listeners) f(); }
-      let active = false;
+      let active = false, capSkip = false;
       for (let i = 0; i < 18; i++) {
         const b = gp.buttons[i]; const v = b ? (typeof b === 'object' ? (b.value || (b.pressed ? 1 : 0)) : b) : 0;
         pad.btn[i] = v;
         const was = pad.on[i], isTrig = i === 6 || i === 7;
         const now = isTrig ? (was ? v > .18 : v > .38) : v > .5;
         pad.on[i] = now ? 1 : 0;
-        if (now && !was) { active = true; for (const a in PADMAP) if (PADMAP[a] === i) edge(a); }
+        if (now && !was) { active = true; if (cap) { if (cap.dev === 'pad') capDone(i === 9 ? null : i); else if (i === 1 || i === 9) capDone(null); capSkip = true; } else if (!capSkip) for (const a in PADMAP) if (PADMAP[a] === i) edge(a); }
       }
       const ax = gp.axes || [];
       const L = deadzone(ax[0] || 0, ax[1] || 0, SETTINGS.deadzone), R = deadzone(ax[2] || 0, ax[3] || 0, SETTINGS.deadzone + .04);
@@ -123,8 +152,6 @@ const Input = (() => {
 
   function held(a) {
     if (KEYMAP[a] && KEYMAP[a].some(k => keys[k])) return true;
-    if (a === 'tk' && mouse.down[0]) return true;
-    if (a === 'rep' && mouse.down[2]) return true;
     if (pad.idx >= 0 && PADMAP[a] !== undefined && pad.on[PADMAP[a]]) return true;
     return false;
   }
@@ -158,8 +185,16 @@ const Input = (() => {
   const PS = { A: 'cross', B: 'circle', X: 'square', Y: 'triangle', LB: 'L1', RB: 'R1', LT: 'L2', RT: 'R2', START: 'OPTIONS', BACK: 'SHARE', LS: 'L', RS: 'R' };
   const FACE_X = { A: '#5fd35f', B: '#ff5a4f', X: '#4f9dff', Y: '#ffcf3f' };
   const FACE_P = { cross: '#8fb4ff', circle: '#ff6b6b', square: '#ff8fd8', triangle: '#5fe0b0' };
+  const PADNAME = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'BACK', 'START', 'L3', 'R3'];
+  function keyName(c) {
+    if (c === 'Mouse0') return 'LMB'; if (c === 'Mouse2') return 'RMB'; if (c === 'Mouse1') return 'MMB'; if (/^Mouse/.test(c)) return 'M' + (+c.slice(5) + 1);
+    if (/^Key.$/.test(c)) return c[3]; if (/^Digit.$/.test(c)) return c[5]; if (/^Numpad/.test(c)) return 'NUM ' + c.slice(6).slice(0, 3).toUpperCase();
+    const n = { Space: 'SPACE', ShiftLeft: 'SHIFT', ShiftRight: 'R SHIFT', ControlLeft: 'CTRL', ControlRight: 'R CTRL', AltLeft: 'ALT', AltRight: 'R ALT', Backspace: 'BKSP', CapsLock: 'CAPS', Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', Backslash: '\\' }[c];
+    return n || c.toUpperCase().slice(0, 7);
+  }
   function glyph(act, forceDevice) {
-    const dev = forceDevice || st.device, g = GL[act]; if (!g) return { kind: 'key', text: act };
+    const dev = forceDevice || st.device; let g = GL[act]; if (!g) return { kind: 'key', text: act };
+    if (REBIND.includes(act)) g = [PADNAME[PADMAP[act]] || '?', keyName(KEYMAP[act][0])];
     if (dev === 'kbm') {
       const t = g[1];
       if (t === 'LMB' || t === 'RMB') return { kind: 'mouse', text: t[0] };
@@ -182,7 +217,8 @@ const Input = (() => {
   }
 
   return {
-    poll, held, move, aimStick, rumble, glyph, mouse, pad, st,
+    poll, held, move, aimStick, rumble, glyph, mouse, pad, st, REBIND, setBind, resetBinds, capture,
+    get capturing() { return !!cap; }, cancelCapture() { if (cap) capDone(null); },
     pressed: a => tickEdges.has(a),
     ui: a => uiEdges.has(a),
     endTick() { tickEdges.clear(); },

@@ -95,6 +95,12 @@ button{font-family:inherit;color:inherit}
 .ctl li{display:flex;align-items:center;gap:12px;font-size:16px}
 .ctl li .k{min-width:84px;display:flex;justify-content:flex-end}
 .ctl li span.d{color:#c7cde0}
+.ctl li.fixed{padding:2px 8px;opacity:.75}
+.bind{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:transparent;border:1px solid transparent;padding:2px 8px;font-size:inherit;cursor:pointer}
+.bind:hover,.bind.focus{border-color:var(--cyan);background:rgba(60,224,255,.08)}
+.bind .wait{color:var(--gold);font-weight:700}
+.rst{margin-top:12px;padding:6px 14px;font-size:12px}
+.bindmsg{margin:14px 0 0;font-size:13px;color:var(--dim)}
 .setgrid{display:flex;flex-direction:column;gap:8px;max-width:560px}
 .sethead{margin:10px 0 0;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}.sethead:first-child{margin-top:0}
 .set.warn .v{color:var(--evil)}
@@ -246,7 +252,7 @@ function rgba(h, a) { const A = rgb(h); return `rgba(${A[0]},${A[1]},${A[2]},${a
    Controller layout (standard mapping):
      LS move  RS aim  RT telekinesis (hold grab, release throw)  LT absorb (hold, release = blast)
      RB repulse  LB gravity well  A dash  X heal (hold)  Y drain (hold)  B drop  Start pause  Back map */
-const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1 };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale
+const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1, binds: { key: {}, pad: {} } };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale
 try { const s = JSON.parse(localStorage.getItem('kc_settings') || 'null'); if (s) Object.assign(SETTINGS, s); } catch (e) { }
 function saveSettings() { try { localStorage.setItem('kc_settings', JSON.stringify(SETTINGS)); } catch (e) { } }
 
@@ -260,8 +266,35 @@ const Input = (() => {
     tabL: ['KeyQ'], tabR: ['KeyE']
   };
   const PADMAP = { dash: 0, drop: 1, heal: 2, drain: 3, well: 4, rep: 5, abs: 6, tk: 7, map: 8, menu: 9, confirm: 0, back: 1, tabL: 4, tabR: 5, uup: 12, udown: 13, uleft: 14, uright: 15 };
+  /* Rebinding. Each of these actions has one changeable binding per device; mouse buttons are the key codes Mouse0-2.
+     SETTINGS.binds holds only what the player changed. Movement, menu navigation and pause are fixed. */
+  const REBIND = ['tk', 'drop', 'rep', 'well', 'abs', 'dash', 'heal', 'drain', 'map'];
+  const DEF_KEY = { tk: 'Mouse0', abs: 'KeyQ', rep: 'Mouse2', well: 'KeyE', dash: 'Space', heal: 'KeyF', drain: 'KeyV', drop: 'KeyC', map: 'KeyM' };
+  const DEF_PAD = { dash: 0, drop: 1, heal: 2, drain: 3, well: 4, rep: 5, abs: 6, tk: 7, map: 8 };
+  const ALT_KEY = { tk: ['KeyJ'], rep: ['KeyR'], dash: ['ShiftLeft', 'ShiftRight'] };   // extra default keys, dropped when bound to something else
+  const KEY_FIXED = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', 'Tab', 'KeyP', 'Enter'];
+  const PAD_OK = [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11];
   const keyToActs = {};
-  for (const a in KEYMAP) for (const k of KEYMAP[a]) (keyToActs[k] = keyToActs[k] || []).push(a);
+  function applyBinds() {
+    const b = SETTINGS.binds && typeof SETTINGS.binds === 'object' ? SETTINGS.binds : (SETTINGS.binds = {}); b.key = b.key || {}; b.pad = b.pad || {};
+    const used = new Set(REBIND.map(a => b.key[a] || DEF_KEY[a]));
+    for (const a of REBIND) { KEYMAP[a] = [b.key[a] || DEF_KEY[a]].concat((ALT_KEY[a] || []).filter(k => !used.has(k))); PADMAP[a] = b.pad[a] !== undefined ? b.pad[a] : DEF_PAD[a]; }
+    for (const k in keyToActs) delete keyToActs[k];
+    for (const a in KEYMAP) for (const k of KEYMAP[a]) (keyToActs[k] = keyToActs[k] || []).push(a);
+  }
+  applyBinds();
+  const getBind = (dev, a) => dev === 'pad' ? PADMAP[a] : KEYMAP[a][0];
+  function setBind(dev, a, code) {   // returns false if that key/button can't be used; a binding already in use swaps with this one
+    if (!REBIND.includes(a) || (dev === 'pad' ? !PAD_OK.includes(code) : KEY_FIXED.includes(code))) return false;
+    const map = dev === 'pad' ? SETTINGS.binds.pad : SETTINGS.binds.key, old = getBind(dev, a);
+    for (const o of REBIND) if (o !== a && getBind(dev, o) === code) map[o] = old;
+    map[a] = code; applyBinds(); saveSettings(); for (const f of st.listeners) f(); return true;
+  }
+  function resetBinds(dev) { SETTINGS.binds[dev === 'pad' ? 'pad' : 'key'] = {}; applyBinds(); saveSettings(); for (const f of st.listeners) f(); }
+  let cap = null, swallowClick = 0;   // cap: waiting for the next key/button to bind
+  function capture(dev, cb) { cap = { dev, cb }; }
+  function capDone(code) { const c = cap; cap = null; c.cb(code); }
+  addEventListener('click', e => { if (performance.now() < swallowClick) { e.stopPropagation(); e.preventDefault(); swallowClick = 0; } }, true);
 
   const keys = {};
   const mouse = { sx: 0, sy: 0, down: [false, false, false] };
@@ -278,6 +311,7 @@ const Input = (() => {
   function edge(a) { tickEdges.add(a); uiPending.add(a); }
 
   addEventListener('keydown', e => {
+    if (cap) { e.preventDefault(); if (!e.repeat && cap.dev === 'kbm') capDone(e.code === 'Escape' ? null : e.code); else if (!e.repeat && e.code === 'Escape') capDone(null); return; }
     if (e.repeat) { if (keyToActs[e.code] && /^(Arrow|Tab|Space)/.test(e.code)) e.preventDefault(); return; }
     keys[e.code] = true; setDevice('kbm');
     for (const a of keyToActs[e.code] || []) edge(a);
@@ -291,12 +325,13 @@ const Input = (() => {
     if (Math.abs(e.movementX) + Math.abs(e.movementY) > 3) setDevice('kbm');
   });
   addEventListener('mousedown', e => {
+    if (cap) { if (cap.dev === 'kbm') { e.preventDefault(); swallowClick = performance.now() + 400; capDone('Mouse' + e.button); } return; }
     if (e.target && e.target.id !== 'game') return;
-    mouse.sx = e.clientX; mouse.sy = e.clientY; mouse.down[e.button] = true; setDevice('kbm');
-    if (e.button === 0) edge('tk'); if (e.button === 2) edge('rep');
+    mouse.sx = e.clientX; mouse.sy = e.clientY; mouse.down[e.button] = true; keys['Mouse' + e.button] = true; setDevice('kbm');
+    for (const a of keyToActs['Mouse' + e.button] || []) edge(a);
     Audio2.unlock();
   });
-  addEventListener('mouseup', e => { mouse.down[e.button] = false; });
+  addEventListener('mouseup', e => { mouse.down[e.button] = false; keys['Mouse' + e.button] = false; });
   addEventListener('contextmenu', e => e.preventDefault());
   addEventListener('gamepadconnected', e => { st.padSeen = true; for (const f of st.listeners) f(); });
   addEventListener('gamepaddisconnected', () => { pad.idx = -1; pad.btn.fill(0); pad.on.fill(0); pad.axes = [0, 0, 0, 0]; for (const f of st.listeners) f(); });
@@ -329,14 +364,14 @@ const Input = (() => {
     const gp = readPads();
     if (gp) {
       if (pad.idx !== gp.index || pad.id !== gp.id) { pad.idx = gp.index; pad.id = gp.id; pad.style = styleOf(gp.id); pad.mapping = gp.mapping; st.padSeen = true; for (const f of st.listeners) f(); }
-      let active = false;
+      let active = false, capSkip = false;
       for (let i = 0; i < 18; i++) {
         const b = gp.buttons[i]; const v = b ? (typeof b === 'object' ? (b.value || (b.pressed ? 1 : 0)) : b) : 0;
         pad.btn[i] = v;
         const was = pad.on[i], isTrig = i === 6 || i === 7;
         const now = isTrig ? (was ? v > .18 : v > .38) : v > .5;
         pad.on[i] = now ? 1 : 0;
-        if (now && !was) { active = true; for (const a in PADMAP) if (PADMAP[a] === i) edge(a); }
+        if (now && !was) { active = true; if (cap) { if (cap.dev === 'pad') capDone(i === 9 ? null : i); else if (i === 1 || i === 9) capDone(null); capSkip = true; } else if (!capSkip) for (const a in PADMAP) if (PADMAP[a] === i) edge(a); }
       }
       const ax = gp.axes || [];
       const L = deadzone(ax[0] || 0, ax[1] || 0, SETTINGS.deadzone), R = deadzone(ax[2] || 0, ax[3] || 0, SETTINGS.deadzone + .04);
@@ -361,8 +396,6 @@ const Input = (() => {
 
   function held(a) {
     if (KEYMAP[a] && KEYMAP[a].some(k => keys[k])) return true;
-    if (a === 'tk' && mouse.down[0]) return true;
-    if (a === 'rep' && mouse.down[2]) return true;
     if (pad.idx >= 0 && PADMAP[a] !== undefined && pad.on[PADMAP[a]]) return true;
     return false;
   }
@@ -396,8 +429,16 @@ const Input = (() => {
   const PS = { A: 'cross', B: 'circle', X: 'square', Y: 'triangle', LB: 'L1', RB: 'R1', LT: 'L2', RT: 'R2', START: 'OPTIONS', BACK: 'SHARE', LS: 'L', RS: 'R' };
   const FACE_X = { A: '#5fd35f', B: '#ff5a4f', X: '#4f9dff', Y: '#ffcf3f' };
   const FACE_P = { cross: '#8fb4ff', circle: '#ff6b6b', square: '#ff8fd8', triangle: '#5fe0b0' };
+  const PADNAME = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'BACK', 'START', 'L3', 'R3'];
+  function keyName(c) {
+    if (c === 'Mouse0') return 'LMB'; if (c === 'Mouse2') return 'RMB'; if (c === 'Mouse1') return 'MMB'; if (/^Mouse/.test(c)) return 'M' + (+c.slice(5) + 1);
+    if (/^Key.$/.test(c)) return c[3]; if (/^Digit.$/.test(c)) return c[5]; if (/^Numpad/.test(c)) return 'NUM ' + c.slice(6).slice(0, 3).toUpperCase();
+    const n = { Space: 'SPACE', ShiftLeft: 'SHIFT', ShiftRight: 'R SHIFT', ControlLeft: 'CTRL', ControlRight: 'R CTRL', AltLeft: 'ALT', AltRight: 'R ALT', Backspace: 'BKSP', CapsLock: 'CAPS', Backquote: '`', Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Semicolon: ';', Quote: "'", Comma: ',', Period: '.', Slash: '/', Backslash: '\\' }[c];
+    return n || c.toUpperCase().slice(0, 7);
+  }
   function glyph(act, forceDevice) {
-    const dev = forceDevice || st.device, g = GL[act]; if (!g) return { kind: 'key', text: act };
+    const dev = forceDevice || st.device; let g = GL[act]; if (!g) return { kind: 'key', text: act };
+    if (REBIND.includes(act)) g = [PADNAME[PADMAP[act]] || '?', keyName(KEYMAP[act][0])];
     if (dev === 'kbm') {
       const t = g[1];
       if (t === 'LMB' || t === 'RMB') return { kind: 'mouse', text: t[0] };
@@ -420,7 +461,8 @@ const Input = (() => {
   }
 
   return {
-    poll, held, move, aimStick, rumble, glyph, mouse, pad, st,
+    poll, held, move, aimStick, rumble, glyph, mouse, pad, st, REBIND, setBind, resetBinds, capture,
+    get capturing() { return !!cap; }, cancelCapture() { if (cap) capDone(null); },
     pressed: a => tickEdges.has(a),
     ui: a => uiEdges.has(a),
     endTick() { tickEdges.clear(); },
@@ -4625,7 +4667,7 @@ const UI = (() => {
     return `<svg viewBox="0 0 ${w} 24" style="height:1.5em">${shape}<text x="${w / 2}" y="16" text-anchor="middle" font-size="${g.text.length > 3 ? 8.5 : 10}" ${F} fill="#e8ecf7">${g.text}</text></svg>`;
   }
   function refreshGlyphs() { document.querySelectorAll('.g[data-act]').forEach(el => { el.innerHTML = glyphSVG(el.dataset.act, el.dataset.dev); }); updatePadStatus(); }
-  Input.onChange(() => { refreshGlyphs(); if (layer === 'pause' && tab === 'controls') renderTab(); });
+  Input.onChange(() => { refreshGlyphs(); if (layer === 'pause' && tab === 'controls' && !Input.capturing) renderTab(focus && focus.dataset.act ? focus.dataset.dev + ':' + focus.dataset.act : null); });
 
   function updatePadStatus() {
     const box = $('padstat'), t = $('padtxt'); if (!box) return;
@@ -4705,6 +4747,7 @@ const UI = (() => {
     show('pause'); renderTab(); sfx('ui'); Audio2.humStop();
   }
   function closePause() {
+    Input.cancelCapture(); bindWait = null; bindMsg = '';
     hide('pause'); sfx('ui');
     if (fromTitle) { show('title'); $('bCont').disabled = !loadSave(); setFocus($(fromTitle === 'settings' ? 'bSet' : 'bCtl')); return; }
     G.mode = G.prevMode === 'dead' ? 'dead' : 'play';
@@ -4731,9 +4774,17 @@ const UI = (() => {
       setFocus(keep || body.querySelector('.card.can') || body.querySelector('.card'));
     } else if (tab === 'controls') {
       const rows = [['move', 'Move'], ['aim', 'Aim'], ['tk', 'Telekinesis: hold to lift, release to throw'], ['drop', 'Drop what you are holding'], ['rep', 'Repulse: shove everything, reflect bullets'], ['well', 'Gravity well at your aim point'], ['abs', 'Absorb: hold to soak hits, release to blast'], ['dash', 'Dash (invulnerable, hits on contact)'], ['heal', 'Hold near a wounded civilian: heal'], ['drain', 'Hold near a civilian: drain their life'], ['map', 'City map'], ['menu', 'Pause and skills']];
-      const list = dev => rows.map(([a, d]) => `<li><span class="k"><span class="g" data-act="${a}" data-dev="${dev}"></span></span><span class="d">${d}</span></li>`).join('');
-      body.innerHTML = `<div class="ctl"><div><h3>Controller · ${Input.padStyle === 'ps' ? 'PlayStation' : 'Xbox'} layout</h3><ul>${list('pad')}</ul></div><div><h3>Keyboard and mouse</h3><ul>${list('kbm')}</ul></div></div>`;
-      refreshGlyphs(); setFocus($('bResume'));
+      // rows you can rebind are buttons: confirm, then press the new key/button (a binding already in use swaps)
+      const list = dev => rows.map(([a, d]) => Input.REBIND.includes(a)
+        ? `<li><button class="bind nav" data-act="${a}" data-dev="${dev}"><span class="k">${bindWait && bindWait.a === a && bindWait.dev === dev ? '<span class="wait">…</span>' : `<span class="g" data-act="${a}" data-dev="${dev}"></span>`}</span><span class="d">${bindWait && bindWait.a === a && bindWait.dev === dev ? (dev === 'pad' ? 'Press a button' : 'Press a key or mouse button') : d}</span></button></li>`
+        : `<li class="fixed"><span class="k"><span class="g" data-act="${a}" data-dev="${dev}"></span></span><span class="d">${d}</span></li>`).join('');
+      const col = (dev, title) => `<div><h3>${title}</h3><ul>${list(dev)}</ul><button class="pbtn nav rst" data-dev="${dev}">Reset to defaults</button></div>`;
+      body.innerHTML = `<div class="ctl">${col('pad', 'Controller · ' + (Input.padStyle === 'ps' ? 'PlayStation' : 'Xbox') + ' layout')}${col('kbm', 'Keyboard and mouse')}</div><p class="bindmsg">${bindMsg || 'Select an action to change its button or key.'}</p>`;
+      body.querySelectorAll('.bind').forEach(b => b.onclick = () => startBind(b.dataset.dev, b.dataset.act));
+      body.querySelectorAll('.rst').forEach(b => b.onclick = () => { bindMsg = ''; Input.resetBinds(b.dataset.dev); sfx('ui'); renderTab('rst:' + b.dataset.dev); });
+      refreshGlyphs();
+      const kp = keepId && String(keepId).split(':');
+      setFocus((kp && (kp[0] === 'rst' ? body.querySelector(`.rst[data-dev="${kp[1]}"]`) : body.querySelector(`.bind[data-dev="${kp[0]}"][data-act="${kp[1]}"]`))) || body.querySelector(`.bind[data-dev="${Input.device === 'pad' ? 'pad' : 'kbm'}"]`));
     } else {
       const row = o => `<button class="set nav ${o.warn ? 'warn' : ''}" data-k="${o.k}"><span>${o.name}</span><span class="v">${o.opts || o.step ? '◀ ' + setLabel(o) + ' ▶' : setLabel(o)}</span></button>`;
       let h = '', sec = '';
@@ -4744,6 +4795,19 @@ const UI = (() => {
     }
     document.querySelectorAll('#tabs .tab').forEach(t => t.onclick = () => { tab = t.dataset.tab; renderTab(); });
   }
+  /* ---------- rebinding ---------- */
+  let bindWait = null, bindMsg = '';
+  function startBind(dev, a) {
+    bindWait = { dev, a }; bindMsg = dev === 'pad' ? 'Press the new button. Start cancels.' : 'Press the new key or mouse button. Esc cancels.'; renderTab(dev + ':' + a);
+    Input.capture(dev, code => {
+      bindWait = null;
+      if (code === null) bindMsg = '';
+      else if (!Input.setBind(dev, a, code)) bindMsg = dev === 'pad' ? 'That button is reserved for menus.' : 'That key is reserved for movement or menus.';
+      else bindMsg = '';
+      Input.clearUI(); sfx('ui'); renderTab(dev + ':' + a);
+    });
+  }
+
   /* Settings rows. step: a number between min and max; opts: named values; neither: on/off or an action. */
   const SETDEFS = [
     { sec: 'Sound', k: 'music', name: 'Music volume', min: 0, max: 1, step: .1 },
@@ -4793,6 +4857,7 @@ const UI = (() => {
   /* ---------- per-frame ---------- */
   function update(dt) {
     const m = G.mode;
+    if (Input.capturing) return;   // waiting for a key/button to bind
     if (layer === 'title' && m === 'title') {
       if (!focus) setFocus($('bCont').disabled ? $('bNew') : $('bCont'));
     }

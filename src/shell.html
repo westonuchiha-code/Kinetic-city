@@ -95,6 +95,12 @@ button{font-family:inherit;color:inherit}
 .ctl li{display:flex;align-items:center;gap:12px;font-size:16px}
 .ctl li .k{min-width:84px;display:flex;justify-content:flex-end}
 .ctl li span.d{color:#c7cde0}
+.ctl li.fixed{padding:2px 8px;opacity:.75}
+.bind{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:transparent;border:1px solid transparent;padding:2px 8px;font-size:inherit;cursor:pointer}
+.bind:hover,.bind.focus{border-color:var(--cyan);background:rgba(60,224,255,.08)}
+.bind .wait{color:var(--gold);font-weight:700}
+.rst{margin-top:12px;padding:6px 14px;font-size:12px}
+.bindmsg{margin:14px 0 0;font-size:13px;color:var(--dim)}
 .setgrid{display:flex;flex-direction:column;gap:8px;max-width:560px}
 .sethead{margin:10px 0 0;font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}.sethead:first-child{margin-top:0}
 .set.warn .v{color:var(--evil)}

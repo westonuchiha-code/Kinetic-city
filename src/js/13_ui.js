@@ -25,7 +25,7 @@ const UI = (() => {
     return `<svg viewBox="0 0 ${w} 24" style="height:1.5em">${shape}<text x="${w / 2}" y="16" text-anchor="middle" font-size="${g.text.length > 3 ? 8.5 : 10}" ${F} fill="#e8ecf7">${g.text}</text></svg>`;
   }
   function refreshGlyphs() { document.querySelectorAll('.g[data-act]').forEach(el => { el.innerHTML = glyphSVG(el.dataset.act, el.dataset.dev); }); updatePadStatus(); }
-  Input.onChange(() => { refreshGlyphs(); if (layer === 'pause' && tab === 'controls') renderTab(); });
+  Input.onChange(() => { refreshGlyphs(); if (layer === 'pause' && tab === 'controls' && !Input.capturing) renderTab(focus && focus.dataset.act ? focus.dataset.dev + ':' + focus.dataset.act : null); });
 
   function updatePadStatus() {
     const box = $('padstat'), t = $('padtxt'); if (!box) return;
@@ -105,6 +105,7 @@ const UI = (() => {
     show('pause'); renderTab(); sfx('ui'); Audio2.humStop();
   }
   function closePause() {
+    Input.cancelCapture(); bindWait = null; bindMsg = '';
     hide('pause'); sfx('ui');
     if (fromTitle) { show('title'); $('bCont').disabled = !loadSave(); setFocus($(fromTitle === 'settings' ? 'bSet' : 'bCtl')); return; }
     G.mode = G.prevMode === 'dead' ? 'dead' : 'play';
@@ -131,9 +132,17 @@ const UI = (() => {
       setFocus(keep || body.querySelector('.card.can') || body.querySelector('.card'));
     } else if (tab === 'controls') {
       const rows = [['move', 'Move'], ['aim', 'Aim'], ['tk', 'Telekinesis: hold to lift, release to throw'], ['drop', 'Drop what you are holding'], ['rep', 'Repulse: shove everything, reflect bullets'], ['well', 'Gravity well at your aim point'], ['abs', 'Absorb: hold to soak hits, release to blast'], ['dash', 'Dash (invulnerable, hits on contact)'], ['heal', 'Hold near a wounded civilian: heal'], ['drain', 'Hold near a civilian: drain their life'], ['map', 'City map'], ['menu', 'Pause and skills']];
-      const list = dev => rows.map(([a, d]) => `<li><span class="k"><span class="g" data-act="${a}" data-dev="${dev}"></span></span><span class="d">${d}</span></li>`).join('');
-      body.innerHTML = `<div class="ctl"><div><h3>Controller · ${Input.padStyle === 'ps' ? 'PlayStation' : 'Xbox'} layout</h3><ul>${list('pad')}</ul></div><div><h3>Keyboard and mouse</h3><ul>${list('kbm')}</ul></div></div>`;
-      refreshGlyphs(); setFocus($('bResume'));
+      // rows you can rebind are buttons: confirm, then press the new key/button (a binding already in use swaps)
+      const list = dev => rows.map(([a, d]) => Input.REBIND.includes(a)
+        ? `<li><button class="bind nav" data-act="${a}" data-dev="${dev}"><span class="k">${bindWait && bindWait.a === a && bindWait.dev === dev ? '<span class="wait">…</span>' : `<span class="g" data-act="${a}" data-dev="${dev}"></span>`}</span><span class="d">${bindWait && bindWait.a === a && bindWait.dev === dev ? (dev === 'pad' ? 'Press a button' : 'Press a key or mouse button') : d}</span></button></li>`
+        : `<li class="fixed"><span class="k"><span class="g" data-act="${a}" data-dev="${dev}"></span></span><span class="d">${d}</span></li>`).join('');
+      const col = (dev, title) => `<div><h3>${title}</h3><ul>${list(dev)}</ul><button class="pbtn nav rst" data-dev="${dev}">Reset to defaults</button></div>`;
+      body.innerHTML = `<div class="ctl">${col('pad', 'Controller · ' + (Input.padStyle === 'ps' ? 'PlayStation' : 'Xbox') + ' layout')}${col('kbm', 'Keyboard and mouse')}</div><p class="bindmsg">${bindMsg || 'Select an action to change its button or key.'}</p>`;
+      body.querySelectorAll('.bind').forEach(b => b.onclick = () => startBind(b.dataset.dev, b.dataset.act));
+      body.querySelectorAll('.rst').forEach(b => b.onclick = () => { bindMsg = ''; Input.resetBinds(b.dataset.dev); sfx('ui'); renderTab('rst:' + b.dataset.dev); });
+      refreshGlyphs();
+      const kp = keepId && String(keepId).split(':');
+      setFocus((kp && (kp[0] === 'rst' ? body.querySelector(`.rst[data-dev="${kp[1]}"]`) : body.querySelector(`.bind[data-dev="${kp[0]}"][data-act="${kp[1]}"]`))) || body.querySelector(`.bind[data-dev="${Input.device === 'pad' ? 'pad' : 'kbm'}"]`));
     } else {
       const row = o => `<button class="set nav ${o.warn ? 'warn' : ''}" data-k="${o.k}"><span>${o.name}</span><span class="v">${o.opts || o.step ? '◀ ' + setLabel(o) + ' ▶' : setLabel(o)}</span></button>`;
       let h = '', sec = '';
@@ -144,6 +153,19 @@ const UI = (() => {
     }
     document.querySelectorAll('#tabs .tab').forEach(t => t.onclick = () => { tab = t.dataset.tab; renderTab(); });
   }
+  /* ---------- rebinding ---------- */
+  let bindWait = null, bindMsg = '';
+  function startBind(dev, a) {
+    bindWait = { dev, a }; bindMsg = dev === 'pad' ? 'Press the new button. Start cancels.' : 'Press the new key or mouse button. Esc cancels.'; renderTab(dev + ':' + a);
+    Input.capture(dev, code => {
+      bindWait = null;
+      if (code === null) bindMsg = '';
+      else if (!Input.setBind(dev, a, code)) bindMsg = dev === 'pad' ? 'That button is reserved for menus.' : 'That key is reserved for movement or menus.';
+      else bindMsg = '';
+      Input.clearUI(); sfx('ui'); renderTab(dev + ':' + a);
+    });
+  }
+
   /* Settings rows. step: a number between min and max; opts: named values; neither: on/off or an action. */
   const SETDEFS = [
     { sec: 'Sound', k: 'music', name: 'Music volume', min: 0, max: 1, step: .1 },
@@ -193,6 +215,7 @@ const UI = (() => {
   /* ---------- per-frame ---------- */
   function update(dt) {
     const m = G.mode;
+    if (Input.capturing) return;   // waiting for a key/button to bind
     if (layer === 'title' && m === 'title') {
       if (!focus) setFocus($('bCont').disabled ? $('bNew') : $('bCont'));
     }
