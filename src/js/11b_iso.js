@@ -150,60 +150,7 @@ function drawIsoBuilding(b) {
 }
 
 /* ---------- hideouts ---------- */
-function drawIsoHideout(e) {
-  const r = e.rect, x0 = r.x, y0 = r.y, x1 = r.x + r.w, y1 = r.y + r.h, ht = 96, t = G.time, fl = e.flash > 0, col = e.col;
-  const brickS = fl ? '#ffffff' : '#2c2321', brickE = fl ? '#ffffff' : '#1d1716', mortS = '#161110', mortE = '#0f0b0b';
-  ipoly([isoXY(x0, y1, 0), isoXY(x1, y1, 0), isoXY(x1, y1, ht), isoXY(x0, y1, ht)], brickS);
-  ipoly([isoXY(x1, y1, 0), isoXY(x1, y0, 0), isoXY(x1, y0, ht), isoXY(x1, y1, ht)], brickE);
-  if (!fl) { // brick courses with staggered joints
-    for (let z = 8, row = 0; z < ht; z += 8, row++) {
-      iline(isoXY(x0, y1, z), isoXY(x1, y1, z), mortS); iline(isoXY(x1, y1, z), isoXY(x1, y0, z), mortE);
-      for (let u = (row % 2 ? 8 : 0) + 4; u < r.w; u += 16) ipx(...isoXY(x0 + u, y1, z + 4), mortS);
-      for (let u = (row % 2 ? 8 : 0) + 4; u < r.h; u += 16) ipx(...isoXY(x1, y0 + u, z + 4), mortE);
-    }
-    // graffiti tag in gang colour
-    ctx.globalAlpha = .85;
-    iline(isoXY(x0 + 14, y1, 56), isoXY(x0 + 20, y1, 34), col); iline(isoXY(x0 + 20, y1, 34), isoXY(x0 + 28, y1, 52), col);
-    iline(isoXY(x0 + 8, y1, 30), isoXY(x0 + 14, y1, 56), col);
-    iline(isoXY(x1, y0 + 14, 40), isoXY(x1, y0 + 24, 26), col); iline(isoXY(x1, y0 + 24, 26), isoXY(x1, y0 + 36, 48), col);
-    ctx.globalAlpha = 1;
-  }
-  // barred windows with a sickly glow
-  for (const u of [16, r.w - 28]) {
-    const z0 = 66, z1 = 82, a = .55 + .2 * Math.sin(t * 3 + u);
-    ctx.globalAlpha = a; ipoly([isoXY(x0 + u, y1, z0), isoXY(x0 + u + 14, y1, z0), isoXY(x0 + u + 14, y1, z1), isoXY(x0 + u, y1, z1)], col); ctx.globalAlpha = 1;
-    for (let i = 3; i < 14; i += 4) iline(isoXY(x0 + u + i, y1, z0), isoXY(x0 + u + i, y1, z1), '#0a0808');
-  }
-  // gate in the middle of the south wall; the shutter rolls up once the guards are down
-  const gx0 = (x0 + x1) / 2 - 16, gx1 = gx0 + 32, gh = 40, open = e.gateOpen ? (e.gateT || 0) : 0;
-  ipoly([isoXY(gx0, y1, 0), isoXY(gx1, y1, 0), isoXY(gx1, y1, gh), isoXY(gx0, y1, gh)], '#050404');
-  if (open > 0 && !e.cleared) { const m = isoXY((gx0 + gx1) / 2, y1, gh * .4); iglow(m[0], m[1], 16, col, .6 * open); }
-  const sb = gh * open;   // bottom edge of the shutter
-  if (gh - sb > .5) {
-    ipoly([isoXY(gx0, y1, sb), isoXY(gx1, y1, sb), isoXY(gx1, y1, gh), isoXY(gx0, y1, gh)], fl ? '#fff' : '#4a4644');
-    for (let z = sb + 4; z < gh; z += 6) iline(isoXY(gx0, y1, z), isoXY(gx1, y1, z), '#2a2726');
-    for (let u = 0; u < 32; u += 4) ipx(...isoXY(gx0 + u + 2, y1, sb + 1), (u / 4) % 2 ? '#1a1408' : '#e0b020');
-  }
-  iline(isoXY(gx0 - 1, y1, 0), isoXY(gx0 - 1, y1, gh + 2), '#6a6260'); iline(isoXY(gx1 + 1, y1, 0), isoXY(gx1 + 1, y1, gh + 2), '#6a6260'); iline(isoXY(gx0 - 1, y1, gh + 2), isoXY(gx1 + 1, y1, gh + 2), '#6a6260');
-  // roof with razor wire on the edges
-  const T = [isoXY(x0, y0, ht), isoXY(x1, y0, ht), isoXY(x1, y1, ht), isoXY(x0, y1, ht)];
-  ipoly(T, fl ? '#fff' : '#1c1817');
-  ibox(x0 + 10, y0 + 10, 18, 12, ht, 8, '#3a3230', '#2a2422', '#201a19');
-  ibox(x1 - 34, y1 - 26, 22, 14, ht, 6, '#3a3230', '#2a2422', '#201a19');
-  for (const [a, b] of [[T[0], T[1]], [T[0], T[3]], [T[3], T[2]], [T[2], T[1]]]) {
-    const n = Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]));
-    for (let i = 0; i <= n; i++) ipx(lerp(a[0], b[0], i / n), lerp(a[1], b[1], i / n) - 1 - (i % 3 === 1 ? 1 : 0), i % 3 ? '#8a8682' : '#5a5652');
-  }
-  iline(isoXY(x0, y1, 0), isoXY(x0, y1, ht), '#100c0c'); iline(isoXY(x1, y1, 0), isoXY(x1, y1, ht), '#4a3a36');
-  if (e.cleared) return;
-  // gang flag, blinking warning light, floodlights
-  const fp = isoXY(x1 - 12, y0 + 12, ht); iline(fp, [fp[0], fp[1] - 14], '#888');
-  const wv = Math.round(Math.sin(t * 6) * 1.5);
-  ipoly([[fp[0] + 1, fp[1] - 14], [fp[0] + 9 + wv, fp[1] - 12], [fp[0] + 1, fp[1] - 9]], col);
-  const on = Math.sin(t * 5) > 0, lp = isoXY(x0 + 12, y1 - 10, ht);
-  ctx.fillStyle = on ? '#ff2a2a' : '#401010'; ctx.fillRect(Math.round(lp[0]), Math.round(lp[1]) - 2, 2, 2); if (on) iglow(lp[0], lp[1], 8, '#ff2a2a', .8);
-  for (const u of [4, r.w - 6]) { const f = isoXY(x0 + u, y1, ht - 6); ctx.fillStyle = '#ddd'; ctx.fillRect(Math.round(f[0]), Math.round(f[1]), 2, 1); iglow(f[0], f[1] + 1, 7, '#ffeedd', .5); }
-}
+// drawIsoHideout lives in 11f_blocks.js
 
 /* ---------- trees, lamps, barricades ---------- */
 function drawIsoTree(t) {
@@ -222,21 +169,35 @@ function drawIsoLamp(l) {
   ctx.fillStyle = k > .5 ? '#fff6d8' : '#5a5040'; ctx.fillRect(Math.round(top[0]) - 1, Math.round(top[1]) + 1, 3, 1);
   if (k > .2) iglow(top[0], top[1] + 1, 7, c, .7 * k);
 }
-function drawGateStripes() { // the barricade's footprint on the ground (affine pass)
+function drawGateStripes() { // the barricade's footprint on the ground (affine pass): a dark sill with yellow and red hazard bars
   for (let i = 0; i < 2; i++) {
     if (gatesOpen[i]) continue;
     const x = GATE_TX[i] * TILE, y0 = Math.max(0, Math.floor(cam.y / 96) * 96), y1 = Math.min(WORLD_H, cam.y + cam.h + 96);
     if (x + 32 < cam.x - 40 || x > cam.x + cam.w + 40) continue;
-    ctx.fillStyle = '#0c0d12'; ctx.fillRect(x + 6, y0, 20, y1 - y0);
-    for (let y = y0; y < y1; y += 16) { ctx.fillStyle = (y / 16) & 1 ? '#3a1018' : '#d02a40'; ctx.fillRect(x + 8, y, 16, 8); }
+    ctx.fillStyle = '#08090d'; ctx.fillRect(x + 4, y0, 24, y1 - y0);
+    ctx.fillStyle = '#23262f'; ctx.fillRect(x + 4, y0, 2, y1 - y0); ctx.fillRect(x + 26, y0, 2, y1 - y0);               // kerbs
+    for (let y = y0; y < y1; y += 16) { ctx.fillStyle = '#d02a40'; ctx.fillRect(x + 8, y, 16, 6); ctx.fillStyle = '#e0b020'; ctx.fillRect(x + 8, y + 8, 16, 2); }
+    ctx.fillStyle = 'rgba(255,60,90,.10)'; ctx.fillRect(x - 10, y0, 52, y1 - y0);                                        // red spill on the road
   }
 }
-function drawIsoGateSeg(g) { // one post and the laser beams to the next post
-  const cx = g.cx, y = g.y, top = 60, p0 = isoXY(cx, y, 0), p1 = isoXY(cx, y, top);
-  ctx.fillStyle = '#2a2d38'; ctx.fillRect(Math.round(p1[0]) - 1, Math.round(p1[1]), 3, Math.round(p0[1] - p1[1]));
-  ctx.fillStyle = '#ff3355'; ctx.fillRect(Math.round(p1[0]) - 1, Math.round(p1[1]) - 1, 3, 2);
-  for (const hh of [.33, .66, 1]) { ctx.globalAlpha = .55 + .3 * Math.sin(G.time * 8 + y + hh * 60); iline(isoXY(cx, y, top * hh), isoXY(cx, y + 96, top * hh), '#ff4060'); }
-  ctx.globalAlpha = 1; iglow(p1[0], p1[1], 9, '#ff3355', .6);
+function drawIsoGateSeg(g) { // one pylon and the laser beams to the next pylon
+  const cx = g.cx, y = g.y, top = 60, t = G.time, p0 = isoXY(cx, y, 0), p1 = isoXY(cx, y, top), X = Math.round(p0[0]), Yb = Math.round(p0[1]), Yt = Math.round(p1[1]);
+  // beams first, so this pylon and the next one cover their ends: a pale core with a red halo, pulsing out of step
+  for (const hh of [.3, .62, .94]) {
+    const a = isoXY(cx, y, top * hh), b = isoXY(cx, y + 96, top * hh), k = .65 + .3 * Math.sin(t * 8 + y + hh * 60);
+    ctx.globalAlpha = k * .3; iline([a[0], a[1] - 1], [b[0], b[1] - 1], '#ff3355'); iline([a[0], a[1] + 1], [b[0], b[1] + 1], '#ff3355');
+    ctx.globalAlpha = k; iline(a, b, '#ff8296');
+    const s = ((t * 40 + y + hh * 200) % 96) / 96, m = isoXY(cx, y + 96 * s, top * hh); ctx.globalAlpha = 1; ipx(m[0], m[1], '#ffffff');   // a spark running along the beam
+  }
+  ctx.globalAlpha = 1;
+  // pylon: dark outline, steel body lit from the left, hazard foot, an emitter block at each beam, warning lamp on top
+  const h = Yb - Yt;
+  ctx.fillStyle = '#07070c'; ctx.fillRect(X - 2, Yt - 3, 5, h + 4);
+  ctx.fillStyle = '#414756'; ctx.fillRect(X - 1, Yt - 2, 3, h + 2); ctx.fillStyle = '#687083'; ctx.fillRect(X - 1, Yt - 2, 1, h + 2); ctx.fillStyle = '#272b36'; ctx.fillRect(X + 1, Yt - 2, 1, h + 2);
+  for (let k = 0; k < 3; k++) { ctx.fillStyle = k % 2 ? '#17130a' : '#e0b020'; ctx.fillRect(X - 1, Yb - 2 - k * 2, 3, 2); }
+  for (const hh of [.3, .62, .94]) { const yy = Yb - Math.round(top * hh * ISO_KZ); ctx.fillStyle = '#12131a'; ctx.fillRect(X - 2, yy - 1, 5, 3); ctx.fillStyle = '#ffb0bc'; ctx.fillRect(X, yy, 1, 1); }
+  const on = Math.sin(t * 4 + y * .05) > -.3; ctx.fillStyle = on ? '#ff3355' : '#5a1220'; ctx.fillRect(X - 1, Yt - 4, 3, 2);
+  if (on) iglow(X + .5, Yt - 3, 9, '#ff3355', .6);
 }
 
 /* ---------- upright entities (old drawings, stood up in the iso view) ---------- */

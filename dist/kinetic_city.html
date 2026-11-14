@@ -3563,60 +3563,7 @@ function drawIsoBuilding(b) {
 }
 
 /* ---------- hideouts ---------- */
-function drawIsoHideout(e) {
-  const r = e.rect, x0 = r.x, y0 = r.y, x1 = r.x + r.w, y1 = r.y + r.h, ht = 96, t = G.time, fl = e.flash > 0, col = e.col;
-  const brickS = fl ? '#ffffff' : '#2c2321', brickE = fl ? '#ffffff' : '#1d1716', mortS = '#161110', mortE = '#0f0b0b';
-  ipoly([isoXY(x0, y1, 0), isoXY(x1, y1, 0), isoXY(x1, y1, ht), isoXY(x0, y1, ht)], brickS);
-  ipoly([isoXY(x1, y1, 0), isoXY(x1, y0, 0), isoXY(x1, y0, ht), isoXY(x1, y1, ht)], brickE);
-  if (!fl) { // brick courses with staggered joints
-    for (let z = 8, row = 0; z < ht; z += 8, row++) {
-      iline(isoXY(x0, y1, z), isoXY(x1, y1, z), mortS); iline(isoXY(x1, y1, z), isoXY(x1, y0, z), mortE);
-      for (let u = (row % 2 ? 8 : 0) + 4; u < r.w; u += 16) ipx(...isoXY(x0 + u, y1, z + 4), mortS);
-      for (let u = (row % 2 ? 8 : 0) + 4; u < r.h; u += 16) ipx(...isoXY(x1, y0 + u, z + 4), mortE);
-    }
-    // graffiti tag in gang colour
-    ctx.globalAlpha = .85;
-    iline(isoXY(x0 + 14, y1, 56), isoXY(x0 + 20, y1, 34), col); iline(isoXY(x0 + 20, y1, 34), isoXY(x0 + 28, y1, 52), col);
-    iline(isoXY(x0 + 8, y1, 30), isoXY(x0 + 14, y1, 56), col);
-    iline(isoXY(x1, y0 + 14, 40), isoXY(x1, y0 + 24, 26), col); iline(isoXY(x1, y0 + 24, 26), isoXY(x1, y0 + 36, 48), col);
-    ctx.globalAlpha = 1;
-  }
-  // barred windows with a sickly glow
-  for (const u of [16, r.w - 28]) {
-    const z0 = 66, z1 = 82, a = .55 + .2 * Math.sin(t * 3 + u);
-    ctx.globalAlpha = a; ipoly([isoXY(x0 + u, y1, z0), isoXY(x0 + u + 14, y1, z0), isoXY(x0 + u + 14, y1, z1), isoXY(x0 + u, y1, z1)], col); ctx.globalAlpha = 1;
-    for (let i = 3; i < 14; i += 4) iline(isoXY(x0 + u + i, y1, z0), isoXY(x0 + u + i, y1, z1), '#0a0808');
-  }
-  // gate in the middle of the south wall; the shutter rolls up once the guards are down
-  const gx0 = (x0 + x1) / 2 - 16, gx1 = gx0 + 32, gh = 40, open = e.gateOpen ? (e.gateT || 0) : 0;
-  ipoly([isoXY(gx0, y1, 0), isoXY(gx1, y1, 0), isoXY(gx1, y1, gh), isoXY(gx0, y1, gh)], '#050404');
-  if (open > 0 && !e.cleared) { const m = isoXY((gx0 + gx1) / 2, y1, gh * .4); iglow(m[0], m[1], 16, col, .6 * open); }
-  const sb = gh * open;   // bottom edge of the shutter
-  if (gh - sb > .5) {
-    ipoly([isoXY(gx0, y1, sb), isoXY(gx1, y1, sb), isoXY(gx1, y1, gh), isoXY(gx0, y1, gh)], fl ? '#fff' : '#4a4644');
-    for (let z = sb + 4; z < gh; z += 6) iline(isoXY(gx0, y1, z), isoXY(gx1, y1, z), '#2a2726');
-    for (let u = 0; u < 32; u += 4) ipx(...isoXY(gx0 + u + 2, y1, sb + 1), (u / 4) % 2 ? '#1a1408' : '#e0b020');
-  }
-  iline(isoXY(gx0 - 1, y1, 0), isoXY(gx0 - 1, y1, gh + 2), '#6a6260'); iline(isoXY(gx1 + 1, y1, 0), isoXY(gx1 + 1, y1, gh + 2), '#6a6260'); iline(isoXY(gx0 - 1, y1, gh + 2), isoXY(gx1 + 1, y1, gh + 2), '#6a6260');
-  // roof with razor wire on the edges
-  const T = [isoXY(x0, y0, ht), isoXY(x1, y0, ht), isoXY(x1, y1, ht), isoXY(x0, y1, ht)];
-  ipoly(T, fl ? '#fff' : '#1c1817');
-  ibox(x0 + 10, y0 + 10, 18, 12, ht, 8, '#3a3230', '#2a2422', '#201a19');
-  ibox(x1 - 34, y1 - 26, 22, 14, ht, 6, '#3a3230', '#2a2422', '#201a19');
-  for (const [a, b] of [[T[0], T[1]], [T[0], T[3]], [T[3], T[2]], [T[2], T[1]]]) {
-    const n = Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]));
-    for (let i = 0; i <= n; i++) ipx(lerp(a[0], b[0], i / n), lerp(a[1], b[1], i / n) - 1 - (i % 3 === 1 ? 1 : 0), i % 3 ? '#8a8682' : '#5a5652');
-  }
-  iline(isoXY(x0, y1, 0), isoXY(x0, y1, ht), '#100c0c'); iline(isoXY(x1, y1, 0), isoXY(x1, y1, ht), '#4a3a36');
-  if (e.cleared) return;
-  // gang flag, blinking warning light, floodlights
-  const fp = isoXY(x1 - 12, y0 + 12, ht); iline(fp, [fp[0], fp[1] - 14], '#888');
-  const wv = Math.round(Math.sin(t * 6) * 1.5);
-  ipoly([[fp[0] + 1, fp[1] - 14], [fp[0] + 9 + wv, fp[1] - 12], [fp[0] + 1, fp[1] - 9]], col);
-  const on = Math.sin(t * 5) > 0, lp = isoXY(x0 + 12, y1 - 10, ht);
-  ctx.fillStyle = on ? '#ff2a2a' : '#401010'; ctx.fillRect(Math.round(lp[0]), Math.round(lp[1]) - 2, 2, 2); if (on) iglow(lp[0], lp[1], 8, '#ff2a2a', .8);
-  for (const u of [4, r.w - 6]) { const f = isoXY(x0 + u, y1, ht - 6); ctx.fillStyle = '#ddd'; ctx.fillRect(Math.round(f[0]), Math.round(f[1]), 2, 1); iglow(f[0], f[1] + 1, 7, '#ffeedd', .5); }
-}
+// drawIsoHideout lives in 11f_blocks.js
 
 /* ---------- trees, lamps, barricades ---------- */
 function drawIsoTree(t) {
@@ -3635,21 +3582,35 @@ function drawIsoLamp(l) {
   ctx.fillStyle = k > .5 ? '#fff6d8' : '#5a5040'; ctx.fillRect(Math.round(top[0]) - 1, Math.round(top[1]) + 1, 3, 1);
   if (k > .2) iglow(top[0], top[1] + 1, 7, c, .7 * k);
 }
-function drawGateStripes() { // the barricade's footprint on the ground (affine pass)
+function drawGateStripes() { // the barricade's footprint on the ground (affine pass): a dark sill with yellow and red hazard bars
   for (let i = 0; i < 2; i++) {
     if (gatesOpen[i]) continue;
     const x = GATE_TX[i] * TILE, y0 = Math.max(0, Math.floor(cam.y / 96) * 96), y1 = Math.min(WORLD_H, cam.y + cam.h + 96);
     if (x + 32 < cam.x - 40 || x > cam.x + cam.w + 40) continue;
-    ctx.fillStyle = '#0c0d12'; ctx.fillRect(x + 6, y0, 20, y1 - y0);
-    for (let y = y0; y < y1; y += 16) { ctx.fillStyle = (y / 16) & 1 ? '#3a1018' : '#d02a40'; ctx.fillRect(x + 8, y, 16, 8); }
+    ctx.fillStyle = '#08090d'; ctx.fillRect(x + 4, y0, 24, y1 - y0);
+    ctx.fillStyle = '#23262f'; ctx.fillRect(x + 4, y0, 2, y1 - y0); ctx.fillRect(x + 26, y0, 2, y1 - y0);               // kerbs
+    for (let y = y0; y < y1; y += 16) { ctx.fillStyle = '#d02a40'; ctx.fillRect(x + 8, y, 16, 6); ctx.fillStyle = '#e0b020'; ctx.fillRect(x + 8, y + 8, 16, 2); }
+    ctx.fillStyle = 'rgba(255,60,90,.10)'; ctx.fillRect(x - 10, y0, 52, y1 - y0);                                        // red spill on the road
   }
 }
-function drawIsoGateSeg(g) { // one post and the laser beams to the next post
-  const cx = g.cx, y = g.y, top = 60, p0 = isoXY(cx, y, 0), p1 = isoXY(cx, y, top);
-  ctx.fillStyle = '#2a2d38'; ctx.fillRect(Math.round(p1[0]) - 1, Math.round(p1[1]), 3, Math.round(p0[1] - p1[1]));
-  ctx.fillStyle = '#ff3355'; ctx.fillRect(Math.round(p1[0]) - 1, Math.round(p1[1]) - 1, 3, 2);
-  for (const hh of [.33, .66, 1]) { ctx.globalAlpha = .55 + .3 * Math.sin(G.time * 8 + y + hh * 60); iline(isoXY(cx, y, top * hh), isoXY(cx, y + 96, top * hh), '#ff4060'); }
-  ctx.globalAlpha = 1; iglow(p1[0], p1[1], 9, '#ff3355', .6);
+function drawIsoGateSeg(g) { // one pylon and the laser beams to the next pylon
+  const cx = g.cx, y = g.y, top = 60, t = G.time, p0 = isoXY(cx, y, 0), p1 = isoXY(cx, y, top), X = Math.round(p0[0]), Yb = Math.round(p0[1]), Yt = Math.round(p1[1]);
+  // beams first, so this pylon and the next one cover their ends: a pale core with a red halo, pulsing out of step
+  for (const hh of [.3, .62, .94]) {
+    const a = isoXY(cx, y, top * hh), b = isoXY(cx, y + 96, top * hh), k = .65 + .3 * Math.sin(t * 8 + y + hh * 60);
+    ctx.globalAlpha = k * .3; iline([a[0], a[1] - 1], [b[0], b[1] - 1], '#ff3355'); iline([a[0], a[1] + 1], [b[0], b[1] + 1], '#ff3355');
+    ctx.globalAlpha = k; iline(a, b, '#ff8296');
+    const s = ((t * 40 + y + hh * 200) % 96) / 96, m = isoXY(cx, y + 96 * s, top * hh); ctx.globalAlpha = 1; ipx(m[0], m[1], '#ffffff');   // a spark running along the beam
+  }
+  ctx.globalAlpha = 1;
+  // pylon: dark outline, steel body lit from the left, hazard foot, an emitter block at each beam, warning lamp on top
+  const h = Yb - Yt;
+  ctx.fillStyle = '#07070c'; ctx.fillRect(X - 2, Yt - 3, 5, h + 4);
+  ctx.fillStyle = '#414756'; ctx.fillRect(X - 1, Yt - 2, 3, h + 2); ctx.fillStyle = '#687083'; ctx.fillRect(X - 1, Yt - 2, 1, h + 2); ctx.fillStyle = '#272b36'; ctx.fillRect(X + 1, Yt - 2, 1, h + 2);
+  for (let k = 0; k < 3; k++) { ctx.fillStyle = k % 2 ? '#17130a' : '#e0b020'; ctx.fillRect(X - 1, Yb - 2 - k * 2, 3, 2); }
+  for (const hh of [.3, .62, .94]) { const yy = Yb - Math.round(top * hh * ISO_KZ); ctx.fillStyle = '#12131a'; ctx.fillRect(X - 2, yy - 1, 5, 3); ctx.fillStyle = '#ffb0bc'; ctx.fillRect(X, yy, 1, 1); }
+  const on = Math.sin(t * 4 + y * .05) > -.3; ctx.fillStyle = on ? '#ff3355' : '#5a1220'; ctx.fillRect(X - 1, Yt - 4, 3, 2);
+  if (on) iglow(X + .5, Yt - 3, 9, '#ff3355', .6);
 }
 
 /* ---------- upright entities (old drawings, stood up in the iso view) ---------- */
@@ -6829,6 +6790,183 @@ function drawIsoTower(e) {
   }
   e.sinceHit = (e.sinceHit || 0) + 1 / 60;
   return top;
+}
+
+/* ---------- gang hideout: a fortified brick warehouse ----------
+   South wall (left face): roll-up shutter gate under a hazard lintel, two barred windows, graffiti.
+   East wall (right face): the gang's initial sprayed large, a steel side door, a vent.
+   Roof: the gang's neon emblem on a sign facing the camera, stair hut, skylight, air-conditioning unit, flag, beacon,
+   razor wire on the front parapets.
+   The still parts are painted once per hideout into a small canvas and stamped; only what moves or glows is drawn
+   live on top (window light, emblem, shutter, lamps, flag, fan). Wall pixels are addressed as (column, row from the
+   ground) so hand-placed details sit exactly on the brick. */
+const HIDE_HT = 96, HIDE_ROWS = 24;
+const HIDE_EMBLEM = [   // neon sign on the roof, one per gang: '#' tube, '+' brighter tube
+  px(`
+    ##...........##
+    .##.........##.
+    .###.......###.
+    ..####...####..
+    ...###+++###...
+    ....+++++++....
+    ....+..+..+....
+    ....+++++++....
+    .....+++++.....
+    .....+.+.+.....
+    ......+++......
+    .......+.......`),    // Rustlers: a bull's skull
+  px(`
+    .....#####.....
+    ...##.....##...
+    ..#.......++#..
+    .#.......++..#.
+    .#......++...#.
+    #......++.....#
+    #.....++++++..#
+    .#.......++..#.
+    .#......++...#.
+    ..#....++...#..
+    ...##.++..##...
+    .....#####.....`),    // Breakers: a bolt cracking a ring
+  px(`
+    .......#.......
+    ......###......
+    ......#.#......
+    .....##.##.....
+    .....#...#.....
+    ....##.+.##....
+    ....#.+++.#....
+    ...##..+..##...
+    ...#.......#...
+    ..##.......##..
+    ..#.........#..
+    .#############.`)     // Architects: the eye in the pyramid
+];
+const HIDE_TAG = [        // the gang's initial sprayed on the east wall
+  ['#####..', '##..##.', '##..##.', '##..##.', '#####..', '####...', '##.##..', '##..##.', '##..##.'],
+  ['#####..', '##..##.', '##..##.', '#####..', '#####..', '##..##.', '##..##.', '##..##.', '#####..'],
+  ['..###..', '.##.##.', '##...##', '##...##', '#######', '#######', '##...##', '##...##', '##...##']
+];
+// the rooftop sign stands upright facing the camera: X, Y = top-left pixel of its panel
+function hideoutSign(e) { const r = e.rect, p = isoXY(r.x + 50, r.y + 8, HIDE_HT); return [Math.round(p[0]) - 8, Math.round(p[1]) - 17]; }
+function hideoutGeo(e) {
+  const r = e.rect, a = isoXY(r.x, r.y + r.h, 0), ax = Math.round(a[0]), ay = Math.round(a[1]), nS = r.w >> 1, nE = r.h >> 1, cx = ax + nS, cy = ay + (nS >> 1);
+  return { ax, ay, cx, cy, nS, nE, S: (i, j) => [ax + i, ay - 1 + ((i + 1) >> 1) - j], E: (i, j) => [cx + i, cy - 1 - ((i + 1) >> 1) - j] };
+}
+function hideoutStatic(e, g) {
+  const r = e.rect, x0 = r.x, y0 = r.y, x1 = x0 + r.w, y1 = y0 + r.h, ht = HIDE_HT, live = !e.cleared, col = e.col, { S, E, nS, nE } = g;
+  const put = (p, c) => { ctx.fillStyle = c; ctx.fillRect(p[0], p[1], 1, 1); };
+  const fill = (W, i0, i1, j0, j1, c) => { for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) put(W(i, j), typeof c === 'function' ? c(i, j) : c); };
+  // ---- roof slab (the walls are painted over its lower edges)
+  const T = [isoXY(x0, y0, ht), isoXY(x1, y0, ht), isoXY(x1, y1, ht), isoXY(x0, y1, ht)];
+  ipoly([T[0], T[1], [T[2][0], T[2][1] + 2], T[3]], '#332b2d');
+  for (const u of [32, 64]) iline(isoXY(x0 + u, y0, ht), isoXY(x0 + u, y1, ht), '#2a2325');             // tar-paper seams
+  iline(isoXY(x0 + 2, y0 + 2, ht), isoXY(x1 - 2, y0 + 2, ht), '#4b4143'); iline(isoXY(x0 + 2, y0 + 2, ht), isoXY(x0 + 2, y1 - 2, ht), '#4b4143');   // back parapets
+  for (const [px_, py_] of [[20, 44], [52, 52], [78, 14], [70, 30]]) { const p = isoXY(x0 + px_, y0 + py_, ht); ctx.fillStyle = '#46506a'; ctx.fillRect(Math.round(p[0]), Math.round(p[1]), 2, 1); }   // puddles
+  // ---- brick walls
+  const rnd2 = (a, b) => (hash2(a + e.hid * 57, b) % 1000) / 1000;
+  const brick = (side, n) => (i, j) => {
+    const lit = side === 0;
+    if (j === 0) return lit ? '#26262c' : '#1b1b21';
+    if (j === 1) return lit ? '#6f6f76' : '#4b4b53';
+    if (j === 23) return lit ? '#978b82' : '#655c5c';                                  // coping
+    if (j === 22) return lit ? '#353945' : '#262933';                                  // steel band
+    if (j === 21) return live ? shade(col, lit ? .78 : .5) : (lit ? '#4c4c54' : '#36363d');   // the gang's stripe
+    const c0 = (j - 2) / 3 | 0, jj = (j - 2) % 3, off = (c0 & 1) * 2, bi = (i + off) >> 2;
+    let base = lit ? '#5c3c31' : '#3f2a28';
+    if (jj === 2) return shade(base, .74);                                             // mortar course
+    if (((i + off) & 3) === 0) return shade(base, .86);                                // joint
+    const v = rnd2(c0 * 31 + side * 7, bi);
+    let k = v < .16 ? 1.16 : v > .86 ? .86 : 1;
+    if (j >= 18) k *= .9; else if (j <= 5) k *= 1.07;                                  // shaded under the band, lit near the ground
+    if (lit && i === n - 1) k *= 1.25; if (lit && i === 0) k *= .75; if (!lit && i === n - 1) k *= .8;   // corner edges
+    return shade(base, k);
+  };
+  fill(S, 0, nS - 1, 0, HIDE_ROWS - 1, brick(0, nS)); fill(E, 0, nE - 1, 0, HIDE_ROWS - 1, brick(1, nE));
+  // ---- south wall: gate, windows, graffiti, floodlights
+  const g0 = (nS >> 1) - 8, g1 = g0 + 15;                                             // gate opening columns
+  fill(S, g0, g1, 0, 9, '#050404');
+  fill(S, g0 - 1, g0 - 1, 0, 10, '#7d828f'); fill(S, g1 + 1, g1 + 1, 0, 10, '#555a67');
+  fill(S, g0, g1, 10, 10, i => ((i - g0) >> 1) & 1 ? '#17130a' : '#e0b020');           // hazard lintel
+  fill(S, g0 - 1, g1 + 1, 11, 11, '#2b2e39'); fill(S, g0 - 1, g1 + 1, 12, 12, '#444956');   // shutter housing
+  for (const w0 of [3, nS - 11]) { fill(S, w0, w0 + 7, 13, 18, '#1a1414'); fill(S, w0 + 1, w0 + 6, 14, 17, '#0e0a0b'); fill(S, w0, w0 + 7, 12, 12, '#7a6f68'); }   // window frames and sills
+  const tag = (W, i0, j0, rows, c) => rows.forEach((row, k) => { for (let i = 0; i < row.length; i++) if (row[i] === '#') put(W(i0 + i, j0 + rows.length - 1 - k), c); });
+  tag(S, 2, 3, ['.#...#...', '#.#.#.#.#', '#..#...#.', '.......#.'], shade(col, live ? .95 : .55));
+  tag(S, nS - 12, 4, ['#..#.##.', '####.#.#', '#..#.##.'], live ? '#3ac2dc' : '#2c6470');
+  put(S(1, 20), '#dfe2ea'); put(S(nS - 3, 20), '#dfe2ea');                              // floodlight heads
+  // ---- east wall: the gang's initial sprayed large (with a drop shadow), side door, vent
+  tag(E, 12, 5, HIDE_TAG[e.did % 3], '#1c1516'); tag(E, 11, 6, HIDE_TAG[e.did % 3], shade(col, live ? 1 : .5));
+  tag(E, 19, 4, ['#.#', '.#.', '#.#'], live ? '#e8ecf4' : '#6a6e78');
+  fill(E, 25, 29, 2, 10, '#4a505e'); fill(E, 25, 25, 2, 10, '#262932'); fill(E, 29, 29, 2, 10, '#31343f'); fill(E, 25, 29, 11, 11, '#262932');   // steel door
+  fill(E, 26, 28, 8, 9, '#161a24'); put(E(28, 5), '#b8bcc6');                           // its slot window and handle
+  fill(E, 1, 5, 14, 16, '#262932'); fill(E, 1, 5, 15, 15, '#525866'); fill(E, 2, 3, 6, 13, (i, j) => shade('#3f2a28', .8));   // vent and the stain under it
+  // ---- roof clutter
+  ibox(x0 + 6, y0 + 6, 22, 18, ht, 18, '#4a4042', '#684a3d', '#463230');                // stair hut
+  { const d = isoXY(x0 + 13, y0 + 24, ht); ctx.fillStyle = '#16110f'; ctx.fillRect(Math.round(d[0]) + 1, Math.round(d[1]) - 3, 3, 4); }   // its door
+  const sk = [isoXY(x0 + 38, y0 + 14, ht), isoXY(x0 + 62, y0 + 14, ht), isoXY(x0 + 62, y0 + 34, ht), isoXY(x0 + 38, y0 + 34, ht)];
+  ipoly(sk, '#171b26'); for (let i = 0; i < 4; i++) iline(sk[i], sk[(i + 1) % 4], '#5a5e6c');   // skylight
+  ibox(x1 - 36, y1 - 28, 20, 14, ht, 8, '#767c8a', '#5b6170', '#414654');               // air-conditioning unit
+  { const f = isoXY(x1 - 26, y1 - 21, ht + 8); iellipse(f[0], f[1], 4, 2, '#23262f'); ctx.fillStyle = '#343844'; const s = isoXY(x1 - 36, y1 - 14, ht + 4); for (let i = 1; i < 9; i += 2) ctx.fillRect(Math.round(s[0]) + i, Math.round(s[1]) + (i >> 1), 1, 1); }
+  { const m = isoXY(x0 + 12, y1 - 10, ht); ctx.fillStyle = '#6a6e7a'; ctx.fillRect(Math.round(m[0]), Math.round(m[1]) - 5, 1, 5); }   // beacon mast
+  { const fp = isoXY(x1 - 12, y0 + 12, ht); ctx.fillStyle = '#9a9ea8'; ctx.fillRect(Math.round(fp[0]), Math.round(fp[1]) - 17, 1, 17); ctx.fillStyle = '#5a5e68'; ctx.fillRect(Math.round(fp[0]) - 1, Math.round(fp[1]) - 1, 3, 1); }   // flag pole
+  // ---- rooftop sign: panel on two legs, tubes unlit here
+  { const [X, Y] = hideoutSign(e), em = HIDE_EMBLEM[e.did % 3];
+    ctx.fillStyle = '#3a3e4a'; ctx.fillRect(X + 2, Y + 14, 1, 4); ctx.fillRect(X + 14, Y + 14, 1, 4);
+    ctx.fillStyle = '#07070c'; ctx.fillRect(X - 1, Y - 1, 19, 16); ctx.fillStyle = '#2c2f3a'; ctx.fillRect(X, Y, 17, 14); ctx.fillStyle = '#0f0d11'; ctx.fillRect(X + 1, Y + 1, 15, 12);
+    em.forEach((row, k) => { for (let i = 0; i < row.length; i++) if (row[i] !== '.') { ctx.fillStyle = '#3a3336'; ctx.fillRect(X + 1 + i, Y + 1 + k, 1, 1); } }); }
+  // ---- razor wire: loose coils on the front parapets, a plain strand along the back
+  for (let i = 1; i < nS; i += 2) put(S(i, 24), i % 4 === 1 ? '#b4b8c2' : '#5e616b');
+  for (let i = 1; i < nE; i += 2) put(E(i, 24), i % 4 === 1 ? '#9296a0' : '#4e515a');
+  for (const [a, b] of [[T[0], T[1]], [T[0], T[3]]]) { const n = Math.round(Math.hypot(b[0] - a[0], b[1] - a[1])); for (let i = 0; i <= n; i += 2) ipx(lerp(a[0], b[0], i / n), lerp(a[1], b[1], i / n) - 1, '#6a6d77'); }
+}
+function drawIsoHideout(e) {
+  const r = e.rect, x0 = r.x, y0 = r.y, x1 = x0 + r.w, y1 = y0 + r.h, ht = HIDE_HT, t = G.time, col = e.col, live = !e.cleared, g = hideoutGeo(e), { S, E, nS } = g;
+  // ---- the still picture, repainted only when the hideout changes state
+  const key = live ? 1 : 0;
+  if (!e._art || e._art.key !== key) {
+    const cvs = document.createElement('canvas'); cvs.width = nS + g.nE + 4; cvs.height = 84;
+    const keep = ctx, ox = ISO.ox, oy = ISO.oy; ISO.ox += 2 - g.ax; ISO.oy += 56 - g.ay; ctx = cvs.getContext('2d');
+    try { hideoutStatic(e, hideoutGeo(e)); } finally { ctx = keep; ISO.ox = ox; ISO.oy = oy; }
+    const wh = document.createElement('canvas'); wh.width = cvs.width; wh.height = cvs.height; const wc = wh.getContext('2d'); wc.drawImage(cvs, 0, 0); wc.globalCompositeOperation = 'source-in'; wc.fillStyle = '#fff'; wc.fillRect(0, 0, wh.width, wh.height);
+    e._art = { key, cv: cvs, white: wh };
+  }
+  ctx.drawImage(e._art.cv, g.ax - 2, g.ay - 56);
+  const put = (p, c) => { ctx.fillStyle = c; ctx.fillRect(p[0], p[1], 1, 1); };
+  // ---- gate: the shutter rolls up once the guards and the tower are down
+  const g0 = (nS >> 1) - 8, open = e.gateOpen ? (e.gateT === undefined ? 1 : e.gateT) : 0, sb = Math.round(10 * clamp(open, 0, 1));
+  if (open > 0 && live) { const m = S(g0 + 8, 4); iglow(m[0], m[1], 15, col, .55 * open); for (let i = 0; i < 16; i++) for (let j = 0; j < Math.min(sb, 4); j++) put(S(g0 + i, j), rgba(col, .16 - j * .035)); }   // light from inside on the floor of the doorway
+  for (let j = sb; j < 10; j++) for (let i = 0; i < 16; i++) put(S(g0 + i, j), j === sb ? ((i >> 1) & 1 ? '#17130a' : '#e0b020') : (j - sb) & 1 ? '#666b78' : '#4a4e5a');   // slats, hazard strip on the bottom edge
+  if (sb < 9) { put(S(g0 + 7, sb + 2), '#1d1f26'); put(S(g0 + 8, sb + 2), '#1d1f26'); }   // handle
+  const lamp = S(g0 + 8, 12);
+  if (live) { const locked = !e.gateOpen, on = locked ? Math.sin(t * 5) > 0 : true, c = locked ? '#ff2a3a' : '#4dff9a'; put(lamp, on ? c : '#4a1016'); if (on) iglow(lamp[0], lamp[1], 6, c, .7); } else put(lamp, '#2a2c34');
+  if (!live) return;
+  // ---- lit windows behind their bars
+  for (const w0 of [3, nS - 11]) {
+    const a = .5 + .22 * Math.sin(t * 3 + w0) + (Math.sin(t * 17 + w0 * 3) > .93 ? -.3 : 0);
+    for (let i = 1; i <= 6; i++) for (let j = 14; j <= 17; j++) put(S(w0 + i, j), i % 2 ? rgba(col, clamp(a, .1, .9)) : '#0a0707');
+    const m = S(w0 + 4, 15); iglow(m[0], m[1], 7, col, .25);
+  }
+  // ---- neon emblem; now and then a tube stutters
+  const em = HIDE_EMBLEM[e.did % 3], [sx, sy] = hideoutSign(e), stutter = Math.sin(t * 1.3 + e.hid * 2.1) > .95 && Math.sin(t * 43) > 0;
+  if (!stutter) {
+    const tube = mix(col, '#ffffff', .18), hot = mix(col, '#ffffff', .72);
+    em.forEach((row, k) => { for (let i = 0; i < row.length; i++) if (row[i] !== '.') put([sx + 1 + i, sy + 1 + k], row[i] === '+' ? hot : tube); });
+    iglow(sx + 8, sy + 7, 17, col, .5);
+  }
+  { const d = E(27, 12); put(d, '#ffe9b8'); iglow(d[0], d[1] + 1, 5, '#ffd9a0', .45); }   // lamp over the side door
+  // ---- roof: skylight glow, fan, flag, beacon, floodlights
+  const sk = [isoXY(x0 + 40, y0 + 16, ht), isoXY(x0 + 60, y0 + 16, ht), isoXY(x0 + 60, y0 + 32, ht), isoXY(x0 + 40, y0 + 32, ht)];
+  ctx.globalAlpha = .3 + .12 * Math.sin(t * 1.7 + e.hid); ipoly(sk, col); ctx.globalAlpha = 1;
+  iline(isoXY(x0 + 50, y0 + 14, ht), isoXY(x0 + 50, y0 + 34, ht), '#5a5e6c'); iline(isoXY(x0 + 38, y0 + 24, ht), isoXY(x0 + 62, y0 + 24, ht), '#5a5e6c');
+  { const m = isoXY(x0 + 50, y0 + 24, ht); iglow(m[0], m[1], 12, col, .22); }
+  { const f = isoXY(x1 - 26, y1 - 21, ht + 8), X = Math.round(f[0]), Y = Math.round(f[1]), ph = Math.floor(t * 12) % 3; ctx.fillStyle = '#5d6372';   // fan blade: one short bar turning
+    if (ph === 0) ctx.fillRect(X - 2, Y, 5, 1); else if (ph === 1) { ctx.fillRect(X - 2, Y - 1, 2, 1); ctx.fillRect(X, Y, 1, 1); ctx.fillRect(X + 1, Y + 1, 2, 1); } else { ctx.fillRect(X + 1, Y - 1, 2, 1); ctx.fillRect(X, Y, 1, 1); ctx.fillRect(X - 2, Y + 1, 2, 1); } }
+  { const fp = isoXY(x1 - 12, y0 + 12, ht), X = Math.round(fp[0]) + 1, Y = Math.round(fp[1]) - 17;   // flag: 9 x 6, rippling
+    for (let i = 0; i < 9; i++) { const dy = Math.round(Math.sin(t * 6 - i * .9) * (i / 8) * 1.6); ctx.fillStyle = i % 4 === 3 ? shade(col, .78) : col; ctx.fillRect(X + i, Y + dy, 1, i < 7 ? 6 : 5 - (i - 7)); }
+    ctx.fillStyle = '#1a1210'; ctx.fillRect(X + 3, Y + 2 + Math.round(Math.sin(t * 6 - 2.7) * .6), 2, 2); }
+  { const on = Math.sin(t * 5) > 0, m = isoXY(x0 + 12, y1 - 10, ht), X = Math.round(m[0]), Y = Math.round(m[1]) - 7; ctx.fillStyle = on ? '#ff2a2a' : '#401010'; ctx.fillRect(X, Y, 2, 2); if (on) iglow(X + 1, Y + 1, 8, '#ff2a2a', .8); }
+  for (const i of [1, nS - 3]) { const f = S(i, 20); iglow(f[0], f[1] + 2, 8, '#ffeedd', .5); for (let j = 19; j >= 12; j--) { const w = (19 - j) >> 1; for (let k = -w; k <= w; k++) put(S(i + k, j), 'rgba(255,238,214,.07)'); } }   // floodlights and their cones on the brick
+  if (e.flash > 0) { ctx.globalAlpha = .8; ctx.drawImage(e._art.white, g.ax - 2, g.ay - 56); ctx.globalAlpha = 1; }
 }
 
 /* ============================== 12 HUD ============================== */
