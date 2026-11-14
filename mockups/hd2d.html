@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>body{margin:0;background:#05060b}canvas{display:block;image-rendering:pixelated}</style></head>
+<body><canvas id="c" width="1600" height="900"></canvas>
+<script>
+/* Hand-placed pixel sprites drawn for the HIGH camera: you mostly see the top of the head and the top of
+   the shoulders; bodies are short; light comes from above (tops light, lower parts darker). 16 wide. */
+const PAL = {
+  k: '#07070c',
+  // hero
+  h: '#f4f6ff', H: '#bfc6dc', J: '#8a92b0', s: '#f0c8a0', S: '#c4936a', e: '#12141c',
+  C: '#46548a', c: '#2c3558', d: '#1c2240', T: '#7ff4ff', t: '#2fb8d8', g: '#d8ffff', G: '#5fe8ff',
+  p: '#20243a', P: '#151827', b: '#0c0d14',
+  // gang
+  B: '#3a3a46', Y: '#26262e', o: '#f08a40', O: '#c8602a', q: '#8a3a18', y: '#ffd04a', R: '#8a2414', r: '#b8301c', n: '#2e2e36',
+  // cop
+  u: '#3a5aa8', U: '#24386e', V: '#16224a', Q: '#ffd23c', w: '#0e1430', W: '#2a3460',
+  // civilian
+  m: '#7a5232', M: '#5a3a22', N: '#3a2414', v: '#7cc488', i: '#4f9a5c', I: '#356a40', j: '#3a4f88', l: '#283864'
+};
+const mir = half => half.map(r => r + r.split('').reverse().join(''));
+const SPR = {
+  heroDown: mir([
+    '....k.k.', '...kJkhk', '..khhhhh', '.khhhhhh', '.kHhhhhh', '.kHHhhHh', '.kJHHJHH', '.kJssHss',
+    '.kSssess', '..kSsSss', '.kkCCCCC', 'kCCCCCCC', 'kckcccct', 'kckcccdT', 'kGkdccdT', 'kgkdddcT',
+    '.kkddddt', '..kpPpk.', '..kpPpk.', '..kbbbk.'
+  ]),
+  heroUp: mir([
+    '....k.k.', '...kJkhk', '..khhhhh', '.khhhhhh', '.khhhhhh', '.kHhhhhh', '.kHHhhhh', '.kJHHhHh',
+    '.kJJHHHH', '..kJJJJJ', '.kkCCCCC', 'kCCCCCCC', 'kckccccc', 'kckccccc', 'kGkcdccc', 'kgkddddd',
+    '.kdddddd', '.kTtttttt'.slice(0, 8), '..kpPpk.', '..kbbbk.'
+  ]),
+  heroRight: [
+    '.....k.k.k......', '....kJkhkhk.....', '...khhhhhhhk....', '..khhhhhhhhhk...', '..kHhhhhhhhhk...', '..kJHhhhhHsssk..',
+    '..kJJHHhssssek..', '..kJJJHsssssk...', '...kJJkSSSSk....', '....kkCCCCk.....', '...kCCCCCCCk....', '..kccccccCCk....',
+    '.kdcccckGkck....', 'kddcccckgkTk....', 'kTdddcckkkTk....', '.kTTdddddddk....', '...kpPk.kpPk....', '...kpPk.kpPk....',
+    '...kbbbk.kbbbk..', '................'
+  ],
+  gruntDown: mir([
+    '........', '....kkkk', '...kBBBB', '..kBBBBB', '.kBBBBBB', '.kYBBBBB', '.kYYYYYY', '.knnnnnn',
+    '.kSssess', '..kRrRRR', '.kkooooo', 'kooooooo', 'kOkOOOOy', 'kOkOOOOy', 'ksk' + 'qqOOy', 'kSkqqqqy',
+    '.kkqqqqq', '..knNnk.', '..knNnk.', '..kbbbk.'
+  ]),
+  copDown: mir([
+    '........', '....kkkk', '...kwwww', '..kwwwWw', '.kwwwwww', '.kwWwwwQ', '.kkkkkkk', '.kWWWWWW',
+    '.kSssess', '..kSsSss', '.kkuuuuu', 'kuuuuuuu', 'kUkUUUUQ', 'kUkUUUUU', 'ksk' + 'VVUUU', 'kSkVVVVU',
+    '.kkVVVVV', '..kVlVk.', '..kVlVk.', '..kbbbk.'
+  ]),
+  civDown: mir([
+    '........', '....kkkk', '...kmmmm', '..kmmmmm', '.kmmMmmm', '.kMmmmmm', '.kMMmMMm', '.kNMssMs',
+    '.kSssess', '..kSsSss', '.kkvvvvv', 'kvvvvvvv', 'kikiiiii', 'kikiiiiv', 'ksk' + 'IIiii', 'kSkIIIIi',
+    '.kkIIIII', '..kjljk.', '..kjljk.', '..kbbbk.'
+  ])
+};
+function draw(ctx, spr, x, y, sc) { spr.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) { const ch = row[rx]; if (ch === '.' || ch === undefined) continue; ctx.fillStyle = PAL[ch] || '#f0f'; ctx.fillRect(x + rx * sc, y + ry * sc, sc, sc); } }); }
+const cv = document.getElementById('c'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+const img = new Image();
+img.onload = () => {
+  ctx.drawImage(img, 0, 0);
+  Promise.resolve([[800,480.18357899838264],[586.5263473652104,420.58643030575416],[522.5405885111165,511.16780510512683],[470.40822237732505,363.9543891505683],[1059.7795316691356,221.8142224201031],[1122.845177983758,209.78975981480838],[237.29713707044962,715.8249739284116],[998.1106045795391,679.2928238478382]]).then(spots => {
+    const P = 4; // one sprite pixel = one pixel of the low-res 3D render
+    const who = ['heroDown', 'gruntDown', 'gruntDown', 'gruntDown', 'civDown', 'civDown', 'civDown', 'copDown'];
+    spots.forEach(([sx, sy], i) => {
+      const spr = SPR[who[i]], w = 16 * P, h = spr.length * P, x = Math.round((sx - w / 2) / P) * P, y = Math.round((sy - h + P) / P) * P;
+      ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(x + 3 * P, y + h - P, 10 * P, 2 * P);
+      if (i === 0) { ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(sx, sy - 30, 0, sx, sy - 30, 70); g.addColorStop(0, 'rgba(60,224,255,.35)'); g.addColorStop(1, 'rgba(60,224,255,0)'); ctx.fillStyle = g; ctx.fillRect(sx - 70, sy - 100, 140, 140); ctx.globalCompositeOperation = 'source-over'; }
+      draw(ctx, spr, x, y, P);
+    });
+    // inset: sprite close-ups at 6x
+    ctx.fillStyle = 'rgba(5,6,11,.92)'; ctx.fillRect(1040, 560, 540, 320);
+    ctx.fillStyle = '#e8ecf7'; ctx.font = '600 18px system-ui'; ctx.fillText('Close-up (6×): you facing down, up, right · gang · cop · civilian', 1056, 588);
+    ['heroDown', 'heroUp', 'heroRight', 'gruntDown', 'copDown', 'civDown'].forEach((k, i) => draw(ctx, SPR[k], 1056 + i * 86, 610 + (i % 2) * 0, 5));
+    document.title = 'done';
+  });
+};
+img.src = 'street_lowres.png';
+</script></body></html>

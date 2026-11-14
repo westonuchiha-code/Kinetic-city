@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>body{margin:0;background:#05060b}canvas{display:block;image-rendering:pixelated}</style></head>
+<body><canvas id="out" width="1600" height="900"></canvas>
+<script>
+/* Isometric pixel mockup. Everything is drawn pixel-by-pixel (no antialiasing) into a 400x225 canvas,
+   then scaled 4x. Tiles are 32x16 diamonds; heights are in pixels. */
+const SC = +(new URLSearchParams(location.search).get('sc') || 5), LW = Math.round(1600 / SC), LH = Math.round(900 / SC);
+const low = document.createElement('canvas'); low.width = LW; low.height = LH;
+const g = low.getContext('2d');
+const OX = Math.round(LW / 2), OY = Math.round(LH / 2 - 96 + 6);
+const P = (x, y, z = 0) => [Math.round(OX + (x - y) * 16), Math.round(OY + (x + y) * 8 - z)];
+function px(x, y, c) { g.fillStyle = c; g.fillRect(x | 0, y | 0, 1, 1); }
+function poly(pts, c) { // scanline fill, crisp pixels
+  let y0 = Infinity, y1 = -Infinity; for (const p of pts) { y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
+  g.fillStyle = c;
+  for (let y = Math.ceil(y0); y < y1; y++) {
+    const xs = [];
+    for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; if ((a[1] <= y && b[1] > y) || (b[1] <= y && a[1] > y)) xs.push(a[0] + (y - a[1]) / (b[1] - a[1]) * (b[0] - a[0])); }
+    xs.sort((a, b) => a - b); for (let i = 0; i + 1 < xs.length; i += 2) g.fillRect(Math.round(xs[i]), y, Math.round(xs[i + 1]) - Math.round(xs[i]), 1);
+  }
+}
+function line(a, b, c) { const n = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])); for (let i = 0; i <= n; i++) px(Math.round(a[0] + (b[0] - a[0]) * i / n), Math.round(a[1] + (b[1] - a[1]) * i / n), c); }
+let seed = 7; const R = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+/* ---------- ground ---------- */
+const N = 12, ROAD = (x, y) => (x >= 5 && x <= 6) || (y >= 5 && y <= 6);
+g.fillStyle = '#06070c'; g.fillRect(0, 0, LW, LH);
+for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+  const road = ROAD(x, y), c = [P(x, y), P(x + 1, y), P(x + 1, y + 1), P(x, y + 1)];
+  poly(c, road ? ((x + y) % 2 ? '#191b26' : '#1b1d29') : ((x + y) % 2 ? '#2a2d3c' : '#2d3040'));
+  if (!road) { line(c[0], c[1], '#363a4e'); line(c[0], c[3], '#363a4e'); }
+}
+// lane dashes + crosswalk
+for (let x = 0; x < N; x++) if (!(x >= 5 && x <= 6) && x % 1 === 0) { const a = P(x + .25, 6), b = P(x + .65, 6); line(a, b, '#c8a040'); }
+for (let y = 0; y < N; y++) if (!(y >= 5 && y <= 6)) { const a = P(6, y + .25), b = P(6, y + .65); line(a, b, '#c8a040'); }
+for (let i = 0; i < 6; i++) { const t = 5.1 + i * .33; poly([P(t, 4.2), P(t + .18, 4.2), P(t + .18, 4.9), P(t, 4.9)], '#9aa0c0'); }
+// puddles (dithered reflections)
+for (const [cx, cy, r] of [[3.3, 5.6, 1.1], [8.2, 6.4, .8]]) { const [sx, sy] = P(cx, cy); for (let y = -r * 8; y < r * 8; y++) for (let x = -r * 16; x < r * 16; x++) if ((x * x) / (r * r * 256) + (y * y) / (r * r * 64) < 1 && (x + y) % 2 === 0) px(sx + x, sy + y, '#2c3450'); }
+
+/* ---------- building helper ---------- */
+const draws = [];
+function building(x0, y0, w, d, h, wall, roof, opts = {}) {
+  draws.push({ depth: x0 + w + y0 + d, f: () => {
+    const A = [P(x0, y0 + d, 0), P(x0 + w, y0 + d, 0), P(x0 + w, y0 + d, h), P(x0, y0 + d, h)];   // front-left wall
+    const B = [P(x0 + w, y0, 0), P(x0 + w, y0 + d, 0), P(x0 + w, y0 + d, h), P(x0 + w, y0, h)];   // front-right wall
+    poly(A, wall[0]); poly(B, wall[1]);
+    // floor lines + lit windows (both walls)
+    for (let fz = 14; fz < h - 4; fz += 14) {
+      for (const [face, len, lit] of [['A', w, wall[2]], ['B', d, wall[2]]]) {
+        for (let t = .5; t < len * 2 - .2; t += 1) {
+          const u = t / 2, on = R() < (opts.lit || .45);
+          const p = face === 'A' ? P(x0 + u, y0 + d, fz + 7) : P(x0 + w, y0 + u, fz + 7);
+          const col = on ? (R() < .15 ? opts.neon || '#ff4fa0' : (R() < .5 ? '#ffd890' : '#9fd8ff')) : '#10121a';
+          for (let k = 0; k < 4; k++) { px(p[0] + (face === 'A' ? k : -k) - (face === 'A' ? 1 : -1), p[1] - 2 + (k >> 1) * (face === 'A' ? 1 : -1) + 0, col); px(p[0] + (face === 'A' ? k : -k) - (face === 'A' ? 1 : -1), p[1] - 1 + (k >> 1) * (face === 'A' ? 1 : -1), col); px(p[0] + (face === 'A' ? k : -k) - (face === 'A' ? 1 : -1), p[1] + (k >> 1) * (face === 'A' ? 1 : -1), col); }
+        }
+      }
+    }
+    // ground floor: shopfront + door
+    if (opts.shop) { const [a, b] = [P(x0 + .4, y0 + d, 2), P(x0 + w - .4, y0 + d, 2)]; for (let z = 0; z < 8; z++) line([a[0], a[1] - z], [b[0], b[1] - z], z === 4 ? '#ffffff' : opts.shop); for (let z = -2; z < 0; z++) line([a[0], a[1] - z + 1], [b[0], b[1] - z + 1], '#5a4a30'); }
+    if (opts.door) { const p = P(x0 + w, y0 + d * .5, 0); for (let z = 0; z < 11; z++) for (let k = 0; k < 5; k++) px(p[0] - k, p[1] - z - (k >> 1) + 1, z > 9 ? '#0a0a10' : '#ffd696'); }
+    // roof
+    const T = [P(x0, y0, h), P(x0 + w, y0, h), P(x0 + w, y0 + d, h), P(x0, y0 + d, h)];
+    poly(T, roof); line(T[3], T[2], '#ffffff22'); line(T[2], T[1], '#ffffff22'); line(T[3], T[2], shade(roof, 1.6)); line(T[2], T[1], shade(roof, 1.4));
+    if (opts.ac) { const c = P(x0 + w * .6, y0 + d * .4, h); poly([[c[0] - 6, c[1]], [c[0], c[1] - 3], [c[0] + 6, c[1]], [c[0], c[1] + 3]], shade(roof, 1.8)); poly([[c[0] - 6, c[1]], [c[0], c[1] + 3], [c[0], c[1] + 7], [c[0] - 6, c[1] + 4]], shade(roof, 1.2)); poly([[c[0], c[1] + 3], [c[0] + 6, c[1]], [c[0] + 6, c[1] + 4], [c[0], c[1] + 7]], shade(roof, .9)); }
+    // vertical neon sign on the right wall
+    if (opts.sign) { const p = P(x0 + w, y0 + d * .25, h * .35); for (let z = 0; z < 22; z++) { px(p[0] + 1, p[1] - z, opts.sign); px(p[0] + 2, p[1] - z + 1, opts.sign); if (z % 3 === 0) px(p[0] + 1, p[1] - z, '#ffffff'); } glowDots(p[0] + 2, p[1] - 11, 14, opts.sign); }
+    // edges
+    line(A[0], A[3], '#00000066'); line(B[1], B[2], shade(wall[1], .6));
+  } });
+}
+function shade(h, k) { const n = parseInt(h.slice(1, 7), 16); const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => Math.max(0, Math.min(255, v * k | 0))); return '#' + c.map(v => v.toString(16).padStart(2, '0')).join(''); }
+function glowDots(cx, cy, r, col) { for (let y = -r; y <= r; y++) for (let x = -r * 1.4; x <= r * 1.4; x++) { const d = Math.hypot(x / 1.4, y) / r; if (d < 1 && (x + y * 3 + ((x * y) & 1)) % (d < .5 ? 3 : 5) === 0) { g.globalAlpha = .55 * (1 - d); px(cx + x, cy + y, col); g.globalAlpha = 1; } } }
+
+/* ---------- city pieces ---------- */
+building(0, 0, 4, 4, 58, ['#3a4566', '#262e48', '#000'], '#2e3650', { shop: '#ff4fa0', ac: true, sign: '#3ce0ff', door: true, neon: '#ff4fa0' });
+building(7, 0, 5, 4, 44, ['#5a4440', '#3c2c2a', '#000'], '#4a3834', { shop: '#ffb13b', ac: true, sign: '#ff4fa0', lit: .35 });
+building(0, 7.5, 4, 4.5, 26, ['#3e3a6a', '#2a2648', '#000'], '#34305a', { shop: '#7affea', door: true, lit: .5, neon: '#b26bff' });
+building(7.5, 7.5, 2, 2, 16, ['#2e2826', '#1e1a19', '#000'], '#26201e', { lit: .2 });   // little gang shack
+building(10, 7.5, 2, 4.5, 30, ['#2a3a5a', '#1c2740', '#000'], '#253350', { sign: '#ffd23c', lit: .55 });
+// street lamp light pools (dithered)
+function lamp(x, y) { draws.push({ depth: x + y, f: () => { const b = P(x, y, 0), t = P(x, y, 34); line(b, t, '#3a3e4c'); px(t[0] + 1, t[1], '#fff6d8'); px(t[0] + 2, t[1], '#fff6d8'); px(t[0] + 1, t[1] + 1, '#ffd7a6'); } }); const [cx, cy] = P(x, y); glowDots(cx, cy, 22, '#ffcf90'); }
+lamp(4.6, 4.6); lamp(7.3, 4.6); lamp(4.6, 7.3);
+// a car (iso box body + cabin)
+function car(x, y, col) {
+  draws.push({ depth: x + 2 + y + 1, f: () => {
+    const box = (x0, y0, w, d, z0, z1, top, l, r) => { poly([P(x0, y0 + d, z0), P(x0 + w, y0 + d, z0), P(x0 + w, y0 + d, z1), P(x0, y0 + d, z1)], l); poly([P(x0 + w, y0, z0), P(x0 + w, y0 + d, z0), P(x0 + w, y0 + d, z1), P(x0 + w, y0, z1)], r); poly([P(x0, y0, z1), P(x0 + w, y0, z1), P(x0 + w, y0 + d, z1), P(x0, y0 + d, z1)], top); };
+    box(x, y, 1.6, .7, 2, 8, shade(col, 1.15), shade(col, .8), shade(col, .55));
+    box(x + .35, y + .1, .8, .5, 8, 13, shade(col, .95), '#1b2a40', '#122034');
+    for (const [wx, wy] of [[x + .3, y + .7], [x + 1.3, y + .7]]) { const p = P(wx, wy, 2); for (let k = -2; k <= 2; k++) for (let z = -2; z <= 2; z++) if (k * k + z * z < 6) px(p[0] + k, p[1] + z, '#0a0a0d'); }
+    const hl = P(x + 1.6, y + .55, 6); px(hl[0], hl[1], '#fff6d0'); px(hl[0] - 1, hl[1] + 1, '#fff6d0'); const hl2 = P(x + 1.6, y + .15, 6); px(hl2[0], hl2[1], '#fff6d0'); px(hl2[0] - 1, hl2[1] - 1, '#fff6d0');
+  } });
+}
+car(1.2, 5.15, '#b8323a'); car(7.4, 6.05, '#e8d040');
+
+/* ---------- characters (hand-placed, iso 3/4: facing down-left / down-right) ---------- */
+const PAL = { k: '#07070c', h: '#f4f6ff', H: '#bfc6dc', J: '#8a92b0', s: '#f0c8a0', S: '#c4936a', e: '#12141c', C: '#46548a', c: '#2c3558', d: '#1c2240', T: '#7ff4ff', g: '#d8ffff', G: '#5fe8ff', p: '#20243a', b: '#0c0d14',
+  B: '#3a3a46', Y: '#26262e', o: '#f08a40', O: '#c8602a', q: '#8a3a18', y: '#ffd04a', R: '#a8301c', n: '#2e2e36', m: '#7a5232', M: '#5a3a22', v: '#7cc488', i: '#4f9a5c', I: '#356a40', j: '#3a4f88', u: '#3a5aa8', U: '#24386e', V: '#16224a', Q: '#ffd23c', w: '#0e1430' };
+// 12x16 sprites facing down-right (mirror for down-left)
+const HERO = [
+  '...k.k.k....', '..khkhkhk...', '.khhhhhhhk..', '.kHhhhhhhk..', '.kJHhhhHsk..', '.kJHHsssesk.', '..kJSssssk..', '..kkCCCCCk..',
+  '.kCCCCCCCCk.', 'kcckccccTGk.', 'kdckcccdTgk.', '.kdkddddTk..', '..kddddddk..', '..kpk.kpk...', '..kpk..kpk..', '..kbbk.kbbk.'];
+const GRUNT = [
+  '............', '...kkkkk....', '..kBBBBBk...', '.kBBBBBBBk..', '.kYYYYYYYk..', '.knnssesk...', '..kRRRRRk...', '..kkoooook..',
+  '.koooooooyk.', 'kOkOOOOOyk..', 'ksk' + 'qqqqyk...', '.kkqqqqqk...', '..kqqqqqk...', '..knk.knk...', '..knk..knk..', '..kbbk.kbbk.'];
+const CIV = [
+  '............', '...kkkkk....', '..kmmmmmk...', '.kmmmmmmmk..', '.kMmmmMmmk..', '.kMMssesk...', '..kSssssk...', '..kkvvvvk...',
+  '.kvvvvvvvk..', 'kikiiiiiik..', 'ksk' + 'IIIIik...', '.kkIIIIIk...', '..kIIIIIk...', '..kjk.kjk...', '..kjk..kjk..', '..kbbk.kbbk.'];
+const COP = [
+  '............', '...kkkkk....', '..kwwwwwk...', '.kwwwQwwwk..', '.kkkkkkkkkk.', '.kwssesk....', '..kSssssk...', '..kkuuuuk...',
+  '.kuuuuuuQk..', 'kUkUUUUUUk..', 'ksk' + 'VVVVUk...', '.kkVVVVVk...', '..kVVVVVk...', '..kVk.kVk...', '..kVk..kVk..', '..kbbk.kbbk.'];
+const PAL2 = {
+  k: '#07070c',
+  // hero
+  h: '#f4f6ff', H: '#bfc6dc', J: '#8a92b0', s: '#f0c8a0', S: '#c4936a', e: '#12141c',
+  C: '#46548a', c: '#2c3558', d: '#1c2240', T: '#7ff4ff', t: '#2fb8d8', g: '#d8ffff', G: '#5fe8ff',
+  p: '#20243a', P: '#151827', b: '#0c0d14',
+  // gang
+  B: '#3a3a46', Y: '#26262e', o: '#f08a40', O: '#c8602a', q: '#8a3a18', y: '#ffd04a', R: '#8a2414', r: '#b8301c', n: '#2e2e36',
+  // cop
+  u: '#3a5aa8', U: '#24386e', V: '#16224a', Q: '#ffd23c', w: '#0e1430', W: '#2a3460',
+  // civilian
+  m: '#7a5232', M: '#5a3a22', N: '#3a2414', v: '#7cc488', i: '#4f9a5c', I: '#356a40', j: '#3a4f88', l: '#283864'
+};
+const mir = half => half.map(r => r + r.split('').reverse().join(''));
+const SPR2 = {
+  heroDown: mir([
+    '....k.k.', '...kJkhk', '..khhhhh', '.khhhhhh', '.kHhhhhh', '.kHHhhHh', '.kJHHJHH', '.kJssHss',
+    '.kSssess', '..kSsSss', '.kkCCCCC', 'kCCCCCCC', 'kckcccct', 'kckcccdT', 'kGkdccdT', 'kgkdddcT',
+    '.kkddddt', '..kpPpk.', '..kpPpk.', '..kbbbk.'
+  ]),
+  heroUp: mir([
+    '....k.k.', '...kJkhk', '..khhhhh', '.khhhhhh', '.khhhhhh', '.kHhhhhh', '.kHHhhhh', '.kJHHhHh',
+    '.kJJHHHH', '..kJJJJJ', '.kkCCCCC', 'kCCCCCCC', 'kckccccc', 'kckccccc', 'kGkcdccc', 'kgkddddd',
+    '.kdddddd', '.kTtttttt'.slice(0, 8), '..kpPpk.', '..kbbbk.'
+  ]),
+  heroRight: [
+    '.....k.k.k......', '....kJkhkhk.....', '...khhhhhhhk....', '..khhhhhhhhhk...', '..kHhhhhhhhhk...', '..kJHhhhhHsssk..',
+    '..kJJHHhssssek..', '..kJJJHsssssk...', '...kJJkSSSSk....', '....kkCCCCk.....', '...kCCCCCCCk....', '..kccccccCCk....',
+    '.kdcccckGkck....', 'kddcccckgkTk....', 'kTdddcckkkTk....', '.kTTdddddddk....', '...kpPk.kpPk....', '...kpPk.kpPk....',
+    '...kbbbk.kbbbk..', '................'
+  ],
+  gruntDown: mir([
+    '........', '....kkkk', '...kBBBB', '..kBBBBB', '.kBBBBBB', '.kYBBBBB', '.kYYYYYY', '.knnnnnn',
+    '.kSssess', '..kRrRRR', '.kkooooo', 'kooooooo', 'kOkOOOOy', 'kOkOOOOy', 'ksk' + 'qqOOy', 'kSkqqqqy',
+    '.kkqqqqq', '..knNnk.', '..knNnk.', '..kbbbk.'
+  ]),
+  copDown: mir([
+    '........', '....kkkk', '...kwwww', '..kwwwWw', '.kwwwwww', '.kwWwwwQ', '.kkkkkkk', '.kWWWWWW',
+    '.kSssess', '..kSsSss', '.kkuuuuu', 'kuuuuuuu', 'kUkUUUUQ', 'kUkUUUUU', 'ksk' + 'VVUUU', 'kSkVVVVU',
+    '.kkVVVVV', '..kVlVk.', '..kVlVk.', '..kbbbk.'
+  ]),
+  civDown: mir([
+    '........', '....kkkk', '...kmmmm', '..kmmmmm', '.kmmMmmm', '.kMmmmmm', '.kMMmMMm', '.kNMssMs',
+    '.kSssess', '..kSsSss', '.kkvvvvv', 'kvvvvvvv', 'kikiiiii', 'kikiiiiv', 'ksk' + 'IIiii', 'kSkIIIIi',
+    '.kkIIIII', '..kjljk.', '..kjljk.', '..kbbbk.'
+  ])
+};
+function sprite2(rows, x, y, flip, depth) {
+  draws.push({ depth, f: () => {
+    const [sx, sy] = P(x, y); const ox = sx - 8, oy = sy - rows.length + 1;
+    for (let k = -6; k <= 6; k++) { px(sx + k, sy, '#00000066'); if (Math.abs(k) < 4) px(sx + k, sy + 1, '#00000055'); }
+    rows.forEach((row, ry) => { for (let rx = 0; rx < 16; rx++) { const ch = row[flip ? 15 - rx : rx]; if (ch && ch !== '.') px(ox + rx, oy + ry, PAL2[ch] || '#f0f'); } });
+  } });
+}
+function sprite(rows, x, y, flip, depth) {
+  draws.push({ depth, f: () => {
+    const [sx, sy] = P(x, y); const ox = sx - 6, oy = sy - 16;
+    for (let k = -4; k <= 4; k++) { px(sx + k, sy, '#00000066'); if (Math.abs(k) < 3) px(sx + k, sy + 1, '#00000055'); }
+    rows.forEach((row, ry) => { for (let rx = 0; rx < 12; rx++) { const ch = row[flip ? 11 - rx : rx]; if (ch && ch !== '.') px(ox + rx, oy + ry, PAL[ch] || '#f0f'); } });
+  } });
+}
+sprite2(SPR2.heroDown, 6, 5.9, false, 11.9); glowDots(...P(6, 5.9).map((v, i) => i ? v - 9 : v), 13, '#3ce0ff');
+sprite2(SPR2.gruntDown, 6.9, 4.4, true, 11.3); sprite2(SPR2.gruntDown, 7.4, 5.0, true, 12.4); sprite2(SPR2.copDown, 4.5, 6.6, false, 11.1);
+sprite2(SPR2.civDown, 4.6, 3.6, false, 8.2); sprite2(SPR2.civDown, 4.3, 7.8, true, 12.1); sprite2(SPR2.civDown, 7.6, 7.3, true, 14.9);
+draws.sort((a, b) => a.depth - b.depth).forEach(d => d.f());
+// rain
+for (let i = 0; i < 160; i++) { const x = R() * LW, y = R() * LH; px(x, y, '#7a8ab055'); px(x - 1, y - 2, '#7a8ab040'); }
+const out = document.getElementById('out').getContext('2d'); out.imageSmoothingEnabled = false;
+out.fillStyle = '#05060b'; out.fillRect(0, 0, 1600, 900); out.drawImage(low, 0, 0, LW * SC, LH * SC);
+document.title = 'done';
+</script></body></html>
