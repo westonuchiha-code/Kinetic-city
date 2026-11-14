@@ -180,7 +180,7 @@ function releaseAbsorb() {
     FX.ring(p.x, p.y, R, '#ffffff', .4, 5); FX.ring(p.x, p.y, R * .75, '#9ff6ff', .3, 3); FX.flash(p.x, p.y, R * 2, '#bff', .35, 1.2);
     sfx('release', p.x, p.y); shake(.55); hitstop(.05); Input.rumble(1, .8, 280);
     for (const e of act) {
-      if (e === p || e.dead || e.held || (e.static && e.kind !== 'hideout')) continue; const d = dist(e, p); if (d > R + e.r) continue;
+      if (e === p || e.dead || e.held || (e.static && e.kind !== 'hideout' && e.kind !== 'tower')) continue; const d = dist(e, p); if (d > R + e.r) continue;
       if (!e.static) { const a = Math.atan2(e.y - p.y, e.x - p.x), k = 520 / Math.sqrt(e.m); e.vx += Math.cos(a) * k; e.vy += Math.sin(a) * k; e.vz = 130; if (!e.prop) { e.stun = Math.max(e.stun, .6); e.flung = true; e.lastHitBy = 'player'; } else { e.thrower = 'player'; e.thrownT = 1; } }
       hurt(e, dmg * (1 - d / (R + e.r) * .5), { by: 'player' });
     }

@@ -171,6 +171,7 @@ const PROPS_ISO = { car: 1, crate: 1, dumpster: 1, barrel: 1 };
 function drawUpright(e) {
   if (PEOPLE[e.kind] || e === P) { artT(); drawChar(e); if (e.aimT > 0 && (e.kind === 'grunt' || e.kind === 'cop')) drawAimLaser(e); return; }
   if (PROPS_ISO[e.kind]) { artT(); drawIsoProp(e); return; }
+  if (e.kind === 'tower') { artT(); drawIsoTower(e); return; }
   uprightT(e.x, e.y);
   const ang = e.ang; if (ang !== undefined) e.ang = ang + Math.PI / 4;
   drawEntity(e);

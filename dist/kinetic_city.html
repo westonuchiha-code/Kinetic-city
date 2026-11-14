@@ -883,6 +883,7 @@ const DEFS = {
   barrel:   { r: 10, m: 2, hp: 16, team: 'prop', prop: 1, grab: 1, rest: .45, fric: .935, explosive: 1 },
   dumpster: { r: 16, m: 5, hp: 110, team: 'prop', prop: 1, grab: 1, rest: .3, fric: .92 },
   car:      { r: 17, m: 9, hp: 95, team: 'prop', prop: 1, grab: 1, rest: .35, fric: .93, explosive: 1 },
+  tower:    { r: 13, m: 3, hp: 60, team: 'gang', static: 1, rest: .2, xp: 20 },   // watchtower: fixed in place, but it breaks
   hideout:  { r: 30, m: 1e6, hp: 240, team: 'gang', static: 1, rest: 0 }
 };
 const ents = [], bullets = [], parts = [], texts = [], pickups = [], wells = [], decals = [], timers = [], rings = [], zones = [], warns = [];
@@ -1148,7 +1149,7 @@ function explosion(x, y, rad, dmg, by) {
   FX.dots(x, y, 26, '#ffb030', 260, .7); FX.dots(x, y, 12, '#ff5020', 180, .6); FX.sparks(x, y, 18, '#ffe0a0', 420); FX.smoke(x, y, 12, '#2a2c34', 1.6); FX.debris(x, y, 10, '#555a66', 300);
   decals.push({ x, y, r: rad * .55, life: 40, k: 'scorch' }); if (decals.length > 60) decals.shift();
   for (const e of act) {
-    if (e.dead || (e.static && e.kind !== 'hideout')) continue;
+    if (e.dead || (e.static && e.kind !== 'hideout' && e.kind !== 'tower')) continue;
     if (e.kind === 'player' && by === 'player') continue;
     if (by === 'boss' && e.team === 'gang') continue;
     const d = Math.hypot(e.x - x, e.y - y); if (d > rad + e.r) continue;
@@ -1227,6 +1228,11 @@ function kill(e, info) {
     if (byP) comboHit();
     if (k === 'car' && Math.random() < .5) pickups.push({ x: e.x, y: e.y, vx: rnd(-40, 40), vy: rnd(-40, 40), type: 'en', life: 16 });
     if (k === 'car') decals.push({ x: e.x, y: e.y, r: 26, life: 60, k: 'wreck', ang: e.ang });
+  } else if (k === 'tower') {   // collapses into splinters; a couple of loose crates tumble out
+    FX.debris(e.x, e.y, 14, '#6a4a2a', 240); FX.debris(e.x, e.y, 8, '#5a6070', 200); FX.dust(e.x, e.y, 10); FX.smoke(e.x, e.y, 6, '#2a2c34', 1.2);
+    sfx('heavy', e.x, e.y); shake(.4); reward(e, byP);
+    for (let i = 0; i < 2; i++) { const a = rnd(TAU), c = mk('crate', e.x + Math.cos(a) * 8, e.y + Math.sin(a) * 8); c.vx = Math.cos(a) * 160; c.vy = Math.sin(a) * 160; c.vz = 120; }
+    if (byP) toast('Watchtower down', '#ffc24a');
   } else if (k === 'boss') {
     releaseLifted(e);
     for (let i = 0; i < 5; i++) later(i * .2, () => explosion(e.x + rnd(-20, 20), e.y + rnd(-20, 20), 50, 0, 'world'));
@@ -1435,7 +1441,7 @@ function releaseAbsorb() {
     FX.ring(p.x, p.y, R, '#ffffff', .4, 5); FX.ring(p.x, p.y, R * .75, '#9ff6ff', .3, 3); FX.flash(p.x, p.y, R * 2, '#bff', .35, 1.2);
     sfx('release', p.x, p.y); shake(.55); hitstop(.05); Input.rumble(1, .8, 280);
     for (const e of act) {
-      if (e === p || e.dead || e.held || (e.static && e.kind !== 'hideout')) continue; const d = dist(e, p); if (d > R + e.r) continue;
+      if (e === p || e.dead || e.held || (e.static && e.kind !== 'hideout' && e.kind !== 'tower')) continue; const d = dist(e, p); if (d > R + e.r) continue;
       if (!e.static) { const a = Math.atan2(e.y - p.y, e.x - p.x), k = 520 / Math.sqrt(e.m); e.vx += Math.cos(a) * k; e.vy += Math.sin(a) * k; e.vz = 130; if (!e.prop) { e.stun = Math.max(e.stun, .6); e.flung = true; e.lastHitBy = 'player'; } else { e.thrower = 'player'; e.thrownT = 1; } }
       hurt(e, dmg * (1 - d / (R + e.r) * .5), { by: 'player' });
     }
@@ -2106,6 +2112,7 @@ function populate(save) {
     const d = h.d, hid = d * 3 + hidIdx[d]++;
     if (destroyed[d].includes(hid) || (save && (save.ds[d].bossDone || save.ds[d].hideoutsLeft === 0))) { mk('hideout', h.x, h.y - 48, { did: d, hid, r: 34, spot: h, rect: hideoutRect(h), gateOpen: true, gateT: 1, cleared: true, col: DIST[d].col }); continue; }
     mk('hideout', h.x, h.y - 48, { did: d, hid, r: 34, spot: h, rect: hideoutRect(h), gateOpen: false, col: DIST[d].col });
+    mk('tower', h.x + (hid % 2 ? 88 : -88), h.y + 20, { did: d, ang: 0, col: DIST[d].col });
     for (let i = 0; i < 3 + d; i++) { const p = findFree(h.x, h.y + 60, 70, 12); if (p) spawnGang(i === 0 && d > 0 ? 'brute' : 'grunt', p.x, p.y, { home: { x: h.x, y: h.y + 50 }, terr: 290, guardOf: hid }); }
     for (let i = 0; i < 3; i++) { const p = findFree(h.x, h.y + 40, 110, 14); if (p) mk(i === 2 ? 'barrel' : 'crate', p.x, p.y); }
   }
@@ -3567,6 +3574,7 @@ function render(dt) {
   for (const e of _vis) {
     if (e.kind === 'hideout') continue;
     const r = e.r || 10, z = e.z || 0;
+    if (e.kind === 'tower') { addPt(e.x, e.y, e.x + e.y, 18, 50, drawUpright, e); continue; }
     addPt(e.x, e.y, e.state === 'wounded' ? -1e6 : e.x + e.y + z * 4, r * SPR_K * 1.8 + 6, r * SPR_K * 3.2 + z * SPR_K + 10, drawUpright, e);
   }
   if (G.mode !== 'dead' && G.mode !== 'title') addPt(P.x, P.y, P.x + P.y + (P.z || 0) * 4, 20, 34, drawUpright, P);
@@ -4012,6 +4020,7 @@ const PROPS_ISO = { car: 1, crate: 1, dumpster: 1, barrel: 1 };
 function drawUpright(e) {
   if (PEOPLE[e.kind] || e === P) { artT(); drawChar(e); if (e.aimT > 0 && (e.kind === 'grunt' || e.kind === 'cop')) drawAimLaser(e); return; }
   if (PROPS_ISO[e.kind]) { artT(); drawIsoProp(e); return; }
+  if (e.kind === 'tower') { artT(); drawIsoTower(e); return; }
   uprightT(e.x, e.y);
   const ang = e.ang; if (ang !== undefined) e.ang = ang + Math.PI / 4;
   drawEntity(e);
@@ -4230,6 +4239,38 @@ function drawIsoFrame(b) {
   iline(isoXY(x0, y1, 4), isoXY(x0 + TILE, y1, fh), steel); iline(isoXY(x1, y1, 4), isoXY(x1, y1 - TILE, fh), steel);
   // work lamp on top
   const lp = isoXY(x1 - 6, y1 - 6, b.ht + 10); ctx.fillStyle = '#ffeec0'; ctx.fillRect(Math.round(lp[0]), Math.round(lp[1]), 2, 1); iglow(lp[0], lp[1], 10, '#ffe0a0', .6);
+}
+
+/* ---------- gang watchtower: steel legs, plank deck with a rail, tin roof in the gang's colour ---------- */
+function drawIsoTower(e) {
+  const fl = e.flash > 0, P3 = propFrame(e), H = 10, DECK = 34, RAIL = 44, ROOF = 54;
+  const steel = fl ? '#ffffff' : '#5a6070', dark = fl ? '#dddddd' : '#343844', wood = fl ? '#ffffff' : '#6a4a2a', tin = fl ? '#ffffff' : shade(e.col, .55);
+  const post = (lx, ly, z0, z1, c) => { const a = P3(lx, ly, z0), b = P3(lx, ly, z1), X = Math.round(b[0]), Y = Math.round(b[1]); ctx.fillStyle = OUT; ctx.fillRect(X - 1, Y, 3, Math.round(a[1]) - Y + 1); ctx.fillStyle = c; ctx.fillRect(X - 1, Y, 2, Math.round(a[1]) - Y); };
+  const brace = (ax, ay, bx, by, c) => { iline(P3(ax, ay, 2), P3(bx, by, DECK - 4), c); iline(P3(bx, by, 2), P3(ax, ay, DECK - 4), c); iline(P3(ax, ay, DECK * .5), P3(bx, by, DECK * .5), c); };
+  // back to front: far leg and far bracing, side legs, near bracing, near leg
+  brace(-H, -H, -H, H, dark); brace(-H, -H, H, -H, dark);
+  post(-H, -H, 0, DECK, dark); post(-H, H, 0, DECK, steel); post(H, -H, 0, DECK, steel);
+  brace(-H, H, H, H, steel); brace(H, -H, H, H, shade(steel, .8));
+  post(H, H, 0, DECK, steel);
+  // deck
+  pixBox(e, P3, 0, 26, 26, DECK, DECK + 3, wood, fl ? '#fff' : '#7a5632', null, tp => { for (let i = 1; i < 4; i++) iline(tp(i / 4, .04), tp(i / 4, .96), shade(wood, .7)); });
+  const R = 12;
+  // far rail and roof posts, lookout lamp, near rail
+  iline(P3(-R, -R, RAIL), P3(-R, R, RAIL), dark); iline(P3(-R, -R, RAIL), P3(R, -R, RAIL), dark);
+  post(-R, -R, DECK + 3, ROOF, dark); post(-R, R, DECK + 3, ROOF, steel); post(R, -R, DECK + 3, ROOF, steel);
+  if (!fl) { const l = P3(0, 0, ROOF - 3); ipx(l[0], l[1], '#fff'); iglow(l[0], l[1] + 2, 9, e.col, .3 + .08 * Math.sin(G.time * 3 + e.id)); }
+  iline(P3(-R, R, RAIL), P3(R, R, RAIL), steel); iline(P3(R, -R, RAIL), P3(R, R, RAIL), shade(steel, .8));
+  iline(P3(-R, R, RAIL - 5), P3(R, R, RAIL - 5), dark); iline(P3(R, -R, RAIL - 5), P3(R, R, RAIL - 5), dark);
+  post(R, R, DECK + 3, ROOF, steel);
+  // roof
+  pixBox(e, P3, 0, 30, 30, ROOF, ROOF + 3, tin, fl ? '#fff' : shade(e.col, .75), null, tp => { for (let i = 1; i < 5; i++) iline(tp(i / 5, .04), tp(i / 5, .96), shade(e.col, .5)); });
+  const top = P3(0, 0, ROOF + 3)[1];
+  if (e.hp < e.maxhp && (e.sinceHit || 0) < 4) {
+    const a = isoXY(e.x, e.y, 0), bw = 16, bx = Math.round(a[0] - bw / 2), by = Math.round(top) - 11;
+    ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(bx - 1, by - 1, bw + 2, 3); ctx.fillStyle = '#ff4a5a'; ctx.fillRect(bx, by, Math.max(0, Math.round(bw * e.hp / e.maxhp)), 1);
+  }
+  e.sinceHit = (e.sinceHit || 0) + 1 / 60;
+  return top;
 }
 
 /* ============================== 12 HUD ============================== */

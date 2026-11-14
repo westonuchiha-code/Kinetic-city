@@ -51,3 +51,35 @@ function drawIsoFrame(b) {
   // work lamp on top
   const lp = isoXY(x1 - 6, y1 - 6, b.ht + 10); ctx.fillStyle = '#ffeec0'; ctx.fillRect(Math.round(lp[0]), Math.round(lp[1]), 2, 1); iglow(lp[0], lp[1], 10, '#ffe0a0', .6);
 }
+
+/* ---------- gang watchtower: steel legs, plank deck with a rail, tin roof in the gang's colour ---------- */
+function drawIsoTower(e) {
+  const fl = e.flash > 0, P3 = propFrame(e), H = 10, DECK = 34, RAIL = 44, ROOF = 54;
+  const steel = fl ? '#ffffff' : '#5a6070', dark = fl ? '#dddddd' : '#343844', wood = fl ? '#ffffff' : '#6a4a2a', tin = fl ? '#ffffff' : shade(e.col, .55);
+  const post = (lx, ly, z0, z1, c) => { const a = P3(lx, ly, z0), b = P3(lx, ly, z1), X = Math.round(b[0]), Y = Math.round(b[1]); ctx.fillStyle = OUT; ctx.fillRect(X - 1, Y, 3, Math.round(a[1]) - Y + 1); ctx.fillStyle = c; ctx.fillRect(X - 1, Y, 2, Math.round(a[1]) - Y); };
+  const brace = (ax, ay, bx, by, c) => { iline(P3(ax, ay, 2), P3(bx, by, DECK - 4), c); iline(P3(bx, by, 2), P3(ax, ay, DECK - 4), c); iline(P3(ax, ay, DECK * .5), P3(bx, by, DECK * .5), c); };
+  // back to front: far leg and far bracing, side legs, near bracing, near leg
+  brace(-H, -H, -H, H, dark); brace(-H, -H, H, -H, dark);
+  post(-H, -H, 0, DECK, dark); post(-H, H, 0, DECK, steel); post(H, -H, 0, DECK, steel);
+  brace(-H, H, H, H, steel); brace(H, -H, H, H, shade(steel, .8));
+  post(H, H, 0, DECK, steel);
+  // deck
+  pixBox(e, P3, 0, 26, 26, DECK, DECK + 3, wood, fl ? '#fff' : '#7a5632', null, tp => { for (let i = 1; i < 4; i++) iline(tp(i / 4, .04), tp(i / 4, .96), shade(wood, .7)); });
+  const R = 12;
+  // far rail and roof posts, lookout lamp, near rail
+  iline(P3(-R, -R, RAIL), P3(-R, R, RAIL), dark); iline(P3(-R, -R, RAIL), P3(R, -R, RAIL), dark);
+  post(-R, -R, DECK + 3, ROOF, dark); post(-R, R, DECK + 3, ROOF, steel); post(R, -R, DECK + 3, ROOF, steel);
+  if (!fl) { const l = P3(0, 0, ROOF - 3); ipx(l[0], l[1], '#fff'); iglow(l[0], l[1] + 2, 9, e.col, .3 + .08 * Math.sin(G.time * 3 + e.id)); }
+  iline(P3(-R, R, RAIL), P3(R, R, RAIL), steel); iline(P3(R, -R, RAIL), P3(R, R, RAIL), shade(steel, .8));
+  iline(P3(-R, R, RAIL - 5), P3(R, R, RAIL - 5), dark); iline(P3(R, -R, RAIL - 5), P3(R, R, RAIL - 5), dark);
+  post(R, R, DECK + 3, ROOF, steel);
+  // roof
+  pixBox(e, P3, 0, 30, 30, ROOF, ROOF + 3, tin, fl ? '#fff' : shade(e.col, .75), null, tp => { for (let i = 1; i < 5; i++) iline(tp(i / 5, .04), tp(i / 5, .96), shade(e.col, .5)); });
+  const top = P3(0, 0, ROOF + 3)[1];
+  if (e.hp < e.maxhp && (e.sinceHit || 0) < 4) {
+    const a = isoXY(e.x, e.y, 0), bw = 16, bx = Math.round(a[0] - bw / 2), by = Math.round(top) - 11;
+    ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(bx - 1, by - 1, bw + 2, 3); ctx.fillStyle = '#ff4a5a'; ctx.fillRect(bx, by, Math.max(0, Math.round(bw * e.hp / e.maxhp)), 1);
+  }
+  e.sinceHit = (e.sinceHit || 0) + 1 / 60;
+  return top;
+}

@@ -77,7 +77,7 @@ function explosion(x, y, rad, dmg, by) {
   FX.dots(x, y, 26, '#ffb030', 260, .7); FX.dots(x, y, 12, '#ff5020', 180, .6); FX.sparks(x, y, 18, '#ffe0a0', 420); FX.smoke(x, y, 12, '#2a2c34', 1.6); FX.debris(x, y, 10, '#555a66', 300);
   decals.push({ x, y, r: rad * .55, life: 40, k: 'scorch' }); if (decals.length > 60) decals.shift();
   for (const e of act) {
-    if (e.dead || (e.static && e.kind !== 'hideout')) continue;
+    if (e.dead || (e.static && e.kind !== 'hideout' && e.kind !== 'tower')) continue;
     if (e.kind === 'player' && by === 'player') continue;
     if (by === 'boss' && e.team === 'gang') continue;
     const d = Math.hypot(e.x - x, e.y - y); if (d > rad + e.r) continue;
@@ -156,6 +156,11 @@ function kill(e, info) {
     if (byP) comboHit();
     if (k === 'car' && Math.random() < .5) pickups.push({ x: e.x, y: e.y, vx: rnd(-40, 40), vy: rnd(-40, 40), type: 'en', life: 16 });
     if (k === 'car') decals.push({ x: e.x, y: e.y, r: 26, life: 60, k: 'wreck', ang: e.ang });
+  } else if (k === 'tower') {   // collapses into splinters; a couple of loose crates tumble out
+    FX.debris(e.x, e.y, 14, '#6a4a2a', 240); FX.debris(e.x, e.y, 8, '#5a6070', 200); FX.dust(e.x, e.y, 10); FX.smoke(e.x, e.y, 6, '#2a2c34', 1.2);
+    sfx('heavy', e.x, e.y); shake(.4); reward(e, byP);
+    for (let i = 0; i < 2; i++) { const a = rnd(TAU), c = mk('crate', e.x + Math.cos(a) * 8, e.y + Math.sin(a) * 8); c.vx = Math.cos(a) * 160; c.vy = Math.sin(a) * 160; c.vz = 120; }
+    if (byP) toast('Watchtower down', '#ffc24a');
   } else if (k === 'boss') {
     releaseLifted(e);
     for (let i = 0; i < 5; i++) later(i * .2, () => explosion(e.x + rnd(-20, 20), e.y + rnd(-20, 20), 50, 0, 'world'));

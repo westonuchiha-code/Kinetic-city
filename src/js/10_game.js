@@ -9,6 +9,7 @@ function populate(save) {
     const d = h.d, hid = d * 3 + hidIdx[d]++;
     if (destroyed[d].includes(hid) || (save && (save.ds[d].bossDone || save.ds[d].hideoutsLeft === 0))) { mk('hideout', h.x, h.y - 48, { did: d, hid, r: 34, spot: h, rect: hideoutRect(h), gateOpen: true, gateT: 1, cleared: true, col: DIST[d].col }); continue; }
     mk('hideout', h.x, h.y - 48, { did: d, hid, r: 34, spot: h, rect: hideoutRect(h), gateOpen: false, col: DIST[d].col });
+    mk('tower', h.x + (hid % 2 ? 88 : -88), h.y + 20, { did: d, ang: 0, col: DIST[d].col });
     for (let i = 0; i < 3 + d; i++) { const p = findFree(h.x, h.y + 60, 70, 12); if (p) spawnGang(i === 0 && d > 0 ? 'brute' : 'grunt', p.x, p.y, { home: { x: h.x, y: h.y + 50 }, terr: 290, guardOf: hid }); }
     for (let i = 0; i < 3; i++) { const p = findFree(h.x, h.y + 40, 110, 14); if (p) mk(i === 2 ? 'barrel' : 'crate', p.x, p.y); }
   }
