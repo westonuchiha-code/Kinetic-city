@@ -1231,6 +1231,7 @@ function kill(e, info) {
   } else if (k === 'tower') {   // collapses into splinters; a couple of loose crates tumble out
     FX.debris(e.x, e.y, 14, '#6a4a2a', 240); FX.debris(e.x, e.y, 8, '#5a6070', 200); FX.dust(e.x, e.y, 10); FX.smoke(e.x, e.y, 6, '#2a2c34', 1.2);
     sfx('heavy', e.x, e.y); shake(.4); reward(e, byP);
+    if (e.hid !== undefined) { const s = DS[e.did]; s.towers = s.towers || []; if (!s.towers.includes(e.hid)) s.towers.push(e.hid); }   // stays down in the save
     for (let i = 0; i < 2; i++) { const a = rnd(TAU), c = mk('crate', e.x + Math.cos(a) * 8, e.y + Math.sin(a) * 8); c.vx = Math.cos(a) * 160; c.vy = Math.sin(a) * 160; c.vz = 120; }
     { const a = rnd(TAU), g = spawnGang('grunt', e.x + Math.cos(a) * 6, e.y + Math.sin(a) * 6, { home: e.home, terr: e.terr, z: 42, vz: 60, stun: 1.3, flung: true, lastHitBy: byP ? 'player' : null }); g.vx = Math.cos(a) * 90; g.vy = Math.sin(a) * 90; g.hp = g.maxhp * .5; }   // the lookout comes down with it, hurt
     if (byP) toast('Watchtower down', '#ffc24a');
@@ -2130,7 +2131,7 @@ function populate(save) {
     const d = h.d, hid = d * 3 + hidIdx[d]++;
     if (destroyed[d].includes(hid) || (save && (save.ds[d].bossDone || save.ds[d].hideoutsLeft === 0))) { mk('hideout', h.x, h.y - 48, { did: d, hid, r: 34, spot: h, rect: hideoutRect(h), gateOpen: true, gateT: 1, cleared: true, col: DIST[d].col }); continue; }
     mk('hideout', h.x, h.y - 48, { did: d, hid, r: 34, spot: h, rect: hideoutRect(h), gateOpen: false, col: DIST[d].col });
-    mk('tower', h.x + (hid % 2 ? 88 : -88), h.y + 20, { did: d, ang: 0, col: DIST[d].col, home: { x: h.x, y: h.y + 50 }, terr: 290 });
+    if (!(save && (save.ds[d].towers || []).includes(hid))) mk('tower', h.x + (hid % 2 ? 88 : -88), h.y + 20, { did: d, hid, ang: 0, col: DIST[d].col, home: { x: h.x, y: h.y + 50 }, terr: 290 });
     for (let i = 0; i < 3 + d; i++) { const p = findFree(h.x, h.y + 60, 70, 12); if (p) spawnGang(i === 0 && d > 0 ? 'brute' : 'grunt', p.x, p.y, { home: { x: h.x, y: h.y + 50 }, terr: 290, guardOf: hid }); }
     for (let i = 0; i < 3; i++) { const p = findFree(h.x, h.y + 40, 110, 14); if (p) mk(i === 2 ? 'barrel' : 'crate', p.x, p.y); }
   }
@@ -2340,7 +2341,7 @@ function saveGame() {
   if (!G.started) return;
   const data = {
     v: 2, karma: G.karma, xp: G.xp, level: G.level, points: G.points, ups: { ...ups }, shards: G.shards, shardIds: G.shardIds, kills: G.kills, civKills: G.civKills, saves: G.saves,
-    ds: DS.map(s => ({ hideoutsLeft: s.hideoutsLeft, destroyed: s.destroyed || [], bossDone: s.bossDone, status: s.status, intro: s.intro })), gates: gatesOpen.slice(), check: G.check, finished: G.finished, seen: G.seen
+    ds: DS.map(s => ({ hideoutsLeft: s.hideoutsLeft, destroyed: s.destroyed || [], towers: s.towers || [], bossDone: s.bossDone, status: s.status, intro: s.intro })), gates: gatesOpen.slice(), check: G.check, finished: G.finished, seen: G.seen
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { }
 }
@@ -2350,7 +2351,7 @@ function loadSave() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) 
 function resetState() {
   ents.length = bullets.length = parts.length = texts.length = pickups.length = wells.length = decals.length = timers.length = rings.length = zones.length = warns.length = dlights.length = 0;
   Object.assign(G, { time: 0, karma: 0, xp: 0, level: 1, points: 0, heat: 0, heatT: 0, shards: 0, shardIds: [], kills: 0, civKills: 0, saves: 0, combo: 0, comboT: 0, comboBest: 0, hitstop: 0, slowT: 0, flash: 0, civHitT: 0, encT: 30, copT: 3, allyT: 8, tribT: 10, toasts: [], boss: null, marker: null, check: { ...START }, deadT: 0, curD: 0, finished: false, hint: null, seen: {}, started: false });
-  DS.forEach((s, i) => Object.assign(s, { hideoutsLeft: 3, bossAlive: false, bossDone: false, status: 'enemy', intro: i === 0, destroyed: [] }));
+  DS.forEach((s, i) => Object.assign(s, { hideoutsLeft: 3, bossAlive: false, bossDone: false, status: 'enemy', intro: i === 0, destroyed: [], towers: [] }));
   gatesOpen[0] = gatesOpen[1] = false;
   for (const k in ups) delete ups[k];
   tkTarget = null; traj = null;
@@ -4523,6 +4524,7 @@ function drawMinimap(x, y, w, h) {
     if (e.dead) continue;
     if (e.kind === 'hideout' && !e.cleared) { const [px, py] = M(e.x, e.y); ctx.fillStyle = '#ff9a3a'; ctx.fillRect(px - 4, py - 4, 8, 8); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(px - 4, py - 4, 8, 8); }
     else if (e.kind === 'boss') { const [px, py] = M(e.x, e.y); ctx.fillStyle = '#ff3355'; circle(px, py, 6 + Math.sin(G.time * 6)); }
+    else if (e.kind === 'tower') { const [px, py] = M(e.x, e.y); ctx.fillStyle = '#ff4a5a'; ctx.fillRect(px - 2.5, py - 2.5, 5, 5); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(px - 2.5, py - 2.5, 5, 5); }
     else if (dist2(e, P) < 700 * 700) {
       if (e.team === 'gang' && !e.static) { const [px, py] = M(e.x, e.y); ctx.fillStyle = '#ff4a5a'; circle(px, py, 2.2); }
       else if (e.kind === 'cop') { const [px, py] = M(e.x, e.y); ctx.fillStyle = e.ally ? '#38d0ff' : '#6a8aff'; circle(px, py, 2.2); }
@@ -4562,6 +4564,7 @@ function drawCityMap() {
   for (const e of ents) {
     if (e.dead) continue;
     if (e.kind === 'hideout' && !e.cleared) { ctx.fillStyle = '#ff9a3a'; ctx.fillRect(x + e.x * sc - 5, y + e.y * sc - 5, 10, 10); }
+    if (e.kind === 'tower') { ctx.fillStyle = '#ff4a5a'; ctx.fillRect(x + e.x * sc - 3, y + e.y * sc - 3, 6, 6); }
     if (e.kind === 'boss') { ctx.fillStyle = '#ff3355'; circle(x + e.x * sc, y + e.y * sc, 7); }
   }
   for (let d = 0; d < 3; d++) if (!DS[d].bossDone && (d === 0 || gatesOpen[d - 1])) { const b = spots.boss[d]; ctx.strokeStyle = '#ff3355'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + b.x * sc, y + b.y * sc, 9, 0, TAU); ctx.stroke(); }

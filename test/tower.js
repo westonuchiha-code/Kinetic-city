@@ -29,5 +29,9 @@ const ROOT = path.resolve(__dirname, '..');
   console.log('cars needed:', cars);
   console.log('lookout on the ground:', await p.evaluate(() => KC.ents.filter(e => e.kind === 'grunt' && !e.dead && Math.hypot(e.x - TW.x, e.y - TW.y) < 120).length));
   console.log('dead:', await p.evaluate(() => TW.dead), ' hideout still standing:', await p.evaluate(() => KC.ents.some(e => e.kind === 'hideout' && !e.dead && !e.cleared)));
+  // minimap marker for a standing tower, and the destroyed one stays down after save + load
+  await p.evaluate(() => { const t = KC.ents.find(e => e.kind === 'tower' && !e.dead); KC.tp(t.x + 20, t.y + 90); });
+  await p.waitForTimeout(600); await p.screenshot({ path: ROOT + '/screenshots/tower_minimap.png', clip: { x: 1280, y: 20, width: 320, height: 220 } });
+  console.log('towers after save + load:', await p.evaluate(() => { saveGame(); newGame(loadSave()); return KC.ents.filter(e => e.kind === 'tower').length; }));
   console.log(errs.slice(0, 5).join('\n') || 'no errors'); await b.close();
 })();

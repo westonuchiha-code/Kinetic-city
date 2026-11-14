@@ -229,6 +229,7 @@ function drawMinimap(x, y, w, h) {
     if (e.dead) continue;
     if (e.kind === 'hideout' && !e.cleared) { const [px, py] = M(e.x, e.y); ctx.fillStyle = '#ff9a3a'; ctx.fillRect(px - 4, py - 4, 8, 8); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(px - 4, py - 4, 8, 8); }
     else if (e.kind === 'boss') { const [px, py] = M(e.x, e.y); ctx.fillStyle = '#ff3355'; circle(px, py, 6 + Math.sin(G.time * 6)); }
+    else if (e.kind === 'tower') { const [px, py] = M(e.x, e.y); ctx.fillStyle = '#ff4a5a'; ctx.fillRect(px - 2.5, py - 2.5, 5, 5); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.strokeRect(px - 2.5, py - 2.5, 5, 5); }
     else if (dist2(e, P) < 700 * 700) {
       if (e.team === 'gang' && !e.static) { const [px, py] = M(e.x, e.y); ctx.fillStyle = '#ff4a5a'; circle(px, py, 2.2); }
       else if (e.kind === 'cop') { const [px, py] = M(e.x, e.y); ctx.fillStyle = e.ally ? '#38d0ff' : '#6a8aff'; circle(px, py, 2.2); }
@@ -268,6 +269,7 @@ function drawCityMap() {
   for (const e of ents) {
     if (e.dead) continue;
     if (e.kind === 'hideout' && !e.cleared) { ctx.fillStyle = '#ff9a3a'; ctx.fillRect(x + e.x * sc - 5, y + e.y * sc - 5, 10, 10); }
+    if (e.kind === 'tower') { ctx.fillStyle = '#ff4a5a'; ctx.fillRect(x + e.x * sc - 3, y + e.y * sc - 3, 6, 6); }
     if (e.kind === 'boss') { ctx.fillStyle = '#ff3355'; circle(x + e.x * sc, y + e.y * sc, 7); }
   }
   for (let d = 0; d < 3; d++) if (!DS[d].bossDone && (d === 0 || gatesOpen[d - 1])) { const b = spots.boss[d]; ctx.strokeStyle = '#ff3355'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + b.x * sc, y + b.y * sc, 9, 0, TAU); ctx.stroke(); }

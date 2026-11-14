@@ -9,7 +9,7 @@ function populate(save) {
     const d = h.d, hid = d * 3 + hidIdx[d]++;
     if (destroyed[d].includes(hid) || (save && (save.ds[d].bossDone || save.ds[d].hideoutsLeft === 0))) { mk('hideout', h.x, h.y - 48, { did: d, hid, r: 34, spot: h, rect: hideoutRect(h), gateOpen: true, gateT: 1, cleared: true, col: DIST[d].col }); continue; }
     mk('hideout', h.x, h.y - 48, { did: d, hid, r: 34, spot: h, rect: hideoutRect(h), gateOpen: false, col: DIST[d].col });
-    mk('tower', h.x + (hid % 2 ? 88 : -88), h.y + 20, { did: d, ang: 0, col: DIST[d].col, home: { x: h.x, y: h.y + 50 }, terr: 290 });
+    if (!(save && (save.ds[d].towers || []).includes(hid))) mk('tower', h.x + (hid % 2 ? 88 : -88), h.y + 20, { did: d, hid, ang: 0, col: DIST[d].col, home: { x: h.x, y: h.y + 50 }, terr: 290 });
     for (let i = 0; i < 3 + d; i++) { const p = findFree(h.x, h.y + 60, 70, 12); if (p) spawnGang(i === 0 && d > 0 ? 'brute' : 'grunt', p.x, p.y, { home: { x: h.x, y: h.y + 50 }, terr: 290, guardOf: hid }); }
     for (let i = 0; i < 3; i++) { const p = findFree(h.x, h.y + 40, 110, 14); if (p) mk(i === 2 ? 'barrel' : 'crate', p.x, p.y); }
   }
@@ -219,7 +219,7 @@ function saveGame() {
   if (!G.started) return;
   const data = {
     v: 2, karma: G.karma, xp: G.xp, level: G.level, points: G.points, ups: { ...ups }, shards: G.shards, shardIds: G.shardIds, kills: G.kills, civKills: G.civKills, saves: G.saves,
-    ds: DS.map(s => ({ hideoutsLeft: s.hideoutsLeft, destroyed: s.destroyed || [], bossDone: s.bossDone, status: s.status, intro: s.intro })), gates: gatesOpen.slice(), check: G.check, finished: G.finished, seen: G.seen
+    ds: DS.map(s => ({ hideoutsLeft: s.hideoutsLeft, destroyed: s.destroyed || [], towers: s.towers || [], bossDone: s.bossDone, status: s.status, intro: s.intro })), gates: gatesOpen.slice(), check: G.check, finished: G.finished, seen: G.seen
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { }
 }
@@ -229,7 +229,7 @@ function loadSave() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) 
 function resetState() {
   ents.length = bullets.length = parts.length = texts.length = pickups.length = wells.length = decals.length = timers.length = rings.length = zones.length = warns.length = dlights.length = 0;
   Object.assign(G, { time: 0, karma: 0, xp: 0, level: 1, points: 0, heat: 0, heatT: 0, shards: 0, shardIds: [], kills: 0, civKills: 0, saves: 0, combo: 0, comboT: 0, comboBest: 0, hitstop: 0, slowT: 0, flash: 0, civHitT: 0, encT: 30, copT: 3, allyT: 8, tribT: 10, toasts: [], boss: null, marker: null, check: { ...START }, deadT: 0, curD: 0, finished: false, hint: null, seen: {}, started: false });
-  DS.forEach((s, i) => Object.assign(s, { hideoutsLeft: 3, bossAlive: false, bossDone: false, status: 'enemy', intro: i === 0, destroyed: [] }));
+  DS.forEach((s, i) => Object.assign(s, { hideoutsLeft: 3, bossAlive: false, bossDone: false, status: 'enemy', intro: i === 0, destroyed: [], towers: [] }));
   gatesOpen[0] = gatesOpen[1] = false;
   for (const k in ups) delete ups[k];
   tkTarget = null; traj = null;
