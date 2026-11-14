@@ -69,5 +69,6 @@ window.KC = {
     for (let i = 0; i < d; i++) { gatesOpen[i] = true; openGate(i); DS[i].bossDone = true; DS[i].hideoutsLeft = 0; DS[i].status = 'liberated'; for (const e of ents) if (e.kind === 'hideout' && e.did === i) { e.cleared = true; e.gateOpen = true; e.gateT = 1; } else if (e.guardOf !== undefined && e.did === i) e.dead = true; }
     drawMinimapBase(); const c = checkpointFor(d); P.x = c.x; P.y = c.y; DS[d].intro = true; snapCamera();
   },
+  costume(n) { if (HERO_COSTUMES[n]) heroCostume = n; return heroCostume; },
   spawn: mk, spawnGang, spawnBoss, render, drawHUD, snapCamera, hurt, kill, explosion
 };

@@ -26,7 +26,7 @@ A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 
 - **Frame:** fixed 16:9 and letterboxed.
 - **Setting:** a neon night city in the rain.
 - **Pixel art:** buildings (lit/dark windows, shopfronts, neon signs, doors, rooftop clutter), hideouts, characters (8 facings, 4-frame walk), vehicles, props and combat effects.
-- **Characters:** small (about 16×20 px), the hero, cops and gang members wear shades; civilians have eyes (a dark pupil with a white pixel beside it, `FACE_ART`). A 32 px redraw was tried as a mock-up and rejected as too "anime RPG Maker". Each gang has its own headwear: Rustlers beanies, Breakers mohawks, Architects visored helmets. Brutes and bosses use the big body.
+- **Characters:** small (about 16×20 px), cops and gang members wear shades (shades = someone you can fight); the hero and civilians have eyes (a dark pupil with a white pixel beside it, `FACE_ART`). The hero wears a yellow rain jacket with tousled brown hair; his zip and cuffs take the karma colour. An earlier white-spiky-hair-and-shades hero was dropped for looking like Gojo. Five more finished hero looks are stored as `HERO_COSTUMES` in 11c_sprites.js (scarf, headphones, glowhood, varsity, headband) for possible unlockable costumes; nothing selects them yet (`KC.costume(name)` switches for a look, `node test/costumes.js` draws them all). A 32 px redraw was tried as a mock-up and rejected as too "anime RPG Maker". Each gang has its own headwear: Rustlers beanies, Breakers mohawks, Architects visored helmets. Brutes and bosses use the big body.
 - **Soft on purpose:** glows and light pools.
 - **Occlusion:** things behind buildings are hidden by them, which the user is fine with. Transparency is an option for later. Enemies behind buildings show a faint red ring on the ground.
 - **Minimap:** north-up even though the view is rotated 45°. The user said this is fine.
@@ -145,7 +145,7 @@ It all becomes one script, so **a later `function` declaration replaces an earli
   - characters: `SPR_K=.6`
 
 ### Debug hooks (`window.KC`)
-`start, skip, step(n), tp(x,y), spawn(kind,x,y,o), spawnGang, spawnBoss, hurt, kill, explosion, skipTo(d), pickups, ents, P, cam, Input`.
+`start, skip, step(n), tp(x,y), spawn(kind,x,y,o), spawnGang, spawnBoss, hurt, kill, explosion, skipTo(d), costume(name), pickups, ents, P, cam, Input`.
 
 ---
 
