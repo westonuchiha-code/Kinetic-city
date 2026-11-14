@@ -64,6 +64,7 @@ function updateTKTarget() {
 function grab(e) {
   const p = P;
   e.held = true; e.heldBy = p; e.thrower = 'player'; e.thrownT = 99; e.spin = 0;
+  if (e.kind === 'car') { e.curb = false; e.claimed = false; e.parkTo = null; }
   if (e.kind === 'car' && e.driving) ejectDriver(e);
   if (!e.prop) { e.stun = 1; e.tgt = null; e.state = 'grabbed'; }
   p.holding = e; p.holdT = 0; tkTarget = null;

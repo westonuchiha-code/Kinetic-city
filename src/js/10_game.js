@@ -81,6 +81,7 @@ function updateEncounters(dt) {
   if (G.tribT <= 0) {
     G.tribT = 10;
     for (const s of DS) if (s.status === 'dominated') G.xp += 8;
+    addXP(0);   // let tribute XP level you up
     if (st.status === 'liberated') { let n = 0; for (const e of act) if (e.kind === 'civ') n++; if (n < 18) { const p = randomInDistrict(d, civWalk, 9); if (p && dist(p, P) > 450) spawnCiv(p.x, p.y); } }
     // keep traffic alive
     let cars = 0; for (const e of act) if (e.kind === 'car' && e.driving) cars++;
@@ -148,7 +149,7 @@ function spawnBoss(d) {
   ];
 }
 function bossDefeated(d) {
-  const st = DS[d]; st.bossDone = true; st.status = G.karma >= 0 ? 'liberated' : 'dominated'; G.check = checkpointFor(d);
+  const st = DS[d]; if (st.bossDone) return; st.bossDying = false; st.bossDone = true; st.status = G.karma >= 0 ? 'liberated' : 'dominated'; G.check = checkpointFor(d);
   for (const e of ents) if (e.team === 'gang' && !e.static && !e.dead && e.did === d && dist(e, P) > 120) { e.dead = true; FX.smoke(e.x, e.y, 3); }
   toast(DIST[d].name + (G.karma >= 0 ? ' liberated' : ' dominated'), G.karma >= 0 ? '#38d0ff' : '#ff3355', true); sfx('level');
   G.points++; toast('+1 skill point', '#ffc24a');
@@ -172,6 +173,7 @@ function objective() {
     else if (best && !best.gateOpen && dist(best, P) < 600) sub = ' · guards left ' + (best.guardsLeft || 0) + (best.towerUp ? ' · tower standing' : '');
     return { text: 'Clear ' + DIST[d].gang + ' hideouts ' + (3 - s.hideoutsLeft) + '/3' + sub, t: best };
   }
+  if (s.bossDying) return { text: DIST[d].boss + ' is down', t: null };
   if (!s.bossDone) return { text: 'Wait for ' + DIST[d].boss, t: spots.boss[d] };
   const nd = Math.min(2, d + 1);
   return { text: 'Head into ' + DIST[nd].name, t: { x: DIST_SPLIT[nd - 1] + 60, y: clamp(Math.round(P.y / BAND) * BAND + 48, 48, WORLD_H - 48) } };
@@ -217,6 +219,7 @@ function buyUpgrade(id) {
 const SAVE_KEY = 'kinetic_city_v2';
 function saveGame() {
   if (!G.started) return;
+  for (let d = 0; d < 3; d++) if (DS[d].bossDying) bossDefeated(d);   // never save the moment between a boss falling and the district changing hands
   const data = {
     v: 2, karma: G.karma, xp: G.xp, level: G.level, points: G.points, ups: { ...ups }, shards: G.shards, shardIds: G.shardIds, kills: G.kills, civKills: G.civKills, saves: G.saves,
     ds: DS.map(s => ({ hideoutsLeft: s.hideoutsLeft, destroyed: s.destroyed || [], towers: s.towers || [], bossDone: s.bossDone, status: s.status, intro: s.intro })), gates: gatesOpen.slice(), check: G.check, finished: G.finished, seen: G.seen
@@ -229,7 +232,7 @@ function loadSave() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) 
 function resetState() {
   ents.length = bullets.length = parts.length = texts.length = pickups.length = wells.length = decals.length = timers.length = rings.length = zones.length = warns.length = dlights.length = 0;
   Object.assign(G, { time: 0, karma: 0, xp: 0, level: 1, points: 0, heat: 0, heatT: 0, shards: 0, shardIds: [], kills: 0, civKills: 0, saves: 0, combo: 0, comboT: 0, comboBest: 0, hitstop: 0, slowT: 0, flash: 0, civHitT: 0, encT: 30, copT: 3, allyT: 8, tribT: 10, toasts: [], boss: null, marker: null, check: { ...START }, deadT: 0, curD: 0, finished: false, hint: null, seen: {}, started: false });
-  DS.forEach((s, i) => Object.assign(s, { hideoutsLeft: 3, bossAlive: false, bossDone: false, status: 'enemy', intro: i === 0, destroyed: [], towers: [] }));
+  DS.forEach((s, i) => Object.assign(s, { hideoutsLeft: 3, bossAlive: false, bossDone: false, status: 'enemy', intro: i === 0, destroyed: [], towers: [], bossDying: false }));
   gatesOpen[0] = gatesOpen[1] = false;
   for (const k in ups) delete ups[k];
   tkTarget = null; traj = null;

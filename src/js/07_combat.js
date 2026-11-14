@@ -54,7 +54,7 @@ const xpNeed = () => 60 + G.level * 45;
 function comboMult() { return 1 + Math.min(4, Math.floor(G.combo / 3)); }
 function addXP(n, x, y) {
   n = Math.round(n * comboMult()); G.xp += n;
-  if (P) floatText(x !== undefined ? x : P.x + 12, (y !== undefined ? y : P.y) - 34, '+' + n + ' XP', '#ffc24a', .85);
+  if (P && n > 0) floatText(x !== undefined ? x : P.x + 12, (y !== undefined ? y : P.y) - 34, '+' + n + ' XP', '#ffc24a', .85);
   while (G.xp >= xpNeed()) {
     G.xp -= xpNeed(); G.level++; G.points++; P.hp = Math.min(S.maxHp, P.hp + S.maxHp * .35);
     toast('Level ' + G.level + '  ·  +1 skill point', '#ffc24a', true); sfx('level'); FX.ring(P.x, P.y, 120, '#ffc24a', .6, 3);
@@ -116,7 +116,7 @@ function hurt(e, dmg, info) {
   }
   if (by === 'player') {
     if (e.kind === 'civ' && G.civHitT <= 0) { karmaAdd(KARMA.civHit); G.civHitT = 3; }
-    if (e.kind === 'cop') { heatAdd(e.ally ? 1 : .45); if (e.ally) { e.ally = false; } }
+    if (e.kind === 'cop') { heatAdd(e.ally ? 1 : .45); if (e.ally) { e.ally = false; e.wasAlly = true; } }
     if ((e.team === 'gang' || e.team === 'police') && !e.static) { e.tgt = P; e.sight = Math.max(e.sight, 420); e.provT = 6; }
   }
   if (!e.prop && !e.static && dmg > 6) e.stun = Math.max(e.stun, .22);
@@ -136,7 +136,7 @@ function reward(e, byP) {
 }
 function kill(e, info) {
   if (e.dead) return; e.dead = true; info = info || {};
-  const byP = info.by === 'player' || e.lastHitBy === 'player', k = e.kind;
+  const k = e.kind, byP = info.by === 'player' || (k !== 'civ' && e.lastHitBy === 'player');   // a civilian you once brushed is not your kill when someone else finishes them
   if (e.held || e === (P && P.holding)) { e.held = false; if (P && P.holding === e) dropHeld(); }
   if (k === 'civ') {
     FX.dots(e.x, e.y, 8, '#a03040', 70, .6);
@@ -147,8 +147,9 @@ function kill(e, info) {
     if (Math.random() < (k === 'grunt' ? .28 : .6)) pickups.push({ x: e.x, y: e.y, vx: rnd(-60, 60), vy: rnd(-60, 60), type: Math.random() < .5 ? 'hp' : 'en', life: 16 });
   } else if (k === 'cop') {
     FX.dots(e.x, e.y, 10, '#4a7ad0', 110, .5);
-    if (byP) { karmaAdd(e.ally ? KARMA.allyKill : KARMA.copKill); heatAdd(1.2); toast(e.ally ? 'You killed an ally' : 'Officer down', '#ff3355'); G.combo = 0; }
-    reward(e, byP && !e.ally);
+    const ally = e.ally || e.wasAlly;
+    if (byP) { karmaAdd(ally ? KARMA.allyKill : KARMA.copKill); heatAdd(1.2); toast(ally ? 'You killed an ally' : 'Officer down', '#ff3355'); G.combo = 0; }
+    reward(e, byP && !ally);
   } else if (e.prop) {
     FX.debris(e.x, e.y, k === 'car' ? 14 : 8, k === 'crate' ? '#8a6038' : k === 'car' ? shade(e.col, .7) : '#666b78', 220); FX.dust(e.x, e.y, 6);
     if (e.def.explosive) explosion(e.x, e.y, k === 'car' ? 118 : 96, k === 'car' ? 64 : 52, byP ? 'player' : (info.by || 'world'));
@@ -159,14 +160,14 @@ function kill(e, info) {
   } else if (k === 'tower') {   // collapses into splinters; a couple of loose crates tumble out
     FX.debris(e.x, e.y, 14, '#6a4a2a', 240); FX.debris(e.x, e.y, 8, '#5a6070', 200); FX.dust(e.x, e.y, 10); FX.smoke(e.x, e.y, 6, '#2a2c34', 1.2);
     sfx('heavy', e.x, e.y); shake(.4); reward(e, byP);
-    if (e.hid !== undefined) { const s = DS[e.did]; s.towers = s.towers || []; if (!s.towers.includes(e.hid)) s.towers.push(e.hid); }   // stays down in the save
+    if (e.hid !== undefined) { const s = DS[e.did]; s.towers = s.towers || []; if (!s.towers.includes(e.hid)) s.towers.push(e.hid); saveGame(); }   // stays down in the save
     for (let i = 0; i < 2; i++) { const a = rnd(TAU), c = mk('crate', e.x + Math.cos(a) * 8, e.y + Math.sin(a) * 8); c.vx = Math.cos(a) * 160; c.vy = Math.sin(a) * 160; c.vz = 120; }
     { const a = rnd(TAU), g = spawnGang('grunt', e.x + Math.cos(a) * 6, e.y + Math.sin(a) * 6, { home: e.home, terr: e.terr, z: 42, vz: 60, stun: 1.3, flung: true, lastHitBy: byP ? 'player' : null }); g.vx = Math.cos(a) * 90; g.vy = Math.sin(a) * 90; g.hp = g.maxhp * .5; }   // the lookout comes down with it, hurt
     if (byP) toast('Watchtower down', '#ffc24a');
   } else if (k === 'boss') {
     releaseLifted(e);
     for (let i = 0; i < 5; i++) later(i * .2, () => explosion(e.x + rnd(-20, 20), e.y + rnd(-20, 20), 50, 0, 'world'));
-    reward(e, true); G.boss = null; DS[e.did].bossAlive = false; G.slowT = 1.4; Input.rumble(1, 1, 600);
+    reward(e, true); G.boss = null; DS[e.did].bossAlive = false; DS[e.did].bossDying = true; G.slowT = 1.4; Input.rumble(1, 1, 600);
     later(1.6, () => bossDefeated(e.did));
   }
 }

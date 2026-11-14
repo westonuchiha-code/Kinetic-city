@@ -61,19 +61,22 @@ const Input = (() => {
   addEventListener('mouseup', e => { mouse.down[e.button] = false; });
   addEventListener('contextmenu', e => e.preventDefault());
   addEventListener('gamepadconnected', e => { st.padSeen = true; for (const f of st.listeners) f(); });
-  addEventListener('gamepaddisconnected', () => { pad.idx = -1; for (const f of st.listeners) f(); });
+  addEventListener('gamepaddisconnected', () => { pad.idx = -1; pad.btn.fill(0); pad.on.fill(0); pad.axes = [0, 0, 0, 0]; for (const f of st.listeners) f(); });
 
   function readPads() {
     let list;
     try { list = navigator.getGamepads ? navigator.getGamepads() : []; }
     catch (e) { st.blocked = true; return null; }
-    let best = null;
+    // keep the current pad; if another pad has a button down while this one is idle (or gone), follow that one
+    const down = gp => { for (const b of gp.buttons || []) if (b && (typeof b === 'object' ? b.pressed || b.value > .5 : b > .5)) return true; return false; };
+    let first = null, cur = null, busy = null;
     for (const gp of list || []) {
       if (!gp || !gp.connected) continue;
-      if (!best || gp.index === pad.idx) best = gp;
-      if (gp.index === pad.idx) break;
+      if (!first) first = gp;
+      if (gp.index === pad.idx) cur = gp; else if (!busy && down(gp)) busy = gp;
     }
-    return best;
+    if (cur && (!busy || down(cur))) return cur;
+    return busy || cur || first;
   }
   function styleOf(id) {
     if (/xbox|xinput|045e/i.test(id)) return 'xbox';

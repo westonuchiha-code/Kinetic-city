@@ -66,7 +66,7 @@ window.KC = {
   skip() { let g = 0; while (G.mode === 'dialog' && g++ < 50) { const l = UI.dialogLine; if (!l) break; if (l.choices) { UI.finishTyping(); return l.choices; } UI.finishTyping(); UI.nextLine(); } return null; },
   tp(x, y) { P.x = x; P.y = y; snapCamera(); }, giveXP(n) { addXP(n); }, setKarma(k) { G.karma = clamp(k, -100, 100); },
   skipTo(d) {
-    for (let i = 0; i < d; i++) { gatesOpen[i] = true; openGate(i); DS[i].bossDone = true; DS[i].hideoutsLeft = 0; DS[i].status = 'liberated'; for (const e of ents) if (e.kind === 'hideout' && e.did === i) { e.cleared = true; e.gateOpen = true; e.gateT = 1; } }
+    for (let i = 0; i < d; i++) { gatesOpen[i] = true; openGate(i); DS[i].bossDone = true; DS[i].hideoutsLeft = 0; DS[i].status = 'liberated'; for (const e of ents) if (e.kind === 'hideout' && e.did === i) { e.cleared = true; e.gateOpen = true; e.gateT = 1; } else if (e.guardOf !== undefined && e.did === i) e.dead = true; }
     drawMinimapBase(); const c = checkpointFor(d); P.x = c.x; P.y = c.y; DS[d].intro = true; snapCamera();
   },
   spawn: mk, spawnGang, spawnBoss, render, drawHUD, snapCamera, hurt, kill, explosion
