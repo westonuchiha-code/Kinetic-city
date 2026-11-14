@@ -978,9 +978,9 @@ const HAIR_ART = {
       ..hhhhhhhhhhhH..
       ..hhhhhhhhhhHH..
       ..YYYYYYYYYYyy..
-      ..HhhhhYYhHHHJ..
-      ..HHhhYyYyHHJJ..
-      ...JJHYJHyJJJ...
+      ..HhhhhhYhHHHJ..
+      ..HHhhhYhyHHJJ..
+      ...JJHYJHJyJJ...
       ................`),
     NE: px(`
       ......h..h......
@@ -989,9 +989,9 @@ const HAIR_ART = {
       ..hhhhhhhhhhhH..
       ..hhhhhhhhhhHH..
       ..YYYYYYYYYYyy..
-      ..HhhYYhhhHHHJ..
-      ..HHYyYyhH......
-      ..JJYJHyJ.......
+      ..HhhhYhhhHHHJ..
+      ..HHhYhyhH......
+      ..JJYJHJy.......
       ...JJJ..........`)
   },
   capback: {   // baseball cap worn backwards
