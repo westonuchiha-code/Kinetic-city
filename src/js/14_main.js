@@ -70,6 +70,6 @@ window.KC = {
     drawMinimapBase(); const c = checkpointFor(d); P.x = c.x; P.y = c.y; DS[d].intro = true; snapCamera();
   },
   costume(n) { if (HERO_COSTUMES[n]) heroCostume = n; return heroCostume; },
-  see(n) { if (n !== undefined) SEE = n; return SEE; },   // how the hero shows behind buildings: 0 hidden, 1 silhouette, 2 window, 3 see-through wall
+  see(n) { if (n !== undefined) SETTINGS.see = n; return SETTINGS.see; },   // how the hero shows behind buildings: 0 hidden, 1 silhouette, 2 window, 3 see-through wall
   spawn: mk, spawnGang, spawnBoss, render, drawHUD, snapCamera, hurt, kill, explosion
 };

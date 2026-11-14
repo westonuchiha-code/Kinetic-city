@@ -8,7 +8,7 @@
    Controller layout (standard mapping):
      LS move  RS aim  RT telekinesis (hold grab, release throw)  LT absorb (hold, release = blast)
      RB repulse  LB gravity well  A dash  X heal (hold)  Y drain (hold)  B drop  Start pause  Back map */
-const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1, costume: 'raincoat', binds: { key: {}, pad: {} } };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale
+const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1, see: 0, costume: 'raincoat', binds: { key: {}, pad: {} } };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale; see: how the hero shows behind buildings
 try { const s = JSON.parse(localStorage.getItem('kc_settings') || 'null'); if (s) Object.assign(SETTINGS, s); } catch (e) { }
 function saveSettings() { try { localStorage.setItem('kc_settings', JSON.stringify(SETTINGS)); } catch (e) { } }
 

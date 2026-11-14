@@ -231,11 +231,10 @@ function drawRain(dt) {
 }
 
 /* ---------- seeing the hero behind buildings ----------
-   SEE picks how: 0 = he is simply hidden, 1 = his silhouette shows on the wall in the karma colour,
+   SETTINGS.see picks how (Settings > Display): 0 = he is simply hidden, 1 = his silhouette shows on the wall in the karma colour,
    2 = a round window with a dithered rim opens in the wall around him, 3 = the whole wall turns see-through (every
    other pixel). 2 and 3 work by keeping a copy of the picture from just before the building is drawn and putting part of
    it back on top, so the building itself is drawn exactly as usual. */
-let SEE = 0;
 const seeCv = document.createElement('canvas'); seeCv.width = ART_W; seeCv.height = ART_H; const seeCtx = seeCv.getContext('2d');
 const SEE_R = 24, _holes = {};
 const ghostCv = document.createElement('canvas'), ghostCtx = ghostCv.getContext('2d');
@@ -269,14 +268,14 @@ function drawBoxSeeThrough(b, hp, dt) {   // returns true if it drew the box
   const poly = hx || boxHex(b);
   seeCtx.setTransform(1, 0, 0, 1, 0, 0); seeCtx.globalCompositeOperation = 'copy'; seeCtx.drawImage(artCv, 0, 0);   // what is behind the building
   seeCtx.globalCompositeOperation = 'destination-in';
-  if (SEE === 2) { const r = Math.max(4, Math.round(SEE_R * (1 - (1 - k) * (1 - k)))); seeCtx.drawImage(holeMask(r), Math.round(hp[0]) - r, Math.round(hp[1]) - 10 - r); }
+  if (SETTINGS.see === 2) { const r = Math.max(4, Math.round(SEE_R * (1 - (1 - k) * (1 - k)))); seeCtx.drawImage(holeMask(r), Math.round(hp[0]) - r, Math.round(hp[1]) - 10 - r); }
   else { seeCtx.globalAlpha = k; seeCtx.drawImage(checker(), 0, 0); seeCtx.globalAlpha = 1; }
   seeCtx.fillStyle = '#fff'; seeCtx.beginPath(); for (const p of poly) seeCtx.lineTo(Math.round(p[0]), Math.round(p[1])); seeCtx.closePath(); seeCtx.fill();   // only inside this building's outline
   seeCtx.globalCompositeOperation = 'source-over';
   b.draw(o); artT(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(seeCv, 0, 0);
   return true;
 }
-function drawHeroSilhouette(from, hp) {   // SEE 1: the hero's shape in the karma colour wherever a building covers him
+function drawHeroSilhouette(from, hp) {   // mode 1: the hero's shape in the karma colour wherever a building covers him
   const lift = Math.round((P.z || 0) * .5), x0 = hp[0] - 14, y0 = hp[1] - 30 - lift, x1 = hp[0] + 14, y1 = hp[1] + 3;
   let any = false; seeCtx.setTransform(1, 0, 0, 1, 0, 0); seeCtx.globalCompositeOperation = 'source-over'; seeCtx.clearRect(0, 0, ART_W, ART_H); seeCtx.fillStyle = '#fff';
   for (let i = Math.max(0, from); i < _boxes.length; i++) {
@@ -358,9 +357,9 @@ function render(dt) {
   let pi = 0; const heroPt = isoXY(P.x, P.y, 0);
   for (let i = 0; i <= _boxes.length; i++) {
     while (pi < _pts.length && _pts[pi].slot === i) { const p = _pts[pi++]; p.draw(p.o); artT(); ctx.globalAlpha = 1; }
-    if (i < _boxes.length) { const b = _boxes[i]; if (!(SEE >= 2 && heroSlot >= 0 && i >= heroSlot && drawBoxSeeThrough(b, heroPt, dt))) b.draw(b.o); }
+    if (i < _boxes.length) { const b = _boxes[i]; if (!(SETTINGS.see >= 2 && heroSlot >= 0 && i >= heroSlot && drawBoxSeeThrough(b, heroPt, dt))) b.draw(b.o); }
   }
-  if (SEE === 1 && heroSlot >= 0) drawHeroSilhouette(heroSlot, heroPt);
+  if (SETTINGS.see === 1 && heroSlot >= 0) drawHeroSilhouette(heroSlot, heroPt);
   ISO.upright = false;
   // ---- overlays on the ground (pixel effects, art space): warnings, aim lasers, hostile markers, telekinesis, effects, splashes ----
   artT();

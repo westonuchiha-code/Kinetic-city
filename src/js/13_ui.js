@@ -181,17 +181,19 @@ const UI = (() => {
     { sec: 'Display', k: 'full', name: 'Fullscreen' },
     { sec: 'Display', k: 'hud', name: 'HUD size', min: .7, max: 1.1, step: .1 },
     { sec: 'Display', k: 'shake', name: 'Screen shake' },
+    { sec: 'Display', k: 'see', name: 'Hero behind buildings', opts: [[0, 'Hidden'], [1, 'Outline'], [2, 'Window'], [3, 'See-through wall']] },
     { sec: 'Controls', k: 'rumble', name: 'Controller rumble' },
     { sec: 'Controls', k: 'deadzone', name: 'Stick dead zone', min: .1, max: .35, step: .05 },
     { sec: 'Controls', k: 'assist', name: 'Aim assist', opts: [[0, 'Off'], [.5, 'Low'], [1, 'Normal'], [1.5, 'High']] },
     { sec: 'Save', k: 'wipe', name: 'Delete saved game', titleOnly: true, warn: true }
   ];
   let wipeArm = false;
+  const k0 = o => o.k === 'see' ? 0 : 2;   // which option an unknown stored value falls back to
   function setLabel(o) {
     if (o.k === 'full') return document.fullscreenElement ? 'On' : 'Off';
     if (o.k === 'wipe') return wipeArm ? 'Press again to delete' : 'Delete';
     const v = SETTINGS[o.k];
-    if (o.opts) return (o.opts.find(p => Math.abs(p[0] - v) < 1e-6) || o.opts[2])[1];
+    if (o.opts) return (o.opts.find(p => Math.abs(p[0] - v) < 1e-6) || o.opts[k0(o)])[1];
     return o.step ? Math.round(v * 100) + '%' : v ? 'On' : 'Off';
   }
   function adjustSetting(k, d, wrap) {
@@ -203,7 +205,7 @@ const UI = (() => {
       if (!wipeArm) wipeArm = true; else { wipeArm = false; try { localStorage.removeItem(SAVE_KEY); } catch (e) { } $('bCont').disabled = true; }
       sfx('ui'); renderTab(loadSave() ? k : null); return;
     }
-    if (o.opts) { let i = o.opts.findIndex(p => Math.abs(p[0] - SETTINGS[k]) < 1e-6); if (i < 0) i = 2; i += d; SETTINGS[k] = o.opts[wrap ? (i + o.opts.length) % o.opts.length : clamp(i, 0, o.opts.length - 1)][0]; }
+    if (o.opts) { let i = o.opts.findIndex(p => Math.abs(p[0] - SETTINGS[k]) < 1e-6); if (i < 0) i = k0(o); i += d; SETTINGS[k] = o.opts[wrap ? (i + o.opts.length) % o.opts.length : clamp(i, 0, o.opts.length - 1)][0]; }
     else if (o.step) { let v = Math.round((SETTINGS[k] + d * o.step) * 100) / 100; if (wrap && v > o.max + 1e-6) v = o.min; SETTINGS[k] = clamp(v, o.min, o.max); if (k === 'music' || k === 'sfx') Audio2.applyVolumes(); }
     else { SETTINGS[k] = !SETTINGS[k]; if (k === 'rumble' && SETTINGS.rumble) Input.rumble(.6, .6, 200); }
     saveSettings(); sfx('ui'); renderTab(k);
