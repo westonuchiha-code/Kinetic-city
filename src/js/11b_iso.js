@@ -48,7 +48,7 @@ function isoDir(v) {
 /* ---------- crisp pixel primitives (art space) ---------- */
 function ipoly(pts, c) {
   let y0 = Infinity, y1 = -Infinity; for (const p of pts) { if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; }
-  ctx.fillStyle = c; y0 = Math.max(Math.round(y0), -2); y1 = Math.min(Math.round(y1), ART_H + 2);
+  ctx.fillStyle = c; y0 = Math.max(Math.round(y0), -2); y1 = Math.min(Math.round(y1), ctx.canvas.height + 2);
   const xs = [];
   for (let y = y0; y < y1; y++) {
     const yc = y + .5; xs.length = 0;
@@ -78,76 +78,7 @@ function ibox(x, y, w, d, z0, hz, top, south, east) {
 /* ---------- buildings ---------- */
 // lit window: a 3x2 pixel slab that follows the slope of its wall
 function iwin(p, slope, c) { ctx.fillStyle = c; const X = Math.round(p[0]), Y = Math.round(p[1]); for (let k = -1; k <= 1; k++) ctx.fillRect(X + k, Y - 1 + Math.round(k * slope), 1, 2); }
-function drawIsoBuilding(b) {
-  const x0 = b.x, y0 = b.y, x1 = b.x + b.w, y1 = b.y + b.h, ht = b.ht, t = G.time;
-  const st = DS[b.d].status, pal = neonPal(b.d), litK = st === 'liberated' ? 1.35 : st === 'dominated' ? .75 : 1;
-  const S_ = shade(b.wall, .95), E_ = shade(b.wall, .6);
-  const A = [isoXY(x0, y1, 0), isoXY(x1, y1, 0), isoXY(x1, y1, ht), isoXY(x0, y1, ht)];   // south wall
-  const B = [isoXY(x1, y1, 0), isoXY(x1, y0, 0), isoXY(x1, y0, ht), isoXY(x1, y1, ht)];   // east wall
-  ipoly(A, S_); ipoly(B, E_);
-  // dark base and floor lines
-  iline(isoXY(x0, y1, 2), isoXY(x1, y1, 2), shade(b.wall, .5)); iline(isoXY(x1, y1, 2), isoXY(x1, y0, 2), shade(b.wall, .35));
-  for (let f = 30; f < ht - 6; f += 30) { iline(isoXY(x0, y1, f), isoXY(x1, y1, f), shade(b.wall, .8)); iline(isoXY(x1, y1, f), isoXY(x1, y0, f), shade(b.wall, .5)); }
-  // windows (one row per floor; unlit ones are dark panes)
-  const lit = [];
-  for (const [side, list] of [[2, b.win[2]], [1, b.win[1]]]) for (const wn of list) {
-    if (wn.v * ht < 34 || Math.round(wn.v * ht / 15) % 2) continue;
-    let on = wn.roll < b.lit * litK; if (wn.roll > .97 && Math.sin(t * .7 + wn.u * 50) > .6) on = !on;
-    const p = side === 2 ? isoXY(lerp(x1, x0, wn.u), y1, wn.v * ht) : isoXY(x1, lerp(y0, y1, wn.u), wn.v * ht);
-    const col = on ? (st === 'dominated' && wn.roll < .1 ? '#ff4a3a' : wn.c) : shade(b.wall, side === 2 ? .55 : .38);
-    iwin(p, side === 2 ? .5 : -.5, on && side === 1 ? shade(col, .8) : col);
-    if (on && wn.roll < .08) lit.push(p, col);
-  }
-  for (let i = 0; i < lit.length; i += 2) iglow(lit[i][0], lit[i][1], 6, lit[i + 1], .3);
-  // door
-  if (b.door) {
-    const dx = (x0 + x1) / 2, dh = Math.min(ht - 4, 28);
-    ipoly([isoXY(dx - 8, y1, 0), isoXY(dx + 8, y1, 0), isoXY(dx + 8, y1, dh), isoXY(dx - 8, y1, dh)], '#0b0a0d');
-    ipoly([isoXY(dx - 5, y1, 0), isoXY(dx + 5, y1, 0), isoXY(dx + 5, y1, dh - 4), isoXY(dx - 5, y1, dh - 4)], '#e0b878');
-    iline(isoXY(dx - 10, y1, dh + 2), isoXY(dx + 10, y1, dh + 2), shade(b.wall, .4));
-    const g = isoXY(dx, y1, 4); iglow(g[0], g[1], 8, '#ffd696', .5);
-  }
-  // ground-floor shopfronts
-  for (const sh of b.shops) {
-    if (sh.side !== 2 && sh.side !== 1) continue;
-    const col = pal[sh.ci], top = Math.min(ht - 3, 22);
-    const Pt = (u, z) => sh.side === 2 ? isoXY(lerp(x1, x0, u), y1, z) : isoXY(x1, lerp(y0, y1, u), z);
-    ipoly([Pt(sh.u0, 2), Pt(sh.u1, 2), Pt(sh.u1, top), Pt(sh.u0, top)], sh.side === 2 ? col : shade(col, .75));
-    iline(Pt(sh.u0, top * .55), Pt(sh.u1, top * .55), '#ffffff');
-    iline(Pt(sh.u0 - .02, top + 4), Pt(sh.u1 + .02, top + 4), shade(col, .45));   // awning
-    const m = Pt((sh.u0 + sh.u1) / 2, top / 2); iglow(m[0], m[1], 16, col, .45);
-  }
-  // neon signs
-  for (const sg of b.signs) {
-    if (sg.side !== 2 && sg.side !== 1) continue;
-    const on = sg.blink ? (Math.sin(t * 3 + sg.ph) > -.2 ? 1 : .15) : 1, col = pal[sg.ci];
-    const Pt = (u, v) => sg.side === 2 ? isoXY(lerp(x1, x0, u), y1, v * ht) : isoXY(x1, y0 + b.h * u, v * ht);
-    const a = Pt(sg.u, sg.v0), c = Pt(sg.u2, sg.v1);
-    ctx.globalAlpha = on; iline(a, c, col); iline([a[0] + 1, a[1]], [c[0] + 1, c[1]], col);
-    const n = Math.max(1, Math.round(Math.hypot(c[0] - a[0], c[1] - a[1]) / 3));
-    for (let i = 0; i <= n; i += 2) ipx(lerp(a[0], c[0], i / n), lerp(a[1], c[1], i / n), '#ffffff');
-    ctx.globalAlpha = 1; iglow((a[0] + c[0]) / 2, (a[1] + c[1]) / 2, 24, col, .55 * on);
-  }
-  // roof
-  const T = [isoXY(x0, y0, ht), isoXY(x1, y0, ht), isoXY(x1, y1, ht), isoXY(x0, y1, ht)];
-  ipoly(T, b.roof);
-  const I = [isoXY(x0 + 5, y0 + 5, ht), isoXY(x1 - 5, y0 + 5, ht), isoXY(x1 - 5, y1 - 5, ht), isoXY(x0 + 5, y1 - 5, ht)];
-  for (let i = 0; i < 4; i++) iline(I[i], I[(i + 1) % 4], shade(b.roof, .75));
-  iline(T[0], T[1], shade(b.roof, 1.3)); iline(T[0], T[3], shade(b.roof, 1.3));
-  iline(T[3], T[2], shade(b.roof, 1.7)); iline(T[2], T[1], shade(b.roof, 1.5));
-  for (const p of b.props) {
-    if (p.k === 'box') ibox(p.x, p.y, p.w, p.h, ht, 10, shade(b.roof, 1.6), shade(b.roof, 1.25), shade(b.roof, .95));
-    else if (p.k === 'tank') { const c = isoXY(p.x + p.w / 2, p.y + p.w / 2, ht); const r = p.w * ISO_K * .55; ctx.fillStyle = shade(b.roof, 1.1); ctx.fillRect(Math.round(c[0] - r), Math.round(c[1] - 5), Math.round(r * 2), 5); idisc(c[0], c[1] - 5, r, shade(b.roof, 1.75)); idisc(c[0], c[1] - 5, r * .5, shade(b.roof, 1.4)); }
-    else if (p.k === 'pad') { ctx.save(); ctx.setTransform(ISO_K, ISO_K / 2, -ISO_K, ISO_K / 2, ISO.ox, ISO.oy - ht * ISO_KZ); ctx.strokeStyle = rgba(pal[0], .8); ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(p.x, p.y, p.w, 0, TAU); ctx.stroke(); ctx.fillStyle = rgba(pal[0], .8); ctx.fillRect(p.x - p.w * .35, p.y - p.w * .45, 4, p.w * .9); ctx.fillRect(p.x + p.w * .35 - 4, p.y - p.w * .45, 4, p.w * .9); ctx.fillRect(p.x - p.w * .35, p.y - 2, p.w * .7, 4); ctx.restore(); }
-  }
-  if (b.trim !== null) {
-    const col = pal[b.trim]; for (let i = 0; i < 4; i++) iline(T[i], T[(i + 1) % 4], col);
-    iglow((T[2][0] + T[3][0]) / 2, (T[2][1] + T[3][1]) / 2, 22, col, .3); iglow((T[1][0] + T[2][0]) / 2, (T[1][1] + T[2][1]) / 2, 18, col, .25);
-  }
-  if ((hash2(b.x, b.y) & 3) === 0) { const on = Math.sin(t * 2.4 + b.x) > 0, p = isoXY(x1 - 8, y0 + 8, ht); ctx.fillStyle = on ? '#ff2a2a' : '#401010'; ctx.fillRect(Math.round(p[0]), Math.round(p[1]) - 1, 1, 2); if (on) iglow(p[0], p[1], 6, '#ff2a2a', .7); }
-  // edges: dark far-left edge, bright front corner
-  iline(A[0], A[3], shade(b.wall, .45)); iline(A[1], A[2], shade(b.wall, 1.25));
-}
+// drawIsoBuilding lives in 11g_buildings.js
 
 /* ---------- hideouts ---------- */
 // drawIsoHideout lives in 11f_blocks.js
