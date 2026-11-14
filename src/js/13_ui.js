@@ -100,7 +100,7 @@ const UI = (() => {
     $('ptitle').textContent = fromTitle ? 'Controls' : 'Paused';
     $('tabs').style.display = fromTitle ? 'none' : 'flex';
     $('bQuit').style.display = fromTitle ? 'none' : '';
-    $('bResume').textContent = fromTitle ? 'Back' : 'Resume';
+    $('bResume').textContent = $('backLbl').textContent = fromTitle ? 'Back' : 'Resume';
     show('pause'); renderTab(); sfx('ui'); Audio2.humStop();
   }
   function closePause() {
@@ -112,7 +112,7 @@ const UI = (() => {
   function switchTab(d) { const order = ['skills', 'controls', 'settings']; tab = order[(order.indexOf(tab) + d + 3) % 3]; renderTab(); sfx('ui'); }
   function renderTab(keepId) {
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('sel', t.dataset.tab === tab));
-    const body = $('pbody');
+    const body = $('pbody'); if (!keepId) body.scrollTop = 0;
     if (tab === 'skills') {
       let h = `<div class="stats"><span>Level <b>${G.level}</b></span><span>Skill points <b style="color:var(--gold)">${G.points}</b></span><span>Karma <b style="color:${karmaColor()}">${Math.round(G.karma * 10)} · ${karmaTier()}</b></span><span>Shards <b>${G.shards}/12</b></span></div><div class="cols" style="margin-top:14px">`;
       for (const [br, title, req] of [['core', 'Core powers', 'Always available'], ['good', 'Hero path', 'Unlocks at Good rank (karma 200+)'], ['evil', 'Villain path', 'Unlocks at Bad rank (karma −200 or lower)']]) {

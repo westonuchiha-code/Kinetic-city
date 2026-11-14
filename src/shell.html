@@ -65,8 +65,9 @@ button{font-family:inherit;color:inherit}
 .choice:hover,.choice.focus{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.5)}
 #dhint{display:flex;justify-content:flex-end;align-items:center;gap:6px;font-size:13px;color:var(--dim);margin-top:8px}
 /* ---------- pause ---------- */
-#pause{background:rgba(4,5,10,.84);backdrop-filter:blur(3px);align-items:stretch;justify-content:center;overflow:auto}
-.pwrap{width:min(1120px,100%);padding:4vh 24px 3vh;display:flex;flex-direction:column;gap:18px}
+#pause{background:rgba(4,5,10,.84);backdrop-filter:blur(3px);align-items:stretch;justify-content:center;overflow:hidden}
+.pwrap{width:min(1120px,100%);height:100%;padding:4vh 24px 3vh;display:flex;flex-direction:column;gap:18px}
+#pbody{flex:1;min-height:0;overflow:auto;scrollbar-width:thin}
 .phead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding-bottom:12px}
 .ptitle{font-family:var(--font-display);font-size:40px;margin:0;color:#e6fbff;text-shadow:0 0 14px var(--cyan)}
 .tabs{display:flex;gap:6px;align-items:center}
@@ -107,7 +108,9 @@ button{font-family:inherit;color:inherit}
 .pbtn.focus,.pbtn:hover{border-color:var(--cyan);color:#fff;background:rgba(60,224,255,.12)}
 .hints{display:flex;gap:16px;font-size:13px;color:var(--dim);align-items:center}
 .hints span{display:inline-flex;gap:6px;align-items:center}
-@media (max-height:520px){.tag{margin:8px 0 12px;font-size:13px}.mbtn{padding:4px 14px 4px 12px;font-size:17px}.menu{gap:2px}.padstat{margin-top:12px;font-size:12px}#title{padding-bottom:4vh}}
+@media (max-height:520px){.tag{margin:8px 0 12px;font-size:13px}.mbtn{padding:4px 14px 4px 12px;font-size:17px}.menu{gap:2px}.padstat{margin-top:12px;font-size:12px}#title{padding-bottom:4vh}
+  .pwrap{padding:10px 20px 8px;gap:8px}.phead{padding-bottom:6px}.ptitle{font-size:24px}.tab{padding:4px 12px;font-size:13px}.pfoot{padding-top:6px}.pbtn{padding:6px 14px;font-size:13px}
+  .ctl{gap:20px}.ctl h3{margin-bottom:5px;font-size:12px}.ctl ul{gap:2px}.ctl li{font-size:12.5px;gap:8px}.ctl li .k{min-width:60px}}
 @media (prefers-reduced-motion:reduce){.logo span{animation:none}}
 </style>
 </head>
@@ -150,7 +153,7 @@ button{font-family:inherit;color:inherit}
     </div>
     <div id="pbody"></div>
     <div class="pfoot">
-      <div class="hints"><span><span class="g" data-act="confirm"></span>Select</span><span><span class="g" data-act="back"></span>Resume</span></div>
+      <div class="hints"><span><span class="g" data-act="confirm"></span>Select</span><span><span class="g" data-act="back"></span><span id="backLbl">Resume</span></span></div>
       <div class="acts"><button class="pbtn nav" id="bResume">Resume</button><button class="pbtn nav" id="bQuit">Quit to title</button></div>
     </div>
   </div>
