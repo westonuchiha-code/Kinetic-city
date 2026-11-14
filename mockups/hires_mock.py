@@ -1,6 +1,6 @@
 """Mock-up only: builds a double-resolution variant of dist/kinetic_city.html (640x360 art instead of 320x180).
 Everything drawn from world coordinates gets twice the pixels; things drawn in fixed pixels are patched here
-(characters are an automatic 2x upscale of today's sprites, standing in for redrawn 32px ones).
+(characters use the redrawn sprites in mockups/chars32.js).
 Usage: python3 mockups/hires_mock.py <out.html>"""
 import sys
 s = open('dist/kinetic_city.html').read()
@@ -9,21 +9,9 @@ def sub(a, b, n=1):
     assert s.count(a) == n, (a, s.count(a)); s = s.replace(a, b)
 sub("const ART_W = 320, ART_H = 180, ISO_K = .5, ISO_KZ = .25, SPR_K = .6;", "const ART_W = 640, ART_H = 360, ISO_K = 1, ISO_KZ = .5, SPR_K = 1.2;")
 sub("const PROP_KZ = .75;", "const PROP_KZ = 1.5;")
-# characters: 2x (EPX) of the current sprites
-sub("  sprCache.set(key, c); return c;\n}", """  c = epx2(c); sprCache.set(key, c); return c;
-}
-function epx2(src) {
-  const w = src.width, h = src.height, d = new Uint32Array(src.getContext('2d').getImageData(0, 0, w, h).data.buffer);
-  const out = document.createElement('canvas'); out.width = w * 2; out.height = h * 2; const o = out.getContext('2d'), im = o.createImageData(w * 2, h * 2), q = new Uint32Array(im.data.buffer);
-  const at = (x, y) => x < 0 || y < 0 || x >= w || y >= h ? 0 : d[y * w + x];
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const P = at(x, y), A = at(x, y - 1), B = at(x + 1, y), C = at(x - 1, y), D = at(x, y + 1);
-    let p1 = P, p2 = P, p3 = P, p4 = P;
-    if (C === A && C !== D && A !== B) p1 = A; if (A === B && A !== C && B !== D) p2 = B; if (D === C && D !== B && C !== A) p3 = C; if (B === D && B !== A && D !== C) p4 = D;
-    const i = y * 2 * w * 2 + x * 2; q[i] = p1; q[i + 1] = p2; q[i + w * 2] = p3; q[i + w * 2 + 1] = p4;
-  }
-  o.putImageData(im, 0, 0); return out;
-}""")
+# characters: redrawn at double size (mockups/chars32.js) in place of the 16px templates
+sub("  const g = buildCharGrid(dir, frame, o);\n  c = document.createElement('canvas'); c.width = g[0].length;", "  c = char32(dir, frame, o, pal); sprCache.set(key, c); return c;\n  const g = buildCharGrid(dir, frame, o);\n  c = document.createElement('canvas'); c.width = g[0].length;")
+sub("const sprCache = new Map();", open('mockups/chars32.js').read() + "\nconst sprCache = new Map();")
 sub("const a = isoXY(e.x, e.y, 0), lift = Math.round((e.z || 0) * .5), t = G.time;", "const a = isoXY(e.x, e.y, 0), lift = Math.round((e.z || 0) * 1), t = G.time;")
 sub("const hx = a[0] + gx / gl * 4, hy = a[1] - 8 - lift + gy / gl * 2; iline([hx, hy], [hx + gx / gl * 4, hy + gy / gl * 3], '#2a2a32'); ipx(hx + gx / gl * 4, hy + gy / gl * 3, '#5a5a66');",
     "const hx = a[0] + gx / gl * 8, hy = a[1] - 16 - lift + gy / gl * 4; for (let w = 0; w < 2; w++) iline([hx, hy + w], [hx + gx / gl * 8, hy + w + gy / gl * 6], '#2a2a32'); ipx(hx + gx / gl * 8, hy + gy / gl * 6, '#5a5a66');")
