@@ -30,7 +30,7 @@ const { chromium } = require('playwright');
   for (let i = 0; i < 4; i++) await p.evaluate(() => tap(0));
   console.log('result', JSON.stringify(await p.evaluate(() => ({ mode: KC.G.mode, karma: KC.G.karma, st: KC.DS[0].status }))));
   // pause -> settings via R1 twice, adjust music with right
-  await p.evaluate(() => tap(9)); await p.evaluate(() => tap(5)); await p.evaluate(() => tap(5)); await p.waitForTimeout(100);
+  await p.evaluate(() => tap(9)); await p.evaluate(() => tap(5)); await p.evaluate(() => tap(5)); await p.evaluate(() => tap(5)); await p.waitForTimeout(100);
   console.log('settings focus', await foc()); await p.evaluate(() => tap(15)); console.log('after right', await foc());
   await p.screenshot({ path: 'shots/43_settings.png' });
   console.log(errs.join('\n'));

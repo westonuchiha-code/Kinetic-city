@@ -77,6 +77,7 @@ function updateEncounters(dt) {
     G.allyT = 9;
     if (G.karma >= 30 && allies < 2 && G.heat < 1) { const p = spotAround(P, 480); if (p) { mk('cop', p.x, p.y, { col: '#58c0ff', ally: true, sight: 380, home: p }); if (!G.seen.ally) { G.seen.ally = 1; toast('The police have started backing you up', '#38d0ff', true); } } }
   }
+  G.cosT = (G.cosT || 0) - dt; if (G.cosT <= 0) { G.cosT = 1; checkCostumes(); }
   G.tribT -= dt;
   if (G.tribT <= 0) {
     G.tribT = 10;
@@ -211,6 +212,28 @@ function buyUpgrade(id) {
 }
 
 /* ---------- save / load (localStorage, optional) ---------- */
+/* ---------- hero costumes ---------- */
+/* What each look is called and how it is unlocked. Unlocks are kept apart from the save (COSTUME_KEY), so they
+   survive a new game; the chosen one is a setting. */
+const COSTUMES = {
+  raincoat:   { name: 'Rain jacket', how: 'Yours from the start', ok: () => true },
+  scarf:      { name: 'Scarf', how: 'Free or take over Ground Zero', ok: () => DS[0].bossDone },
+  headphones: { name: 'Headphones', how: 'Find 4 kinetic shards', ok: () => G.shards >= 4 },
+  varsity:    { name: 'Varsity', how: 'Reach level 5', ok: () => G.level >= 5 },
+  headband:   { name: 'Headband', how: 'Free or take over The Slums', ok: () => DS[1].bossDone },
+  glowhood:   { name: 'Glow hood', how: 'Find all 12 kinetic shards', ok: () => G.shards >= 12 }
+};
+const COSTUME_KEY = 'kc_costumes';
+let costumesOpen = []; try { costumesOpen = JSON.parse(localStorage.getItem(COSTUME_KEY) || '[]') || []; } catch (e) { }
+const costumeUnlocked = id => id === 'raincoat' || costumesOpen.includes(id);
+function checkCostumes() {
+  for (const id in COSTUMES) if (!costumeUnlocked(id) && COSTUMES[id].ok()) {
+    costumesOpen.push(id); try { localStorage.setItem(COSTUME_KEY, JSON.stringify(costumesOpen)); } catch (e) { }
+    toast('New costume · ' + COSTUMES[id].name, '#ffc24a', true); sfx('level');
+  }
+}
+function setCostume(id) { if (!HERO_COSTUMES[id] || !costumeUnlocked(id)) return false; heroCostume = id; SETTINGS.costume = id; saveSettings(); return true; }
+
 const SAVE_KEY = 'kinetic_city_v2';
 function saveGame() {
   if (!G.started) return;
@@ -234,6 +257,7 @@ function resetState() {
 }
 function newGame(save) {
   resetState(); buildCity();
+  heroCostume = costumeUnlocked(SETTINGS.costume) && HERO_COSTUMES[SETTINGS.costume] ? SETTINGS.costume : 'raincoat';
   if (save) {
     Object.assign(G, { karma: save.karma, xp: save.xp, level: save.level, points: save.points, shards: save.shards, shardIds: save.shardIds.slice(), kills: save.kills, civKills: save.civKills, saves: save.saves || 0, check: save.check, finished: save.finished, seen: save.seen || {} });
     Object.assign(ups, save.ups);

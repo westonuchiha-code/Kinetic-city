@@ -22,6 +22,7 @@ fs.mkdirSync(OUT, { recursive: true });
   await p.evaluate(() => { KC.start(); KC.skip(); KC.P.invT = 1e9; }); await p.waitForTimeout(800);
   await shot('03_play_start');
   await tap(9); await shot('04_pause_skills');
+  await tap(5); await shot('04b_pause_costumes');
   await tap(5); await shot('05_pause_controls');
   await tap(5); await shot('06_pause_settings');
   await tap(9); await p.waitForTimeout(200);

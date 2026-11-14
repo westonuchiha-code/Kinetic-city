@@ -151,6 +151,15 @@ button{font-family:inherit;color:inherit}
 #bQuit{--c:var(--pink)}.rst{--c:var(--gold)}
 .pbtn.focus,.pbtn:hover{border-color:var(--c);color:#fff;background:color-mix(in srgb,var(--c) 26%,transparent);box-shadow:0 0 8px var(--c),0 0 24px color-mix(in srgb,var(--c) 55%,transparent)}
 .ctl h3{color:var(--cyan);text-shadow:0 0 9px rgba(60,224,255,.6)}.ctl>div:nth-child(2) h3{color:var(--pink);text-shadow:0 0 9px rgba(255,61,139,.6)}
+.looks{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+.look{--cc:var(--cyan);display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px 12px;background:linear-gradient(180deg,color-mix(in srgb,var(--cc) 10%,transparent),rgba(255,255,255,.02));border:2px solid var(--line);border-radius:4px;cursor:pointer}
+.look canvas{width:108px;height:138px;image-rendering:pixelated}
+.look .nm{font-weight:700;font-size:15px;letter-spacing:.1em;text-transform:uppercase}
+.look .st{font-size:12px;letter-spacing:.06em;color:var(--dim);text-align:center;min-height:2.4em;line-height:1.2}
+.look.on{--cc:var(--gold);border-color:var(--gold);box-shadow:0 0 14px color-mix(in srgb,var(--gold) 45%,transparent)}.look.on .st{color:var(--gold)}
+.look.lock canvas{filter:brightness(0) opacity(.55)}.look.lock .nm{color:var(--dim)}
+.look:hover,.look.focus{border-color:var(--cc);box-shadow:0 0 18px color-mix(in srgb,var(--cc) 55%,transparent),inset 0 0 18px color-mix(in srgb,var(--cc) 14%,transparent)}
+.lookhint{margin:0 0 12px;font-size:13px;color:var(--dim)}
 .bind{border-radius:3px}.bind:hover,.bind.focus{box-shadow:0 0 14px rgba(60,224,255,.4),inset 0 0 12px rgba(60,224,255,.1)}
 @media (max-height:520px){#tmenu{margin-top:10px}.mbtn{padding:4px 14px 4px 12px;font-size:17px}.menu{gap:2px}.padstat{margin-top:12px;font-size:12px}#title{padding-bottom:4vh}
   .pwrap{padding:10px 20px 8px;gap:8px}.phead{padding-bottom:6px}.ptitle{font-size:24px}.tab{padding:4px 12px;font-size:13px}.pfoot{padding-top:6px}.pbtn{padding:6px 14px;font-size:13px}
@@ -188,6 +197,7 @@ button{font-family:inherit;color:inherit}
       <div class="tabs" id="tabs">
         <span class="g" data-act="tabL"></span>
         <button class="tab nav" data-tab="skills">Skills</button>
+        <button class="tab nav" data-tab="looks">Costumes</button>
         <button class="tab nav" data-tab="controls">Controls</button>
         <button class="tab nav" data-tab="settings">Settings</button>
         <span class="g" data-act="tabR"></span>
@@ -291,7 +301,7 @@ function rgba(h, a) { const A = rgb(h); return `rgba(${A[0]},${A[1]},${A[2]},${a
    Controller layout (standard mapping):
      LS move  RS aim  RT telekinesis (hold grab, release throw)  LT absorb (hold, release = blast)
      RB repulse  LB gravity well  A dash  X heal (hold)  Y drain (hold)  B drop  Start pause  Back map */
-const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1, binds: { key: {}, pad: {} } };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale
+const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1, costume: 'raincoat', binds: { key: {}, pad: {} } };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale
 try { const s = JSON.parse(localStorage.getItem('kc_settings') || 'null'); if (s) Object.assign(SETTINGS, s); } catch (e) { }
 function saveSettings() { try { localStorage.setItem('kc_settings', JSON.stringify(SETTINGS)); } catch (e) { } }
 
@@ -2303,6 +2313,7 @@ function updateEncounters(dt) {
     G.allyT = 9;
     if (G.karma >= 30 && allies < 2 && G.heat < 1) { const p = spotAround(P, 480); if (p) { mk('cop', p.x, p.y, { col: '#58c0ff', ally: true, sight: 380, home: p }); if (!G.seen.ally) { G.seen.ally = 1; toast('The police have started backing you up', '#38d0ff', true); } } }
   }
+  G.cosT = (G.cosT || 0) - dt; if (G.cosT <= 0) { G.cosT = 1; checkCostumes(); }
   G.tribT -= dt;
   if (G.tribT <= 0) {
     G.tribT = 10;
@@ -2437,6 +2448,28 @@ function buyUpgrade(id) {
 }
 
 /* ---------- save / load (localStorage, optional) ---------- */
+/* ---------- hero costumes ---------- */
+/* What each look is called and how it is unlocked. Unlocks are kept apart from the save (COSTUME_KEY), so they
+   survive a new game; the chosen one is a setting. */
+const COSTUMES = {
+  raincoat:   { name: 'Rain jacket', how: 'Yours from the start', ok: () => true },
+  scarf:      { name: 'Scarf', how: 'Free or take over Ground Zero', ok: () => DS[0].bossDone },
+  headphones: { name: 'Headphones', how: 'Find 4 kinetic shards', ok: () => G.shards >= 4 },
+  varsity:    { name: 'Varsity', how: 'Reach level 5', ok: () => G.level >= 5 },
+  headband:   { name: 'Headband', how: 'Free or take over The Slums', ok: () => DS[1].bossDone },
+  glowhood:   { name: 'Glow hood', how: 'Find all 12 kinetic shards', ok: () => G.shards >= 12 }
+};
+const COSTUME_KEY = 'kc_costumes';
+let costumesOpen = []; try { costumesOpen = JSON.parse(localStorage.getItem(COSTUME_KEY) || '[]') || []; } catch (e) { }
+const costumeUnlocked = id => id === 'raincoat' || costumesOpen.includes(id);
+function checkCostumes() {
+  for (const id in COSTUMES) if (!costumeUnlocked(id) && COSTUMES[id].ok()) {
+    costumesOpen.push(id); try { localStorage.setItem(COSTUME_KEY, JSON.stringify(costumesOpen)); } catch (e) { }
+    toast('New costume · ' + COSTUMES[id].name, '#ffc24a', true); sfx('level');
+  }
+}
+function setCostume(id) { if (!HERO_COSTUMES[id] || !costumeUnlocked(id)) return false; heroCostume = id; SETTINGS.costume = id; saveSettings(); return true; }
+
 const SAVE_KEY = 'kinetic_city_v2';
 function saveGame() {
   if (!G.started) return;
@@ -2460,6 +2493,7 @@ function resetState() {
 }
 function newGame(save) {
   resetState(); buildCity();
+  heroCostume = costumeUnlocked(SETTINGS.costume) && HERO_COSTUMES[SETTINGS.costume] ? SETTINGS.costume : 'raincoat';
   if (save) {
     Object.assign(G, { karma: save.karma, xp: save.xp, level: save.level, points: save.points, shards: save.shards, shardIds: save.shardIds.slice(), kills: save.kills, civKills: save.civKills, saves: save.saves || 0, check: save.check, finished: save.finished, seen: save.seen || {} });
     Object.assign(ups, save.ups);
@@ -6071,8 +6105,8 @@ function mkPal(b) {
 /* ---------- looks per character type ---------- */
 const SKINS = ['#f0c8a0', '#e0b088', '#c08a60', '#9a6a44', '#74482c'];
 /* The hero's look. `trim` is always the karma colour, so each costume shows karma somewhere (zip, cuffs, scarf, lights...).
-   'raincoat' is the one in use. The others are finished alternates kept for later (for example as unlockable costumes);
-   nothing in the game selects them yet. KC.costume('scarf') switches for a look. */
+   The player picks one on the Costumes tab of the pause menu; all but the rain jacket have to be unlocked first
+   (COSTUMES in 10_game.js holds the names and unlock rules). KC.costume('scarf') forces one for a look. */
 const HERO_COSTUMES = {
   raincoat:   { o: { style: 'messy', top: 'raincoat', face: 'eyes', zip: 1, cuffs: 1 }, c: { hair: '#4a2e1a', shirt: '#e3b92e', pants: '#2a2f45', shoe: '#3a3d4a' } },
   scarf:      { o: { style: 'messy', top: 'scarf', face: 'eyes' }, c: { hair: '#7a3f1c', shirt: '#4b566b', pants: '#262b40', shoe: '#d5d9e8' } },
@@ -6093,13 +6127,14 @@ const BOSS_LOOK = [
     c: { hair: '#f0e8ff', skin: '#cdb8dc', shirt: '#2a2050', trim: '#b06bff', band: '#d0a0ff', pants: '#14102a', shoe: '#14102a', lens: '#7a2cf0' }, glint: '#f4e6ff' }
 ];
 const CIV_STYLES = ['hood', 'short', 'long', 'beanie', 'short', 'afro', 'hood', 'long', 'bald', 'short'];
+function heroLook(name, fl, live) {   // live: follow what the hero is doing (casting pose, glowing hands); off for menu previews
+  const kc = kcol(), cast = live && !!(P.holding || P.absorbing || P.throwT > 0 || P.chan), H = HERO_COSTUMES[name] || HERO_COSTUMES.raincoat;
+  return { o: Object.assign({ armsUp: false, pose: cast ? 'cast' : '' }, H.o), pal: mkPal(Object.assign({ skin: '#f0c8a0', trim: kc, hand: cast ? mix('#ffffff', kc, .5) : '#f0c8a0', white: fl }, H.c, H.karmaBand ? { band: kc } : null)) };
+}
 function charLook(e) {
   const fl = e.flash > 0;
   switch (e.kind) {
-    case 'player': {
-      const kc = kcol(), cast = !!(P.holding || P.absorbing || P.throwT > 0 || P.chan), H = HERO_COSTUMES[heroCostume] || HERO_COSTUMES.raincoat;
-      return { o: Object.assign({ armsUp: false, pose: cast ? 'cast' : '' }, H.o), pal: mkPal(Object.assign({ skin: '#f0c8a0', trim: kc, hand: cast ? mix('#ffffff', kc, .5) : '#f0c8a0', white: fl }, H.c, H.karmaBand ? { band: kc } : null)) };
-    }
+    case 'player': return heroLook(heroCostume, fl, true);
     case 'civ': {
       const style = CIV_STYLES[e.id % CIV_STYLES.length];
       if (!e.pants) e.pants = pick(['#2e3a66', '#34343c', '#4a3a2a', '#3a3a48']);
@@ -7124,7 +7159,7 @@ const UI = (() => {
     G.mode = G.prevMode === 'dead' ? 'dead' : 'play';
     if (P && P.holding) Audio2.humStart();
   }
-  function switchTab(d) { const order = ['skills', 'controls', 'settings']; tab = order[(order.indexOf(tab) + d + 3) % 3]; renderTab(); sfx('ui'); }
+  function switchTab(d) { const order = ['skills', 'looks', 'controls', 'settings']; tab = order[(order.indexOf(tab) + d + order.length) % order.length]; renderTab(); sfx('ui'); }
   function renderTab(keepId) {
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('sel', t.dataset.tab === tab));
     const body = $('pbody'); if (!keepId) body.scrollTop = 0;
@@ -7143,6 +7178,14 @@ const UI = (() => {
       body.querySelectorAll('.card').forEach(b => b.onclick = () => { if (buyUpgrade(b.dataset.id)) { renderTab(b.dataset.id); } });
       const keep = keepId && body.querySelector(`.card[data-id="${keepId}"]`);
       setFocus(keep || body.querySelector('.card.can') || body.querySelector('.card'));
+    } else if (tab === 'looks') {
+      let h = '<p class="lookhint">Pick what the hero wears. The trim on every costume follows your karma.</p><div class="looks">';
+      for (const id in HERO_COSTUMES) { const c = COSTUMES[id], open = costumeUnlocked(id), on = heroCostume === id;
+        h += `<button class="look nav ${open ? '' : 'lock'} ${on ? 'on' : ''}" data-id="${id}"><canvas width="18" height="23" data-look="${id}"></canvas><span class="nm">${open ? c.name : '???'}</span><span class="st">${on ? 'Wearing' : open ? 'Wear' : c.how}</span></button>`; }
+      body.innerHTML = h + '</div>';
+      body.querySelectorAll('canvas[data-look]').forEach(cv => { const L = heroLook(cv.dataset.look, false, false), sp = charSprite('S', 0, L.o, L.pal); cv.width = sp.width; cv.height = sp.height; cv.getContext('2d').drawImage(sp, 0, 0); });
+      body.querySelectorAll('.look').forEach(b => b.onclick = () => { if (setCostume(b.dataset.id)) sfx('select'); else sfx('ui'); renderTab(b.dataset.id); });
+      setFocus((keepId && body.querySelector(`.look[data-id="${keepId}"]`)) || body.querySelector('.look.on') || body.querySelector('.look'));
     } else if (tab === 'controls') {
       const rows = [['move', 'Move'], ['aim', 'Aim'], ['tk', 'Telekinesis: hold to lift, release to throw'], ['drop', 'Drop what you are holding'], ['rep', 'Repulse: shove everything, reflect bullets'], ['well', 'Gravity well at your aim point'], ['abs', 'Absorb: hold to soak hits, release to blast'], ['dash', 'Dash (invulnerable, hits on contact)'], ['heal', 'Hold near a wounded civilian: heal'], ['drain', 'Hold near a civilian: drain their life'], ['map', 'City map'], ['menu', 'Pause and skills']];
       // rows you can rebind are buttons: confirm, then press the new key/button (a binding already in use swaps)

@@ -2336,8 +2336,8 @@ function mkPal(b) {
 /* ---------- looks per character type ---------- */
 const SKINS = ['#f0c8a0', '#e0b088', '#c08a60', '#9a6a44', '#74482c'];
 /* The hero's look. `trim` is always the karma colour, so each costume shows karma somewhere (zip, cuffs, scarf, lights...).
-   'raincoat' is the one in use. The others are finished alternates kept for later (for example as unlockable costumes);
-   nothing in the game selects them yet. KC.costume('scarf') switches for a look. */
+   The player picks one on the Costumes tab of the pause menu; all but the rain jacket have to be unlocked first
+   (COSTUMES in 10_game.js holds the names and unlock rules). KC.costume('scarf') forces one for a look. */
 const HERO_COSTUMES = {
   raincoat:   { o: { style: 'messy', top: 'raincoat', face: 'eyes', zip: 1, cuffs: 1 }, c: { hair: '#4a2e1a', shirt: '#e3b92e', pants: '#2a2f45', shoe: '#3a3d4a' } },
   scarf:      { o: { style: 'messy', top: 'scarf', face: 'eyes' }, c: { hair: '#7a3f1c', shirt: '#4b566b', pants: '#262b40', shoe: '#d5d9e8' } },
@@ -2358,13 +2358,14 @@ const BOSS_LOOK = [
     c: { hair: '#f0e8ff', skin: '#cdb8dc', shirt: '#2a2050', trim: '#b06bff', band: '#d0a0ff', pants: '#14102a', shoe: '#14102a', lens: '#7a2cf0' }, glint: '#f4e6ff' }
 ];
 const CIV_STYLES = ['hood', 'short', 'long', 'beanie', 'short', 'afro', 'hood', 'long', 'bald', 'short'];
+function heroLook(name, fl, live) {   // live: follow what the hero is doing (casting pose, glowing hands); off for menu previews
+  const kc = kcol(), cast = live && !!(P.holding || P.absorbing || P.throwT > 0 || P.chan), H = HERO_COSTUMES[name] || HERO_COSTUMES.raincoat;
+  return { o: Object.assign({ armsUp: false, pose: cast ? 'cast' : '' }, H.o), pal: mkPal(Object.assign({ skin: '#f0c8a0', trim: kc, hand: cast ? mix('#ffffff', kc, .5) : '#f0c8a0', white: fl }, H.c, H.karmaBand ? { band: kc } : null)) };
+}
 function charLook(e) {
   const fl = e.flash > 0;
   switch (e.kind) {
-    case 'player': {
-      const kc = kcol(), cast = !!(P.holding || P.absorbing || P.throwT > 0 || P.chan), H = HERO_COSTUMES[heroCostume] || HERO_COSTUMES.raincoat;
-      return { o: Object.assign({ armsUp: false, pose: cast ? 'cast' : '' }, H.o), pal: mkPal(Object.assign({ skin: '#f0c8a0', trim: kc, hand: cast ? mix('#ffffff', kc, .5) : '#f0c8a0', white: fl }, H.c, H.karmaBand ? { band: kc } : null)) };
-    }
+    case 'player': return heroLook(heroCostume, fl, true);
     case 'civ': {
       const style = CIV_STYLES[e.id % CIV_STYLES.length];
       if (!e.pants) e.pants = pick(['#2e3a66', '#34343c', '#4a3a2a', '#3a3a48']);

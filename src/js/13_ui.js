@@ -111,7 +111,7 @@ const UI = (() => {
     G.mode = G.prevMode === 'dead' ? 'dead' : 'play';
     if (P && P.holding) Audio2.humStart();
   }
-  function switchTab(d) { const order = ['skills', 'controls', 'settings']; tab = order[(order.indexOf(tab) + d + 3) % 3]; renderTab(); sfx('ui'); }
+  function switchTab(d) { const order = ['skills', 'looks', 'controls', 'settings']; tab = order[(order.indexOf(tab) + d + order.length) % order.length]; renderTab(); sfx('ui'); }
   function renderTab(keepId) {
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('sel', t.dataset.tab === tab));
     const body = $('pbody'); if (!keepId) body.scrollTop = 0;
@@ -130,6 +130,14 @@ const UI = (() => {
       body.querySelectorAll('.card').forEach(b => b.onclick = () => { if (buyUpgrade(b.dataset.id)) { renderTab(b.dataset.id); } });
       const keep = keepId && body.querySelector(`.card[data-id="${keepId}"]`);
       setFocus(keep || body.querySelector('.card.can') || body.querySelector('.card'));
+    } else if (tab === 'looks') {
+      let h = '<p class="lookhint">Pick what the hero wears. The trim on every costume follows your karma.</p><div class="looks">';
+      for (const id in HERO_COSTUMES) { const c = COSTUMES[id], open = costumeUnlocked(id), on = heroCostume === id;
+        h += `<button class="look nav ${open ? '' : 'lock'} ${on ? 'on' : ''}" data-id="${id}"><canvas width="18" height="23" data-look="${id}"></canvas><span class="nm">${open ? c.name : '???'}</span><span class="st">${on ? 'Wearing' : open ? 'Wear' : c.how}</span></button>`; }
+      body.innerHTML = h + '</div>';
+      body.querySelectorAll('canvas[data-look]').forEach(cv => { const L = heroLook(cv.dataset.look, false, false), sp = charSprite('S', 0, L.o, L.pal); cv.width = sp.width; cv.height = sp.height; cv.getContext('2d').drawImage(sp, 0, 0); });
+      body.querySelectorAll('.look').forEach(b => b.onclick = () => { if (setCostume(b.dataset.id)) sfx('select'); else sfx('ui'); renderTab(b.dataset.id); });
+      setFocus((keepId && body.querySelector(`.look[data-id="${keepId}"]`)) || body.querySelector('.look.on') || body.querySelector('.look'));
     } else if (tab === 'controls') {
       const rows = [['move', 'Move'], ['aim', 'Aim'], ['tk', 'Telekinesis: hold to lift, release to throw'], ['drop', 'Drop what you are holding'], ['rep', 'Repulse: shove everything, reflect bullets'], ['well', 'Gravity well at your aim point'], ['abs', 'Absorb: hold to soak hits, release to blast'], ['dash', 'Dash (invulnerable, hits on contact)'], ['heal', 'Hold near a wounded civilian: heal'], ['drain', 'Hold near a civilian: drain their life'], ['map', 'City map'], ['menu', 'Pause and skills']];
       // rows you can rebind are buttons: confirm, then press the new key/button (a binding already in use swaps)

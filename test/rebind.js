@@ -14,7 +14,7 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..');
   await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(400);
   await R(() => { localStorage.removeItem('kc_settings'); }); await p.reload(); await p.waitForTimeout(400);
   await R(() => { KC.start(); KC.skip(); KC.P.invT = 1e9; KC.tp(200, 816); });
-  await tap(9); await tap(5); await p.waitForTimeout(150);                       // pause -> controls tab
+  await tap(9); await tap(5); await tap(5); await p.waitForTimeout(150);         // pause -> controls tab
   ok('controls tab focuses the telekinesis row', await R(() => document.querySelector('.focus').dataset.act === 'tk'));
   await tap(0); await p.waitForTimeout(100); await p.screenshot({ path: ROOT + '/screenshots/ui/15_rebind_waiting.png' });
   await tap(2);                                                                  // bind telekinesis to X: swaps with heal
@@ -41,7 +41,7 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..');
   await R(() => { __pad.buttons[2] = { pressed: false, value: 0 }; __pad.axes[2] = 0; }); await p.waitForTimeout(300);
   await p.screenshot({ path: ROOT + '/screenshots/ui/17_rebound_hud.png' });
   // reset
-  await tap(9); await tap(5); await R(() => document.querySelectorAll('.rst').forEach(b => b.click()));
+  await tap(9); await tap(5); await tap(5); await R(() => document.querySelectorAll('.rst').forEach(b => b.click()));
   ok('reset restores defaults', await g('pad', 'tk') === 'RT' && await g('kbm', 'dash') === 'SPACE' && await g('kbm', 'abs') === 'Q');
   console.log(errs.join('|') || 'no errors'); await b.close();
 })();
