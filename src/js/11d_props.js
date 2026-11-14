@@ -47,40 +47,130 @@ function iellipse(cx, cy, rx, ry, col) {
   for (let dy = -Math.ceil(ry); dy <= ry; dy++) { const h = Math.round(rx * Math.sqrt(Math.max(0, 1 - (dy * dy) / (ry * ry)))); if (h > 0) ctx.fillRect(Math.round(cx) - h, Math.round(cy) + dy, h * 2, 1); }
 }
 
+/* ---------- swept solids: vehicles ---------- */
+/* A vehicle is built from solids made by sweeping a side profile across its width, so bonnets, windscreens
+   and boots can slope instead of everything being a box. prof is the side outline as [along, height] points
+   going round counter-clockwise (rear-bottom, front-bottom, up the nose, back over the top). w is the half
+   width. Like pixBox, only faces turned toward the camera are drawn, each lit by the way it points.
+   o.side / o.top are the colours; o.strip(j) can recolour strip j (the surface between profile points j and
+   j+1); o.sideDeco(api, after) and o.stripDeco(j, api) add detail. Coordinates in decos are the car's own:
+   side api works in [along, height]; strip api in (v across the width 0..1, t along the strip 0..1).
+   Detail is skipped on faces seen nearly edge-on, where it would only be noise. */
+function pixSweep(e, P3, prof, w, o) {
+  const ca = Math.cos(e.ang || 0), sa = Math.sin(e.ang || 0), n = prof.length, yc = o.yc || 0;
+  const face = (nx, ny, nz) => { const wx = nx * ca - ny * sa, wy = nx * sa + ny * ca, dot = wx + wy + nz * .667; return { vis: dot > .02, flat: dot > .34, k: clamp(.62 + .22 * wy - .12 * wx + .46 * Math.max(0, nz), .32, 1.12), nz }; };
+  const pt = (j, sg) => P3(prof[j % n][0], yc + sg * w, prof[j % n][1]);
+  const strips = [];
+  for (let j = 0; j < n; j++) {
+    const a = prof[j], b = prof[(j + 1) % n], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, f = face(dz / l, 0, -dx / l);
+    const mx = (a[0] + b[0]) / 2; f.j = j; f.a = a; f.b = b; f.key = (mx * ca - yc * sa) + (mx * sa + yc * ca) + (a[1] + b[1]) / 2 * .667;
+    f.col = (o.strip && o.strip(j, f)) || (f.nz > .3 ? o.top : o.side);
+    strips.push(f);
+  }
+  const sides = [1, -1].map(sg => Object.assign(face(0, sg, 0), { sg }));
+  const sideApi = sg => {
+    const q = p => P3(p[0], yc + sg * w, p[1]);
+    return { sg, poly: (pts, c) => ipoly(pts.map(q), c), line: (a, b, c) => iline(q(a), q(b), c),
+      disc: (x, z, r, c) => { const pts = []; for (let i = 0; i < 8; i++) { const t = i * TAU / 8 + TAU / 16; pts.push(q([x + Math.cos(t) * r, z + Math.sin(t) * r])); } ipoly(pts, c); } };
+  };
+  // far faces first: visible strips back to front, then the visible side
+  for (const f of strips.filter(f => f.vis).sort((p, q) => p.key - q.key)) {
+    const S = (v, t) => P3(lerp(f.a[0], f.b[0], t), yc + (v * 2 - 1) * w, lerp(f.a[1], f.b[1], t));
+    ipoly([S(0, 0), S(1, 0), S(1, 1), S(0, 1)], shade(f.col, f.nz > .3 ? 1 : f.k / .84));
+    if (o.stripDeco && f.flat) o.stripDeco(f.j, { k: f.k, quad: (v0, v1, t0, t1, c) => ipoly([S(v0, t0), S(v1, t0), S(v1, t1), S(v0, t1)], c), line: (v0, t0, v1, t1, c) => iline(S(v0, t0), S(v1, t1), c), at: S });
+  }
+  for (const sd of sides) if (sd.vis) {
+    ipoly(prof.map((p, j) => pt(j, sd.sg)), shade(o.side, sd.k / .84));
+    if (o.sideDeco && sd.flat) o.sideDeco(Object.assign(sideApi(sd.sg), { k: sd.k }), false);
+  }
+  // outlines: dark where a drawn face meets a hidden one, a lighter or darker crease where two drawn faces meet
+  const hi = shade(o.top, 1.18), lo = shade(o.side, .45);
+  for (let pass = 0; pass < 2; pass++) for (let j = 0; j < n; j++) {
+    const A = strips[(j + n - 1) % n], B = strips[j], topA = A.nz > .3, topB = B.nz > .3;
+    const base = o.noBase && (j === 0 || j === 1);   // a solid standing on another one has no outline round its foot
+    if (A.vis !== B.vis) { if (pass && !base) iline(pt(j, -1), pt(j, 1), OUT); }
+    else if (A.vis && !pass && topA !== topB) iline(pt(j, -1), pt(j, 1), hi);   // where the top meets a wall
+    for (const sd of sides) { if (sd.vis !== B.vis) { if (pass && !(o.noBase && j === 0)) iline(pt(j, sd.sg), pt(j + 1, sd.sg), OUT); } else if (sd.vis && sd.flat && !pass) iline(pt(j, sd.sg), pt(j + 1, sd.sg), topB ? hi : lo); }
+  }
+  for (const sd of sides) if (sd.vis && o.sideDeco) o.sideDeco(Object.assign(sideApi(sd.sg), { k: sd.k, thin: !sd.flat }), true);
+  return { strips, sides };
+}
+/* Vehicles. Physics sizes come from VEHICLES (L, Wd, bh body height, ch cabin roof, cL/cx cabin length and offset). */
 function drawIsoCar(e) {
-  const fl = e.flash > 0, P3 = propFrame(e), v = e.vs || VEHICLES.sedan, L = v.L, Wd = v.Wd, bh = v.bh;
-  const base = fl ? '#ffffff' : (e.hp < e.maxhp * .35 ? shade(e.col, .55) : e.col), glass = fl ? '#ffffff' : '#1b2a40', shine = fl ? '#fff' : '#3a5a80';
-  const headOn = e.driving ? '#fff6d0' : '#8a8670', tailOn = e.driving ? '#ff3030' : '#6a1818';
-  const wheels = (i, quad, us) => { for (const u of us) { quad(i, u - .09, u + .09, 0, 7, OUT); quad(i, u - .05, u + .05, 2, 5, '#4a4d58'); } };
-  let roofZ;
-  if (!v.ch) { // one tall box: van or bus
-    const bus = e.vt === 'bus', wu = bus ? [.16, .8] : [.2, .78];
-    const top = pixBox(e, P3, 0, L, Wd, 3, bh, base, shade(base, 1.08), (i, quad, line) => {
-      if (i === 1 || i === 3) {
-        wheels(i, quad, wu);
-        if (bus) { for (let k = 0; k < 6; k++) { const u0 = .1 + k * .14; quad(i, u0, u0 + .11, bh * .55, bh * .88, glass); } line(i, .04, bh * .45, .96, bh * .45, shade(base, 1.4)); quad(i, i === 1 ? .9 : .02, i === 1 ? .98 : .1, 3, bh * .8, shade(base, .5)); }
-        else { quad(i, i === 1 ? .78 : .02, i === 1 ? .98 : .22, bh * .55, bh * .85, glass); line(i, .05, bh * .4, .95, bh * .4, shade(base, 1.35)); line(i, .5, 4, .5, bh * .85, shade(base, .5)); }
-      } else if (i === 0) { quad(i, .08, .92, bh * .5, bh * .9, glass); quad(i, .2, .4, bh * .6, bh * .8, shine); quad(i, .06, .2, 5, 9, headOn); quad(i, .8, .94, 5, 9, headOn); quad(i, .3, .7, 4, 8, '#15161b'); if (bus) quad(i, .15, .85, bh * .9, bh * .98, '#ffb040'); }
-      else { quad(i, .06, .2, 6, 10, tailOn); quad(i, .8, .94, 6, 10, tailOn); if (!bus) line(i, .5, 4, .5, bh * .9, shade(base, .5)); }
+  const fl = e.flash > 0, P3 = propFrame(e), v = e.vs || VEHICLES.sedan, L = v.L, Wd = v.Wd, bh = v.bh, h = L / 2, w = Wd / 2;
+  const hurt = e.hp < e.maxhp * .35;
+  const base = fl ? '#ffffff' : (hurt ? shade(e.col, .55) : e.col), top = fl ? '#ffffff' : shade(base, 1.12);
+  const glass = fl ? '#ffffff' : '#172338', glassHi = fl ? '#ffffff' : '#4a6c96', trim = fl ? '#ffffff' : '#23252e', chrome = fl ? '#ffffff' : '#9aa1b0';
+  const headOn = fl ? '#fff' : e.driving ? '#fff6d0' : '#a8a48c', tailOn = fl ? '#fff' : e.driving ? '#ff3838' : '#7a1c1c';
+  const tyre = fl ? '#ffffff' : '#15161c', hub = fl ? '#ffffff' : '#8a8f9c', crack = '#a9bcd6', dent = shade(e.col, .3);
+  const wheels = (api, xs, r) => { for (const x of xs) { api.disc(x, r + .4, r + 1.1, OUT); api.disc(x, r + .2, r, tyre); api.disc(x, r + .2, r * .45, hub); } };
+  const lights = (api, col, z0, z1, T) => { const t0 = T(z0), t1 = T(z1); api.quad(.07, .3, t0, t1, col); api.quad(.7, .93, t0, t1, col); };
+  let roofZ = bh;
+  if (!v.ch) {
+    /* ---- van and bus: one tall body with a raked windscreen ---- */
+    const bus = e.vt === 'bus', nose = bus ? 2.5 : 8, wr = bus ? 4.3 : 3.7, wx = bus ? [h - 13, -h + 15] : [h - 10, -h + 10];
+    const prof = bus ? [[-h, 3], [h, 3], [h, 13], [h - nose, bh - 4], [h - nose - 1.5, bh], [-h, bh]]
+                     : [[-h, 3], [h, 3], [h, 11], [h - 3.5, 13.5], [h - nose, bh], [-h, bh]];
+    const fz = z => (z - 3) / (prof[2][1] - 3), rz = z => (bh - z) / (bh - 3);
+    pixSweep(e, P3, prof, w, {
+      side: base, top,
+      strip: j => (bus ? j === 2 : j === 3) ? glass : null,
+      stripDeco: (j, a) => {
+        if (j === 1) { a.quad(0, 1, 0, fz(5.5), shade(trim, a.k / .6)); lights(a, headOn, 6.5, 10, fz); a.quad(.36, .64, fz(6), fz(10), trim); if (bus) a.quad(.05, .95, fz(11), fz(12.5), shade(base, .6)); }
+        else if (bus ? j === 2 : j === 3) { a.quad(.1, .28, .25, .6, glassHi); a.line(.5, .05, .5, .95, shade(base, .8)); if (hurt && !fl) { a.line(.15, .2, .4, .7, crack); a.line(.4, .7, .3, .95, crack); a.line(.4, .7, .46, .4, crack); } }
+        else if (j === 5) { a.quad(0, 1, rz(5.5), 1, shade(trim, a.k / .6)); lights(a, tailOn, 7, 10.5, z => rz(z)); if (bus) a.quad(.2, .8, rz(bh - 4), rz(bh - 11), glass); else { a.quad(.12, .45, rz(bh - 4), rz(bh - 10), glass); a.quad(.55, .88, rz(bh - 4), rz(bh - 10), glass); a.line(.5, rz(bh - 2), .5, rz(5), shade(base, .5)); } }
+        else if (j === 4 && bus && !fl) { a.quad(.3, .7, .12, .3, shade(base, .8)); a.quad(.3, .7, .55, .78, shade(base, .8)); a.quad(.34, .66, .14, .26, shade(base, 1.25)); a.quad(.34, .66, .57, .74, shade(base, 1.25)); }   // roof units
+      },
+      sideDeco: (a, after) => {
+        if (after) { if (!a.thin) wheels(a, wx, wr); return; }
+        const dk = shade(base, a.k * .62), lt = shade(base, 1.3);
+        if (hurt && !fl) { a.poly([[-6, 7], [1, 7.6], [-1, 12], [-7, 11]], dent); a.poly([[h - 26, 6], [h - 22, 6.4], [h - 23, 9.5], [h - 26.5, 9]], dent); }
+        a.poly([[-h, 3], [h, 3], [h, 5.2], [-h, 5.2]], shade(trim, a.k / .7));                        // sill
+        if (bus) {
+          for (let x = -h + 5; x < h - 16; x += 8.6) a.poly([[x, 15.5], [x + 6.8, 15.5], [x + 6.8, 24.5], [x, 24.5]], glass);
+          a.poly([[h - 12.5, 6], [h - 6, 6], [h - 6, 25], [h - 12.5, 25]], shade(base, a.k * .5)); a.poly([[h - 11.6, 9], [h - 9.6, 9], [h - 9.6, 24], [h - 11.6, 24]], glass); a.poly([[h - 8.8, 9], [h - 6.8, 9], [h - 6.8, 24], [h - 8.8, 24]], glass);   // doors
+          a.poly([[-h + 2, 11], [h - 14, 11], [h - 14, 13.2], [-h + 2, 13.2]], fl ? '#fff' : shade(base, 1.45));   // stripe
+        } else {
+          a.poly([[h - 17, 15], [h - 7.2, 15], [h - 10.4, bh - 2], [h - 17, bh - 2]], glass); a.line([h - 16.2, bh - 3], [h - 13, bh - 3], glassHi);   // cab window
+          a.line([h - 18.5, 5.5], [h - 18.5, bh - 1.5], dk); a.line([-h + 14, 5.5], [-h + 14, bh - 1.5], dk);                                        // door seams
+          a.poly([[-h + 3, 12.5], [h - 20, 12.5], [h - 20, 14.5], [-h + 3, 14.5]], fl ? '#fff' : shade(base, .74));                                   // side rub strip
+          a.line([h - 21, 11], [h - 20, 11], chrome);
+        }
+      }
     });
-    if (bus && !fl) { const a = top.tp(.35, .3), c = top.tp(.6, .7); ctx.fillStyle = shade(base, 1.3); ctx.fillRect(Math.round(Math.min(a[0], c[0])), Math.round(Math.min(a[1], c[1])), Math.max(3, Math.round(Math.abs(c[0] - a[0]))), 3); }
-    roofZ = bh;
-  } else { // two boxes: body + glass cabin
-    const cruiser = e.vt === 'cruiser';
-    pixBox(e, P3, 0, L, Wd, 3, bh, base, shade(base, 1.08), (i, quad, line) => {
-      if (i === 1 || i === 3) {
-        wheels(i, quad, [.22, .78]);
-        if (cruiser && !fl) quad(i, .3, .7, 4, bh - .6, '#e8eaf0');   // white doors
-        line(i, .5, 4, .5, bh - 1, shade(base, .45)); line(i, .05, bh - .6, .95, bh - .6, shade(base, 1.35));
-      } else if (i === 0) { quad(i, .08, .3, 6, 9, headOn); quad(i, .7, .92, 6, 9, headOn); quad(i, .36, .64, 5, 8, '#15161b'); }
-      else { quad(i, .06, .28, 6, 9, tailOn); quad(i, .72, .94, 6, 9, tailOn); }
+  } else {
+    /* ---- cars: a body with a sloped nose and tail, and a glasshouse on top ---- */
+    const cruiser = e.vt === 'cruiser', taxi = e.vt === 'taxi', hatch = e.vt === 'compact';
+    const body = [[-h, 3], [h, 3], [h, bh - 3], [h - 2.5, bh - .4], [-h + (hatch ? 1 : 2), bh], [-h, bh - 2.2]];
+    const fz = z => (z - 3) / (bh - 6), rz = z => (bh - 2.2 - z) / (bh - 5.2);
+    const x0 = v.cx - v.cL / 2 - (hatch ? 1 : .5), x1 = v.cx + v.cL / 2 + 1.5, r0 = x0 + (hatch ? 1.6 : 4.2), r1 = x1 - 5.2, ch = v.ch, cw = w - 1.6;
+    pixSweep(e, P3, body, w, {
+      side: base, top,
+      stripDeco: (j, a) => {
+        if (j === 1) { a.quad(0, 1, 0, fz(4.6), shade(chrome, a.k / .7)); lights(a, headOn, 5.2, 8, fz); a.quad(.38, .62, fz(5.2), fz(7.6), trim); }
+        else if (j === 5) { a.quad(0, 1, rz(4.6), 1, shade(chrome, a.k / .7)); lights(a, tailOn, 5.6, 8.4, z => rz(z)); }
+      },
+      sideDeco: (a, after) => {
+        if (after) { if (!a.thin) wheels(a, [h - 8.5, -h + 9], 3.4); return; }
+        const dk = shade(base, a.k * .55), lt = shade(base, 1.32);
+        a.poly([[-h + 1, 3], [h - 1, 3], [h - 1, 4.6], [-h + 1, 4.6]], shade(trim, a.k / .7));          // sill
+        if (cruiser && !fl) a.poly([[-h + 12, 4.6], [h - 13, 4.6], [h - 13, bh - .8], [-h + 12, bh - .8]], shade('#e8eaf0', a.k / .84));   // white doors
+        a.line([v.cx + 1.5, 4.8], [v.cx + 1.5, bh - 1.2], dk);                                          // door seam
+        a.line([v.cx - 2.2, bh - 2.9], [v.cx - 1.2, bh - 2.9], chrome);                                 // handle
+        if (hurt && !fl) { a.poly([[h - 15, 6], [h - 11, 6.5], [h - 12, 9], [h - 15.5, 8.4]], dent); a.poly([[-h + 13, 5.5], [-h + 17, 6], [-h + 16, 8], [-h + 13.5, 8.5]], dent); }   // dents
+      }
     });
-    const cab = pixBox(e, P3, v.cx, v.cL, Wd - 4, bh, v.ch, base, shade(base, .92), (i, quad) => {
-      if (i === 1 || i === 3) { quad(i, .08, .46, bh + 1, v.ch - 1, glass); quad(i, .54, .92, bh + 1, v.ch - 1, glass); quad(i, .12, .3, v.ch - 3, v.ch - 1.5, shine); }
-      else quad(i, .1, .9, bh + 1, v.ch - 1, glass);
+    const cab = pixSweep(e, P3, [[x0, bh], [x1, bh], [r1, ch], [r0, ch]], cw, {
+      noBase: true, side: base, top: fl ? '#ffffff' : shade(base, .98), strip: j => j === 1 || j === 3 ? glass : null,
+      stripDeco: (j, a) => { if (j === 1) { a.quad(.12, .3, .25, .6, glassHi); if (hurt && !fl) { a.line(.3, .15, .55, .6, crack); a.line(.55, .6, .8, .35, crack); a.line(.55, .6, .5, .95, crack); } } else if (j === 3) a.quad(.7, .86, .3, .6, shade(glassHi, .7)); },
+      sideDeco: (a, after) => {
+        if (after) return; const mid = (x0 + x1) / 2 + .6;
+        a.poly([[mid + .8, bh + 1], [x1 - 1.9, bh + 1], [r1 - .5, ch - 1.1], [mid + .8, ch - 1.1]], glass);
+        a.poly([[x0 + (hatch ? 1 : 1.9), bh + 1], [mid - .8, bh + 1], [mid - .8, ch - 1.1], [r0 + .5, ch - 1.1]], glass);
+      }
     });
-    const m = (() => { const a = cab.tp(.35, .25), b2 = cab.tp(.65, .75); return [Math.round((a[0] + b2[0]) / 2), Math.round((a[1] + b2[1]) / 2)]; })();
-    if (e.vt === 'taxi') { ctx.fillStyle = OUT; ctx.fillRect(m[0] - 3, m[1] - 3, 7, 4); ctx.fillStyle = '#ffe680'; ctx.fillRect(m[0] - 2, m[1] - 3, 5, 2); }
+    const m = P3((r0 + r1) / 2, 0, ch).map(Math.round);
+    if (taxi) { ctx.fillStyle = OUT; ctx.fillRect(m[0] - 3, m[1] - 3, 7, 4); ctx.fillStyle = fl ? '#fff' : '#ffe680'; ctx.fillRect(m[0] - 2, m[1] - 3, 5, 2); ctx.fillStyle = fl ? '#fff' : '#c89a20'; ctx.fillRect(m[0] - 2, m[1] - 1, 5, 1); }
     if (cruiser) { // light bar: flashes red/blue while the police are after you
       const on = G.heat >= 1 ? Math.sin(G.time * 14 + e.id) > 0 : null;
       ctx.fillStyle = OUT; ctx.fillRect(m[0] - 4, m[1] - 3, 9, 3);
@@ -88,7 +178,7 @@ function drawIsoCar(e) {
       ctx.fillStyle = on === null ? '#20305a' : !on ? '#2060ff' : '#101840'; ctx.fillRect(m[0] + 1, m[1] - 3, 3, 2);
       if (on !== null) iglow(m[0], m[1] - 2, 10, on ? '#ff2040' : '#2060ff', .7);
     }
-    roofZ = v.ch;
+    roofZ = ch;
   }
   if (e.hp < e.maxhp * .45 && Math.random() < .25) FX.smoke(e.x, e.y - 18, 1, '#2a2c34', .7);
   if (e.hp < e.maxhp * .25 && Math.random() < .3) FX.embers(e.x, e.y - 12, 1);
@@ -104,31 +194,35 @@ function shadowOf(e) {
   ellipse(e.x + 1 + z * .3, e.y + 1 + z * .5, e.r * .8, e.r * .35);
 }
 function drawIsoCrate(e) {
-  const fl = e.flash > 0, P3 = propFrame(e), wood = fl ? '#ffffff' : '#8a6238', dark = fl ? '#dddddd' : '#4a321a';
-  pixBox(e, P3, 0, 22, 22, 0, 18, wood, fl ? '#fff' : '#9a7244', (i, quad, line, k) => {
-    const fr = shade(dark, k * 1.2);
-    quad(i, 0, .12, 0, 18, fr); quad(i, .88, 1, 0, 18, fr); quad(i, 0, 1, 0, 2.5, fr); quad(i, 0, 1, 15.5, 18, fr);
-    line(i, .38, 3, .38, 15, shade(wood, k * .7)); line(i, .62, 3, .62, 15, shade(wood, k * .7));
-    line(i, .12, 3, .88, 15, fr);
+  const fl = e.flash > 0, P3 = propFrame(e), wood = fl ? '#ffffff' : '#a07440', dark = fl ? '#dddddd' : '#5a3c1e', metal = fl ? '#ffffff' : '#8d93a0';
+  pixBox(e, P3, 0, 22, 22, 0, 18, wood, fl ? '#fff' : '#b4864c', (i, quad, line, k) => {
+    const fr = shade(dark, k * 1.2), gap = shade(wood, k * .66), m = shade(metal, k / .84);
+    quad(i, 0, .13, 0, 18, fr); quad(i, .87, 1, 0, 18, fr); quad(i, 0, 1, 0, 2.6, fr); quad(i, 0, 1, 15.4, 18, fr);   // frame
+    line(i, .38, 3, .38, 15, gap); line(i, .62, 3, .62, 15, gap);                                                     // plank gaps
+    line(i, .14, 3.2, .86, 14.8, fr); line(i, .14, 4.2, .86, 15.4, shade(fr, 1.25));                                  // brace, with a lit edge
+    quad(i, 0, .13, 15.4, 18, m); quad(i, .87, 1, 15.4, 18, m); quad(i, 0, .13, 0, 2.6, shade(m, .7)); quad(i, .87, 1, 0, 2.6, shade(m, .7));   // metal corners
   }, tp => {
     const fr = dark;
     ipoly([tp(0, 0), tp(1, 0), tp(1, .14), tp(0, .14)], fr); ipoly([tp(0, .86), tp(1, .86), tp(1, 1), tp(0, 1)], fr);
     ipoly([tp(0, 0), tp(.14, 0), tp(.14, 1), tp(0, 1)], fr); ipoly([tp(.86, 0), tp(1, 0), tp(1, 1), tp(.86, 1)], fr);
-    iline(tp(.14, .38), tp(.86, .38), shade(wood, .75)); iline(tp(.14, .62), tp(.86, .62), shade(wood, .75));
+    iline(tp(.14, .38), tp(.86, .38), shade(wood, .78)); iline(tp(.14, .62), tp(.86, .62), shade(wood, .78));
+    for (const [u, v] of [[0, 0], [1, 0], [1, 1], [0, 1]]) ipoly([tp(u ? .86 : 0, v ? .86 : 0), tp(u ? 1 : .14, v ? .86 : 0), tp(u ? 1 : .14, v ? 1 : .14), tp(u ? .86 : 0, v ? 1 : .14)], metal);
   });
   return P3(0, 0, 18)[1];
 }
 function drawIsoDumpster(e) {
-  const fl = e.flash > 0, P3 = propFrame(e), green = fl ? '#ffffff' : '#2f5f4a', lid = fl ? '#ffffff' : '#3a6e56';
+  const fl = e.flash > 0, P3 = propFrame(e), green = fl ? '#ffffff' : '#2f6a50', lid = fl ? '#ffffff' : '#2b3038', rim = fl ? '#ffffff' : '#3f8263';
   pixBox(e, P3, 0, 36, 24, 2, 20, green, lid, (i, quad, line, k) => {
-    quad(i, 0, 1, 2, 4, shade(green, k * .55));
-    const n = i % 2 === 0 ? 2 : 4; for (let r = 1; r <= n; r++) line(i, r / (n + 1), 4, r / (n + 1), 18, shade(green, k * .65));
-    quad(i, 0, 1, 18, 20, shade(lid, k * 1.15));
-    if (i % 2 === 1) { quad(i, .1, .22, 0, 3, OUT); quad(i, .78, .9, 0, 3, OUT); }
-    if (i % 2 === 0 && !fl) quad(i, .3, .7, 9, 13, '#c8a838');
+    quad(i, 0, 1, 2, 4.2, shade(green, k * .5));                                                                        // skirt
+    const n = i % 2 === 0 ? 2 : 4; for (let r = 1; r <= n; r++) line(i, r / (n + 1), 4.2, r / (n + 1), 17, shade(green, k * .62));   // pressed ribs
+    quad(i, 0, 1, 17, 20, shade(rim, k / .84)); line(i, 0, 17, 1, 17, shade(green, k * .5));                            // rim band under the lids
+    if (i % 2 === 1) { quad(i, .1, .22, 0, 3, OUT); quad(i, .78, .9, 0, 3, OUT); quad(i, .13, .19, .6, 2, '#6a6e7a'); quad(i, .81, .87, .6, 2, '#6a6e7a'); }   // castors
+    if (i % 2 === 0) { quad(i, .08, .22, 9, 14, shade(green, k * .45)); quad(i, .78, .92, 9, 14, shade(green, k * .45)); }   // lifting pockets
+    if (i % 2 === 1 && !fl) { quad(i, .4, .6, 8, 13, '#d8b23c'); line(i, .44, 10.5, .56, 10.5, '#5a4a14'); }            // label
   }, tp => {
-    iline(tp(.5, .03), tp(.5, .97), shade(lid, .55));
-    iline(tp(.03, .5), tp(.47, .5), shade(lid, 1.2));
+    iline(tp(.5, .02), tp(.5, .98), shade(lid, .5));                                                                    // the two lids
+    ipoly([tp(.06, .08), tp(.44, .08), tp(.44, .2), tp(.06, .2)], shade(lid, 1.45)); ipoly([tp(.56, .08), tp(.94, .08), tp(.94, .2), tp(.56, .2)], shade(lid, 1.45));   // lid highlights
+    iline(tp(.2, .9), tp(.3, .9), shade(lid, 1.8)); iline(tp(.7, .9), tp(.8, .9), shade(lid, 1.8));                      // handles
   });
   return P3(0, 0, 20)[1];
 }

@@ -125,7 +125,7 @@ It all becomes one script, so **a later `function` declaration replaces an earli
 | `11_render.js` | **old tilted renderer.** Still used for `drawGround`, ground lights, glows and helpers; most of its drawing is replaced |
 | `11b_iso.js` | **iso renderer**: projection (`isoXY`, `ISO_K=.5`, `ISO_KZ=.25`), pixel primitives (`ipoly`, `iline`, `idisc`), buildings, hideouts, trees, lamps, barricades, depth sorting, rain, the main `render()` |
 | `11c_sprites.js` | character sprites, hand-drawn as pixel grids you can read in the source (`px(...)`): per facing (S, SE, E, NE, N; the rest mirrored) a bare head with shades, hair/headwear layers (`HAIR_ART`), torso poses and leg frames (`CHAR_ART`; `BIG_ART` is the brute/boss body). Only colours are drawn; the outline is added by code. `charLook` picks style and palette per character type; `drawChar` draws |
-| `11d_props.js` | pixel vehicles/crates/dumpsters/barrels as projected 3D boxes (`pixBox`), vehicle shadows |
+| `11d_props.js` | props and vehicles drawn as small 3D models turned to the object's angle: crates and dumpsters are boxes (`pixBox`); vehicles are solids swept from a side profile (`pixSweep`) so bonnets and windscreens slope, with wheels, lights, glass and damage (cracked screen, dents below 35% health) added as detail; vehicle shadows |
 | `11e_fx.js` | pixel effects: particles, bullets, rings, wells, warnings, fire, telekinesis tether/throw line, aim lasers, splashes |
 | `11f_blocks.js` | fence, basketball hoop, unfinished steel frame |
 | `12_hud.js` | canvas HUD, minimap, button glyphs, world-anchored labels (`toScreen(x, y, height)`) |
@@ -161,7 +161,7 @@ Also: `tower` (watchtower, lookout, gate, save), `fixes` (bug-fix checks), `rebi
 **Visual checks:**
 - `iso`, `iso2`: street, hideout and Tower screenshots
 - `sprites`: character sheets (`screenshots/sprites_sheet.png`, `sprites_closeup*.png`); also checks every art row has the right width
-- `props_iso`, `vehicles`: prop and vehicle sheets
+- `vehicles`: vehicle and prop sheets (`screenshots/vehicles_sheet*.png`, `props_sheet.png`) plus a render-time check
 - `fx_iso`: effects
 - `bigcity`: layout, reachability, perf
 
