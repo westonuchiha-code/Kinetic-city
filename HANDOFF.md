@@ -26,6 +26,7 @@ A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 
 - **Frame:** fixed 16:9 and letterboxed.
 - **Setting:** a neon night city in the rain.
 - **Pixel art:** buildings (lit/dark windows, shopfronts, neon signs, doors, rooftop clutter), hideouts, characters (8 facings, 4-frame walk), vehicles, props and combat effects.
+- **Characters:** small (about 16×20 px), everyone wears shades (the user picked this look; a 32 px redraw was tried as a mock-up and rejected as too "anime RPG Maker"). Each gang has its own headwear: Rustlers beanies, Breakers mohawks, Architects visored helmets. Brutes and bosses use the big body.
 - **Soft on purpose:** glows and light pools.
 - **Occlusion:** things behind buildings are hidden by them, which the user is fine with. Transparency is an option for later. Enemies behind buildings show a faint red ring on the ground.
 - **Minimap:** north-up even though the view is rotated 45°. The user said this is fine.
@@ -122,7 +123,7 @@ It all becomes one script, so **a later `function` declaration replaces an earli
 | `10_game.js` | `populate`, objectives, district progression, save/load |
 | `11_render.js` | **old tilted renderer.** Still used for `drawGround`, ground lights, glows and helpers; most of its drawing is replaced |
 | `11b_iso.js` | **iso renderer**: projection (`isoXY`, `ISO_K=.5`, `ISO_KZ=.25`), pixel primitives (`ipoly`, `iline`, `idisc`), buildings, hideouts, trees, lamps, barricades, depth sorting, rain, the main `render()` |
-| `11c_sprites.js` | character sprites: hand-placed templates per facing (S, SE, E, NE, N; the rest mirrored), arm/leg walk frames, outfits per type, `drawChar` |
+| `11c_sprites.js` | character sprites, hand-drawn as pixel grids you can read in the source (`px(...)`): per facing (S, SE, E, NE, N; the rest mirrored) a bare head with shades, hair/headwear layers (`HAIR_ART`), torso poses and leg frames (`CHAR_ART`; `BIG_ART` is the brute/boss body). Only colours are drawn; the outline is added by code. `charLook` picks style and palette per character type; `drawChar` draws |
 | `11d_props.js` | pixel vehicles/crates/dumpsters/barrels as projected 3D boxes (`pixBox`), vehicle shadows |
 | `11e_fx.js` | pixel effects: particles, bullets, rings, wells, warnings, fire, telekinesis tether/throw line, aim lasers, splashes |
 | `11f_blocks.js` | fence, basketball hoop, unfinished steel frame |
@@ -158,7 +159,7 @@ Also: `tower` (watchtower, lookout, gate, save), `fixes` (bug-fix checks), `rebi
 
 **Visual checks:**
 - `iso`, `iso2`: street, hideout and Tower screenshots
-- `sprites`: character sheet
+- `sprites`: character sheets (`screenshots/sprites_sheet.png`, `sprites_closeup*.png`); also checks every art row has the right width
 - `props_iso`, `vehicles`: prop and vehicle sheets
 - `fx_iso`: effects
 - `bigcity`: layout, reachability, perf

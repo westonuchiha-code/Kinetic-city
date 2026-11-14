@@ -1,25 +1,34 @@
+// Character sheet: every character type in all 8 facings (stand + a step frame), plus close-ups of the main cast.
+// Writes screenshots/sprites_sheet.png and screenshots/sprites_closeup.png.
 const { chromium } = require('playwright');
+const path = require('path'); const ROOT = path.resolve(__dirname, '..');
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message + e.stack));
-  await p.goto('file:///home/claude/kc/dist/kinetic_city.html'); await p.waitForTimeout(500);
+  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(400);
   await p.evaluate(() => { KC.start(); KC.skip(); });
-  await p.waitForTimeout(300);
-  await p.evaluate(() => {
-    const kinds = [['player'], ['civ', 0], ['civ', 1], ['civ', 3], ['grunt', 0], ['grunt', 1], ['grunt', 2], ['cop'], ['brute', 1], ['sup'], ['boss', 0]];
-    const c = document.createElement('canvas'), SC = 3; c.width = 1600; c.height = 900; const x = c.getContext('2d');
-    x.fillStyle = '#1a1c28'; x.fillRect(0, 0, 1600, 900); x.imageSmoothingEnabled = false;
-    const angs = [0, Math.PI / 4, Math.PI / 2, 3 * Math.PI / 4, Math.PI, -3 * Math.PI / 4, -Math.PI / 2, -Math.PI / 4];   // world angles
-    kinds.forEach(([k, v], row) => {
-      const e = k === 'player' ? KC.P : { kind: k, id: v !== undefined ? v * 7 + 3 : 5, did: v || 0, col: ['#c84a4a', '#4a8ac8', '#d8c050', '#9a5ac8'][v || 0], hair: ['#1a1410', '#c8a060', '#7a4a2a'][(v || 0) % 3], umb: null, state: '', flash: 0, hp: 1, maxhp: 1, team: 'x' };
-      angs.forEach((a, i) => { e.ang = a; const o = OCT[screenOctant(a)];
-        for (let f = 0; f < 2; f++) { const L = charLook(e), s = charSprite(o[0], f, L.o, L.pal);
-          const X = 14 + (i * 2 + f) * 98, Y = 6 + row * 81;
-          x.save(); if (o[1]) { x.translate(X + s.width * SC, Y); x.scale(-1, 1); x.drawImage(s, 0, 0, s.width * SC, s.height * SC); } else x.drawImage(s, X, Y, s.width * SC, s.height * SC); x.restore(); } });
+  const bad = await p.evaluate(() => { const bad = [], chk = (rows, n, w) => rows && rows.forEach((r, i) => { if (r.length !== w) bad.push(n + ' row ' + i + ': ' + r); });
+    for (const [set, w] of [[CHAR_ART, 16], [BIG_ART, 22]]) for (const d in set) { const A = set[d]; chk(A.head, d + ' head', 16); A.torso.forEach((t, i) => chk(t, d + ' torso ' + i, w)); chk(A.cheer, d + ' cheer', w); A.legs.forEach((t, i) => chk(t, d + ' legs ' + i, w)); }
+    for (const s in HAIR_ART) for (const d in HAIR_ART[s]) chk(HAIR_ART[s][d], s + ' ' + d, 16); return bad; });
+  console.log(bad.length ? 'rows with the wrong width:\n' + bad.join('\n') : 'all art rows are the right width');
+  const CAST = [['player'], ['civ', 0], ['civ', 1], ['civ', 2], ['civ', 3], ['civ', 5], ['civ', 8], ['grunt', 0], ['grunt', 1], ['grunt', 2], ['cop'], ['brute', 0], ['sup'], ['boss', 0], ['boss', 1], ['boss', 2]];
+  const draw = (cast, SC, cols, cw, rh, bg) => p.evaluate(([cast, SC, cols, cw, rh, bg]) => {
+    let c = document.getElementById('sheet'); if (!c) { c = document.createElement('canvas'); c.id = 'sheet'; document.body.innerHTML = ''; document.body.appendChild(c); c.style.cssText = 'position:fixed;left:0;top:0'; }
+    c.width = 1600; c.height = 900; const x = c.getContext('2d'); x.fillStyle = bg; x.fillRect(0, 0, 1600, 900); x.imageSmoothingEnabled = false;
+    const CIVC = ['#c84a4a', '#4a8ac8', '#d8c050', '#9a5ac8', '#5fbf8a', '#e08a4a', '#d0d0d8', '#e0a0c0', '#5ab0e0'], HAIRC = ['#1a1410', '#c8a060', '#7a4a2a', '#3a2a1a', '#d0d0d0'];
+    cast.forEach(([k, v], row) => {
+      const e = k === 'player' ? KC.P : { kind: k, id: k === 'civ' ? v : 5, did: v || 0, col: CIVC[(v || 0) % 9], hair: HAIRC[(v || 0) % 5], umb: null, state: '', flash: 0, hp: 1, maxhp: 1, team: 'x' };
+      cols.forEach(([d, f, flip], i) => { const L = charLook(e), s = charSprite(d, f, L.o, L.pal), X = 8 + i * cw + ((cw - s.width * SC) >> 1), Y = 6 + (row + 1) * rh - s.height * SC - 4;
+        x.save(); if (flip) { x.translate(X + s.width * SC, Y); x.scale(-1, 1); x.drawImage(s, 0, 0, s.width * SC, s.height * SC); } else x.drawImage(s, X, Y, s.width * SC, s.height * SC); x.restore(); });
     });
-    document.body.innerHTML = ''; document.body.appendChild(c); c.style.cssText = 'position:fixed;left:0;top:0';
-  });
-  await p.screenshot({ path: '/home/claude/sprites_sheet.png' });
-  console.log(errs.join('\n') || 'no errors');
-  await b.close();
+  }, [cast, SC, cols, cw, rh, bg]);
+  // the whole cast, 8 facings x (stand, step), at 2x
+  const all = []; for (const [d, flip] of [['S', 0], ['SE', 0], ['E', 0], ['NE', 0], ['N', 0], ['NE', 1], ['E', 1], ['SE', 1]]) for (const f of [0, 1]) all.push([d, f, flip]);
+  await draw(CAST, 2, all, 99, 55, '#2a2f3d'); await p.screenshot({ path: ROOT + '/screenshots/sprites_sheet.png' });
+  // close-up: main cast, five drawn facings, at 6x
+  await draw([['player'], ['grunt', 0], ['grunt', 1], ['grunt', 2], ['cop']], 6, [['S', 0, 0], ['S', 1, 0], ['SE', 0, 0], ['E', 0, 0], ['E', 1, 0], ['E', 3, 0], ['NE', 0, 0], ['N', 0, 0], ['N', 1, 0]], 176, 176, '#2a2f3d');
+  await p.screenshot({ path: ROOT + '/screenshots/sprites_closeup.png' });
+  await draw([['civ', 0], ['civ', 1], ['civ', 2], ['civ', 5], ['brute', 0], ['sup'], ['boss', 0]].slice(0, 5), 6, [['S', 0, 0], ['S', 1, 0], ['SE', 0, 0], ['E', 0, 0], ['E', 1, 0], ['E', 3, 0], ['NE', 0, 0], ['N', 0, 0], ['N', 1, 0]], 176, 176, '#2a2f3d');
+  await p.screenshot({ path: ROOT + '/screenshots/sprites_closeup2.png' });
+  console.log(errs.join('\n') || 'no errors'); await b.close();
 })();
