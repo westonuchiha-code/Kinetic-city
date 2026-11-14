@@ -26,7 +26,7 @@ A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 
 - **Frame:** fixed 16:9 and letterboxed.
 - **Setting:** a neon night city in the rain.
 - **Pixel art:** buildings (lit/dark windows, shopfronts, neon signs, doors, rooftop clutter), hideouts, characters (8 facings, 4-frame walk), vehicles, props and combat effects.
-- **Characters:** small (about 16×20 px), everyone wears shades (the user picked this look; a 32 px redraw was tried as a mock-up and rejected as too "anime RPG Maker"). Each gang has its own headwear: Rustlers beanies, Breakers mohawks, Architects visored helmets. Brutes and bosses use the big body.
+- **Characters:** small (about 16×20 px), the hero, cops and gang members wear shades; civilians have eyes (a dark pupil with a white pixel beside it, `FACE_ART`). A 32 px redraw was tried as a mock-up and rejected as too "anime RPG Maker". Each gang has its own headwear: Rustlers beanies, Breakers mohawks, Architects visored helmets. Brutes and bosses use the big body.
 - **Soft on purpose:** glows and light pools.
 - **Occlusion:** things behind buildings are hidden by them, which the user is fine with. Transparency is an option for later. Enemies behind buildings show a faint red ring on the ground.
 - **Minimap:** north-up even though the view is rotated 45°. The user said this is fine.

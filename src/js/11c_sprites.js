@@ -7,7 +7,7 @@
    - mid-step the body rises a pixel, so the walk has a bounce
    - finished frames are cached as small canvases, so drawing a character is one drawImage
    Letters: h/H/J hair (light/mid/dark), s/S/z skin (light/shade/deep shade), i skin shine,
-   x/X shades (lens/glint), C/c/d shirt (light/mid/dark), T/t trim, p/P pants, b/B shoes (dark/light),
+   x/X shades (lens/glint), e/O eye (pupil/white), C/c/d shirt (light/mid/dark), T/t trim, p/P pants, b/B shoes (dark/light),
    w/W hat, Y/y hat band, Q badge, n hand, k an inner dark line. '.' is see-through.
    Outfit letters become trim only when the outfit has that feature, otherwise plain shirt:
    Z zip, R/r chest stripe, q badge, A/a shoulder pads, U/u cuffs, E/e belt and buckle, M/m/N bare arms (big body). */
@@ -1140,6 +1140,26 @@ const TOP_ART = {
       ................`)
   }
 };
+/* Faces without shades, laid over the two eye rows of the head: an eye is a dark pupil with a white pixel beside it. */
+const FACE_ART = {
+  eyes: {
+    S: px(`
+      ..ssOesssseOsS..
+      ..ssOesssseOsS..`),
+    N: px(`
+      ..ssssssssssSS..
+      ..SsssssssSSSS..`),
+    E: px(`
+      ..sssSsssssOes..
+      ..sssSSssssOess.`),
+    SE: px(`
+      ..sSssOessseOs..
+      ..sSssOessseOs..`),
+    NE: px(`
+      ..ssssssssSsss..
+      ..SssssssSSsss..`)
+  }
+};
 const BALD_TOP = 5;   // the shine sits on the top rows of the head, not on the chin row like the other grids
 const HAIR_DROP = { long: 2 };   // rows a hairstyle hangs below the chin
 for (const set of [CHAR_ART, BIG_ART]) for (const d in set) { const A = set[d]; A.torso[2] = A.torso[0]; A.legs[2] = A.legs[0]; }
@@ -1160,6 +1180,7 @@ function buildCharGrid(dir, frame, o) {
   if (o.armsUp && A.cheer) put(A.cheer, 13 + bodyRows - up - A.cheer.length); else put(A.torso[frame], 13 - up);
   const top = !o.armsUp && TOP_ART[o.top] && TOP_ART[o.top][dir]; if (top) put(top, 13 - up, hx);
   put(CHAR_ART[dir].head, 5 - up, hx);
+  const face = FACE_ART[o.face] && FACE_ART[o.face][dir]; if (face) put(face, 10 - up, hx);
   const hair = HAIR_ART[o.style] && HAIR_ART[o.style][dir]; if (hair) put(hair, o.style === 'bald' ? BALD_TOP - up : 13 + (HAIR_DROP[o.style] || 0) - up - hair.length, hx);
   for (const r of g) for (let x = 0; x < W0; x++) { const f = OUTFIT[r[x]]; if (f) r[x] = o[f[0]] ? f[1] : f[2]; }
   // bosses: stretch the body further by repeating a middle column and a torso row (the head keeps its size)
@@ -1191,7 +1212,7 @@ function mkPal(b) {
   const p = { k: '#07070c', e: '#0c0d14' };
   p.h = b.hair; p.H = shade(b.hair, .78); p.J = shade(b.hair, .58);
   p.s = b.skin; p.S = shade(b.skin, .8); p.z = shade(b.skin, .62); p.i = shade(b.skin, 1.12);
-  p.x = b.lens || '#12141f'; p.X = b.glint || '#8f9bbb';
+  p.x = b.lens || '#12141f'; p.X = b.glint || '#8f9bbb'; p.O = '#f2f4ff';
   p.C = b.shirt; p.c = shade(b.shirt, .74); p.d = shade(b.shirt, .52);
   p.T = b.trim || shade(b.shirt, 1.4); p.t = shade(p.T, .72); p.p = b.pants; p.P = shade(b.pants, .7);
   p.b = b.shoe || '#1d1f2b'; p.B = shade(p.b, 1.9);
@@ -1214,7 +1235,8 @@ function charLook(e) {
     case 'civ': {
       const style = CIV_STYLES[e.id % CIV_STYLES.length];
       if (!e.pants) e.pants = pick(['#2e3a66', '#34343c', '#4a3a2a', '#3a3a48']);
-      return { o: { style, top: style === 'hood' ? 'hoodie' : '', armsUp: e.state === 'cheer' }, pal: mkPal({ hair: e.hair || '#3a2a1a', skin: SKINS[e.id % SKINS.length], shirt: e.col || '#7cc488', pants: e.pants, shoe: ['#dcdce4', '#2a2c38', '#7a4a2a', '#b83a3a'][e.id % 4], hat: ['#c83a3a', '#3a6ac8', '#e8e0d0'][e.id % 3], band: '#e8e0d0', white: fl }) };
+      return { o: { style, face: 'eyes', top: style === 'hood' ? 'hoodie' : '', armsUp: e.state === 'cheer' }, pal:   // civilians show their eyes; shades are for the hero, cops and gangs
+         mkPal({ hair: e.hair || '#3a2a1a', skin: SKINS[e.id % SKINS.length], shirt: e.col || '#7cc488', pants: e.pants, shoe: ['#dcdce4', '#2a2c38', '#7a4a2a', '#b83a3a'][e.id % 4], hat: ['#c83a3a', '#3a6ac8', '#e8e0d0'][e.id % 3], band: '#e8e0d0', white: fl }) };
     }
     case 'grunt': {   // each gang has its own headwear: Rustlers beanies, Breakers mohawks, Architects visored helmets
       const L = GANG_LOOK[e.did], G3 = [{ style: 'beanie', hat: '#26262e' }, { style: 'mohawk', hair: '#ff5a4a' }, { style: 'helmet', hat: '#3a3560', lens: '#b46bff', glint: '#f6e8ff' }][e.did];
