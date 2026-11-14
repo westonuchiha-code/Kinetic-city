@@ -29,7 +29,7 @@ A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 
 - **Shades rule (agreed with the user, keep it):** everyone you are meant to fight wears sunglasses: grunts, brutes, elites, cops, and every current and future boss. The hero and civilians never do. Idea from the user for later: give more important enemies differently tinted or differently shaped shades. Started: the three bosses each have their own shape and tint (`BOSS_LOOK` in 11c_sprites.js: Mr. Cinder round goggles with fire reflected in them, Krag a narrow red slit with a scar, The Architect an angular purple visor); elites have glowing lenses in their gang colour; ordinary gang members and cops share one shape.
 - **Characters:** small (about 16×20 px), cops and gang members wear shades (shades = someone you can fight); the hero and civilians have eyes (a dark pupil with a white pixel beside it, `FACE_ART`). The hero wears a yellow rain jacket with tousled brown hair; his zip and cuffs take the karma colour. An earlier white-spiky-hair-and-shades hero was dropped for looking like Gojo. Five more finished hero looks are stored as `HERO_COSTUMES` in 11c_sprites.js (scarf, headphones, glowhood, varsity, headband) as unlockable costumes. They are picked on the **Costumes** tab of the pause menu (between Skills and Controls); locked ones show as a dark silhouette with the unlock rule. The rules are in `COSTUMES` in 10_game.js and are a first guess, not something the user chose: scarf = Ground Zero done, headband = Slums done, headphones = 4 shards, varsity = level 5, glow hood = all 12 shards. Unlocks are kept for good under `kc_costumes` (they survive a new game and deleting the save); the costume in use is `SETTINGS.costume`. `KC.costume(name)` forces one for a look; `node test/costumes.js` draws them all and checks the tab. A 32 px redraw was tried as a mock-up and rejected as too "anime RPG Maker". Each gang has its own headwear: Rustlers beanies, Breakers mohawks, Architects visored helmets. Brutes and bosses use the big body. Each boss has his own look on top of it: Mr. Cinder has burning hair that flickers and a long coat with a burning hem; Krag is the biggest, bald and bare-armed with spiked shoulders and crossed straps; The Architect wears a robe to the floor under a floating ring and glides instead of walking.
 - **Soft on purpose:** glows and light pools.
-- **Occlusion:** things behind buildings are hidden by them, which the user is fine with. Transparency is an option for later. Enemies behind buildings show a faint red ring on the ground.
+- **Occlusion:** things behind buildings are hidden by them, which the user was fine with. Enemies behind buildings show a faint red ring on the ground. Three ways of showing the hero behind a building are built and switched **off** (`SEE = 0` in 11b_iso.js; try them with `KC.see(1|2|3)`): 1 = his silhouette on the wall, 2 = a round dithered window in the wall, 3 = the whole wall see-through. Option sheets are in `screenshots/mock_see/`. The user has been asked to pick; turn one on only when they do, then delete the other two.
 - **Minimap:** north-up even though the view is rotated 45°. The user said this is fine.
 
 ### Controls (standard gamepad)
@@ -147,7 +147,7 @@ It all becomes one script, so **a later `function` declaration replaces an earli
   - characters: `SPR_K=.6`
 
 ### Debug hooks (`window.KC`)
-`start, skip, step(n), tp(x,y), spawn(kind,x,y,o), spawnGang, spawnBoss, hurt, kill, explosion, skipTo(d), costume(name), pickups, ents, P, cam, Input`.
+`start, skip, step(n), tp(x,y), spawn(kind,x,y,o), spawnGang, spawnBoss, hurt, kill, explosion, skipTo(d), costume(name), see(mode), pickups, ents, P, cam, Input`.
 
 ---
 
@@ -194,7 +194,7 @@ Also: `tower` (watchtower, lookout, gate, save), `fixes` (bug-fix checks), `rebi
   - aim assist (`assistTarget`)
   - `IMPACT_K`
 - **Watchtowers / small structures destroyable from outside.** The user's future idea; main hideouts stay indestructible.
-- **Transparency for things behind buildings.** Only if the user decides occlusion is a bad trade-off.
+- **Seeing the hero behind buildings.** Waiting for the user to pick one of the three built options (see Occlusion above), or to keep him hidden.
 
 **Shelved:** interior levels. "Outside assault" was chosen instead.
 

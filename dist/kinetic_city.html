@@ -3682,6 +3682,74 @@ function drawRain(dt) {
   }
 }
 
+/* ---------- seeing the hero behind buildings ----------
+   SEE picks how: 0 = he is simply hidden, 1 = his silhouette shows on the wall in the karma colour,
+   2 = a round window with a dithered rim opens in the wall around him, 3 = the whole wall turns see-through (every
+   other pixel). 2 and 3 work by keeping a copy of the picture from just before the building is drawn and putting part of
+   it back on top, so the building itself is drawn exactly as usual. */
+let SEE = 0;
+const seeCv = document.createElement('canvas'); seeCv.width = ART_W; seeCv.height = ART_H; const seeCtx = seeCv.getContext('2d');
+const SEE_R = 24, _holes = {};
+const ghostCv = document.createElement('canvas'), ghostCtx = ghostCv.getContext('2d');
+let _checker = null;
+function boxHex(b) { return [isoXY(b.x0, b.y1, 0), isoXY(b.x1, b.y1, 0), isoXY(b.x1, b.y0, 0), isoXY(b.x1, b.y0, b.ht), isoXY(b.x0, b.y0, b.ht), isoXY(b.x0, b.y1, b.ht)]; }
+function inPoly(x, y, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const a = pts[i], b = pts[j]; if ((a[1] > y) !== (b[1] > y) && x < a[0] + (y - a[1]) / (b[1] - a[1]) * (b[0] - a[0])) inside = !inside; }
+  return inside;
+}
+function holeMask(r) {   // a disc: solid inside, then three rings that thin out (75%, 50%, 25% of the pixels)
+  let c = _holes[r]; if (c) return c;
+  c = _holes[r] = document.createElement('canvas'); c.width = c.height = r * 2 + 1; const g = c.getContext('2d'); g.fillStyle = '#fff';
+  for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
+    const d = Math.hypot(x, y * 1.25), k = d < r - 6 ? 4 : d < r - 4 ? 3 : d < r - 2 ? 2 : d < r ? 1 : 0, e = (x & 1) + (y & 1) * 2;   // squashed a little, like a circle lying on the ground
+    if (k === 4 || (k === 3 && e !== 0) || (k === 2 && (e === 0 || e === 3)) || (k === 1 && e === 0)) g.fillRect(x + r, y + r, 1, 1);
+  }
+  return c;
+}
+function checker() {
+  if (_checker) return _checker;
+  _checker = document.createElement('canvas'); _checker.width = ART_W; _checker.height = ART_H; const g = _checker.getContext('2d'); g.fillStyle = '#fff';
+  for (let y = 0; y < ART_H; y++) for (let x = y & 1; x < ART_W; x += 2) g.fillRect(x, y, 1, 1);
+  return _checker;
+}
+// is the hero behind this box? (feet, chest or head covered by its outline; fences and gate posts are too low to matter)
+function heroBehind(b, hp) { if (b.ht < 40 || b.draw === drawIsoGateSeg || b.draw === drawIsoFence) return false; const hx = boxHex(b); return inPoly(hp[0], hp[1] - 2, hx) || inPoly(hp[0], hp[1] - 10, hx) || inPoly(hp[0], hp[1] - 18, hx) ? hx : false; }
+function drawBoxSeeThrough(b, hp, dt) {   // returns true if it drew the box
+  const o = b.o, hx = heroBehind(b, hp), k = o._see = clamp((o._see || 0) + (hx ? dt : -dt) * 7, 0, 1);
+  if (k <= 0) return false;
+  const poly = hx || boxHex(b);
+  seeCtx.setTransform(1, 0, 0, 1, 0, 0); seeCtx.globalCompositeOperation = 'copy'; seeCtx.drawImage(artCv, 0, 0);   // what is behind the building
+  seeCtx.globalCompositeOperation = 'destination-in';
+  if (SEE === 2) { const r = Math.max(4, Math.round(SEE_R * (1 - (1 - k) * (1 - k)))); seeCtx.drawImage(holeMask(r), Math.round(hp[0]) - r, Math.round(hp[1]) - 10 - r); }
+  else { seeCtx.globalAlpha = k; seeCtx.drawImage(checker(), 0, 0); seeCtx.globalAlpha = 1; }
+  seeCtx.fillStyle = '#fff'; seeCtx.beginPath(); for (const p of poly) seeCtx.lineTo(Math.round(p[0]), Math.round(p[1])); seeCtx.closePath(); seeCtx.fill();   // only inside this building's outline
+  seeCtx.globalCompositeOperation = 'source-over';
+  b.draw(o); artT(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(seeCv, 0, 0);
+  return true;
+}
+function drawHeroSilhouette(from, hp) {   // SEE 1: the hero's shape in the karma colour wherever a building covers him
+  const lift = Math.round((P.z || 0) * .5), x0 = hp[0] - 14, y0 = hp[1] - 30 - lift, x1 = hp[0] + 14, y1 = hp[1] + 3;
+  let any = false; seeCtx.setTransform(1, 0, 0, 1, 0, 0); seeCtx.globalCompositeOperation = 'source-over'; seeCtx.clearRect(0, 0, ART_W, ART_H); seeCtx.fillStyle = '#fff';
+  for (let i = Math.max(0, from); i < _boxes.length; i++) {
+    const b = _boxes[i]; if (b.rt < x0 || b.l > x1 || b.bot < y0 || b.top > y1) continue;
+    seeCtx.beginPath(); for (const p of boxHex(b)) seeCtx.lineTo(Math.round(p[0]), Math.round(p[1])); seeCtx.closePath(); seeCtx.fill(); any = true;
+  }
+  if (!any) return;
+  const look = charLook(P), moving = Math.hypot(P.vx || 0, P.vy || 0) > 14, frame = moving ? Math.floor(((P.walk || 0) % TAU + TAU) % TAU / (Math.PI / 2)) % 4 : 0;
+  const [dir, flip] = OCT[screenOctant(P.ang || 0)], spr = charSprite(dir, frame, look.o, look.pal), w = spr.width, h = spr.height, X = Math.round(hp[0] - w / 2), Y = Math.round(hp[1]) - h + 1 - lift;
+  // the ghost: a one-pixel rim in the karma colour with the hero himself faint inside it
+  const g = ghostCtx; ghostCv.width = w + 2; ghostCv.height = h + 2;
+  for (const [dx, dy] of [[0, 1], [2, 1], [1, 0], [1, 2]]) g.drawImage(spr, dx, dy);
+  g.globalCompositeOperation = 'source-in'; g.fillStyle = mix(kcol(), '#ffffff', .2); g.fillRect(0, 0, w + 2, h + 2);
+  g.globalCompositeOperation = 'destination-out'; g.drawImage(spr, 1, 1);
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = .5; g.drawImage(spr, 1, 1); g.globalAlpha = 1;
+  seeCtx.globalCompositeOperation = 'source-in';
+  if (flip) { seeCtx.save(); seeCtx.translate(X + w + 1, Y - 1); seeCtx.scale(-1, 1); seeCtx.drawImage(ghostCv, 0, 0); seeCtx.restore(); } else seeCtx.drawImage(ghostCv, X - 1, Y - 1);
+  seeCtx.globalCompositeOperation = 'source-over';
+  artT(); ctx.globalAlpha = .85 + .15 * Math.sin(G.time * 5); ctx.drawImage(seeCv, 0, 0); ctx.globalAlpha = 1;
+}
+
 /* ---------- frame ---------- */
 const _boxes = [], _pts = [];
 function render(dt) {
@@ -3709,7 +3777,7 @@ function render(dt) {
   _boxes.length = 0; _pts.length = 0;
   const addBox = (x0, y0, x1, y1, ht, draw, o) => {
     const l = isoXY(x0, y1, 0)[0], rt = isoXY(x1, y0, 0)[0], top = isoXY(x0, y0, ht)[1] - 16, bot = isoXY(x1, y1, 0)[1];
-    if (inArt(l, top, rt, bot)) _boxes.push({ x0, y0, x1, y1, key: x0 + y0 + x1 + y1, l, rt, top, bot, draw, o, pts: null });
+    if (inArt(l, top, rt, bot)) _boxes.push({ x0, y0, x1, y1, ht, key: x0 + y0 + x1 + y1, l, rt, top, bot, draw, o, pts: null });
   };
   for (const b of buildings) if (b.x < cam.x + cam.w && b.x + b.w > cam.x && b.y < cam.y + cam.h && b.y + b.h > cam.y) addBox(b.x, b.y, b.x + b.w, b.y + b.h, b.ht, b.frame ? drawIsoFrame : drawIsoBuilding, b);
   for (const e of _vis) if (e.kind === 'hideout') addBox(e.rect.x, e.rect.y, e.rect.x + e.rect.w, e.rect.y + e.rect.h, 96, drawIsoHideout, e);
@@ -3724,7 +3792,7 @@ function render(dt) {
     if (!inArt(l, top, rt, bot)) return;
     let slot = 0;
     for (let i = 0; i < _boxes.length; i++) { const b = _boxes[i]; if (rt < b.l || l > b.rt || bot < b.top || top > b.bot) continue; if (x > b.x1 - 1 || y > b.y1 - 1) slot = i + 1; }
-    _pts.push({ key, slot, draw, o });
+    _pts.push({ key, slot, draw, o }); return slot;
   };
   for (const e of _vis) {
     if (e.kind === 'hideout') continue;
@@ -3732,18 +3800,19 @@ function render(dt) {
     if (e.kind === 'tower') { addPt(e.x, e.y, e.x + e.y, 18, 66, drawUpright, e); continue; }
     addPt(e.x, e.y, e.state === 'wounded' ? -1e6 : e.x + e.y + z * 4, r * SPR_K * 1.8 + 6, r * SPR_K * 3.2 + z * SPR_K + 10, drawUpright, e);
   }
-  if (G.mode !== 'dead' && G.mode !== 'title') addPt(P.x, P.y, P.x + P.y + (P.z || 0) * 4, 20, 34, drawUpright, P);
+  let heroSlot = -1; if (G.mode !== 'dead' && G.mode !== 'title') { const sl = addPt(P.x, P.y, P.x + P.y + (P.z || 0) * 4, 20, 34, drawUpright, P); if (sl !== undefined) heroSlot = sl; }
   for (const t of trees) if (inView(t.x, t.y, 60)) addPt(t.x, t.y, t.x + t.y, t.r, t.h * ISO_KZ + t.r, drawIsoTree, t);
   for (const d of decos) if (inView(d.x, d.y, 60)) addPt(d.x, d.y, d.x + d.y, 14, 40, drawIsoHoop, d);
   for (const l of lamps) if (inView(l.x, l.y, 40)) addPt(l.x, l.y, l.x + l.y, 3, 20, drawIsoLamp, l);
   for (const p of pickups) if (inView(p.x, p.y, 30)) addPt(p.x, p.y, p.x + p.y, 8, 12, pp => { uprightT(pp.x, pp.y); drawPickup(pp); }, p);
   _pts.sort((a, b) => a.slot - b.slot || a.key - b.key);
   ISO.upright = true; ISO.lasers.length = 0;
-  let pi = 0;
+  let pi = 0; const heroPt = isoXY(P.x, P.y, 0);
   for (let i = 0; i <= _boxes.length; i++) {
     while (pi < _pts.length && _pts[pi].slot === i) { const p = _pts[pi++]; p.draw(p.o); artT(); ctx.globalAlpha = 1; }
-    if (i < _boxes.length) { const b = _boxes[i]; b.draw(b.o); }
+    if (i < _boxes.length) { const b = _boxes[i]; if (!(SEE >= 2 && heroSlot >= 0 && i >= heroSlot && drawBoxSeeThrough(b, heroPt, dt))) b.draw(b.o); }
   }
+  if (SEE === 1 && heroSlot >= 0) drawHeroSilhouette(heroSlot, heroPt);
   ISO.upright = false;
   // ---- overlays on the ground (pixel effects, art space): warnings, aim lasers, hostile markers, telekinesis, effects, splashes ----
   artT();
@@ -7453,6 +7522,7 @@ window.KC = {
     drawMinimapBase(); const c = checkpointFor(d); P.x = c.x; P.y = c.y; DS[d].intro = true; snapCamera();
   },
   costume(n) { if (HERO_COSTUMES[n]) heroCostume = n; return heroCostume; },
+  see(n) { if (n !== undefined) SEE = n; return SEE; },   // how the hero shows behind buildings: 0 hidden, 1 silhouette, 2 window, 3 see-through wall
   spawn: mk, spawnGang, spawnBoss, render, drawHUD, snapCamera, hurt, kill, explosion
 };
 
