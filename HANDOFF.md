@@ -92,6 +92,7 @@ A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 
   - the karma meter is always on screen
 - **Saves:** localStorage (`SAVE_KEY`, v2) plus settings under `kc_settings` and unlocked costumes under `kc_costumes`.
 - **Watchtowers:** one per hideout (`tower` entity, static, 120 hp). A lookout on the deck shoots while you're on the turf and can't be hit up there; destroy the tower and he falls out. The hideout gate opens only when the guards **and** the tower are down. Destroyed towers are saved (`DS[d].towers`) and shown on both maps.
+- **In-game HUD look:** same neon language as the menus. Dark plates that lean 9° like the menu buttons (`plate`, `slantPath`), glowing coloured edges (`neonStroke`/`neonFill`: the edge stroked three times, no blur), glowing lettering for the few big words (`glowText`). Each power has its own tile colour (Well purple, Absorb cyan, Dash gold, Push pink, Grab green); an unlit tile means no energy or cooling down. The minimap frame is lit in the district's colour. The layout and sizes did not change. Glowing pieces that rarely change are painted once and stamped (`stamp`, cache `_stamps`, cleared when the web font finishes loading) so the HUD costs about the same per frame as before; draw new glowing text through `glowText` rather than setting `shadowBlur` every frame. `node test/hud.js` takes a calm and a busy HUD screenshot.
 - **Settings (pause → Settings, or title → Settings):** music/effects volume, fullscreen, HUD size (70–110%), screen shake, rumble, stick dead zone, aim assist (Off/Low/Normal/High), delete saved game (title only).
 - **Rebinding (Controls screen):** every action except movement, aim, pause and menu navigation can be rebound per device; a binding already in use swaps. Stored in `SETTINGS.binds`; glyphs everywhere follow the bindings (`Input.glyph`).
 - **Traffic:** streamed onto lanes inside the simulated area (`ACTIVE_R`) but off screen; `CAR_TARGET` (09b_street.js) is the density knob.
@@ -128,7 +129,7 @@ It all becomes one script, so **a later `function` declaration replaces an earli
 | `11d_props.js` | props and vehicles drawn as small 3D models turned to the object's angle: crates and dumpsters are boxes (`pixBox`); vehicles are solids swept from a side profile (`pixSweep`) so bonnets and windscreens slope, with wheels, lights, glass and damage (cracked screen, dents below 35% health) added as detail; vehicle shadows |
 | `11e_fx.js` | pixel effects: particles, bullets, rings, wells, warnings, fire, telekinesis tether/throw line, aim lasers, splashes |
 | `11f_blocks.js` | fence, basketball hoop, unfinished steel frame |
-| `12_hud.js` | canvas HUD, minimap, button glyphs, world-anchored labels (`toScreen(x, y, height)`) |
+| `12_hud.js` | canvas HUD (neon plates, ability tiles), minimap, city map, button glyphs, world-anchored labels (`toScreen(x, y, height)`) |
 | `13_ui.js` | DOM menus, controller navigation |
 | `14_main.js` | main loop (fixed step, hitstop); `window.KC` debug hooks |
 
