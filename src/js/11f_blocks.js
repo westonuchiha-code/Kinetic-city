@@ -54,7 +54,7 @@ function drawIsoFrame(b) {
 
 /* ---------- gang watchtower: steel legs, plank deck with a rail, tin roof in the gang's colour ---------- */
 function drawIsoTower(e) {
-  const fl = e.flash > 0, P3 = propFrame(e), H = 10, DECK = 34, RAIL = 44, ROOF = 54;
+  const fl = e.flash > 0, P3 = propFrame(e), H = 10, DECK = 34, RAIL = 44, ROOF = 72;
   const steel = fl ? '#ffffff' : '#5a6070', dark = fl ? '#dddddd' : '#343844', wood = fl ? '#ffffff' : '#6a4a2a', tin = fl ? '#ffffff' : shade(e.col, .55);
   const post = (lx, ly, z0, z1, c) => { const a = P3(lx, ly, z0), b = P3(lx, ly, z1), X = Math.round(b[0]), Y = Math.round(b[1]); ctx.fillStyle = OUT; ctx.fillRect(X - 1, Y, 3, Math.round(a[1]) - Y + 1); ctx.fillStyle = c; ctx.fillRect(X - 1, Y, 2, Math.round(a[1]) - Y); };
   const brace = (ax, ay, bx, by, c) => { iline(P3(ax, ay, 2), P3(bx, by, DECK - 4), c); iline(P3(bx, by, 2), P3(ax, ay, DECK - 4), c); iline(P3(ax, ay, DECK * .5), P3(bx, by, DECK * .5), c); };
@@ -69,6 +69,7 @@ function drawIsoTower(e) {
   // far rail and roof posts, lookout lamp, near rail
   iline(P3(-R, -R, RAIL), P3(-R, R, RAIL), dark); iline(P3(-R, -R, RAIL), P3(R, -R, RAIL), dark);
   post(-R, -R, DECK + 3, ROOF, dark); post(-R, R, DECK + 3, ROOF, steel); post(R, -R, DECK + 3, ROOF, steel);
+  if (e.lk) { drawChar(e.lk); artT(); ctx.globalAlpha = 1; }   // the lookout, standing on the deck
   if (!fl) { const l = P3(0, 0, ROOF - 3); ipx(l[0], l[1], '#fff'); iglow(l[0], l[1] + 2, 9, e.col, .3 + .08 * Math.sin(G.time * 3 + e.id)); }
   iline(P3(-R, R, RAIL), P3(R, R, RAIL), steel); iline(P3(R, -R, RAIL), P3(R, R, RAIL), shade(steel, .8));
   iline(P3(-R, R, RAIL - 5), P3(R, R, RAIL - 5), dark); iline(P3(R, -R, RAIL - 5), P3(R, R, RAIL - 5), dark);

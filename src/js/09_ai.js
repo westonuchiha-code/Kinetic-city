@@ -362,6 +362,22 @@ function aiCar(e, dt) {
   if (Math.hypot(e.vx, e.vy) > 8) e.ang += angDiff(Math.atan2(e.vy, e.vx), e.ang) * Math.min(1, dt * 10);
 }
 
+/* ---------- watchtower lookout ---------- */
+/* A grunt stands on the deck and shoots like any gunman (same aim laser, same bullets) while you are on the
+   hideout's turf and he can see you. He can't be hit up there: bring the tower down and he falls with it. */
+function aiTower(e, dt) {
+  const lk = e.lk || (e.lk = { kind: 'grunt', team: 'gang', id: e.id, did: e.did, x: e.x, y: e.y, z: 56, r: 10, ang: Math.PI / 4, aimT: 0, vx: 0, vy: 0, hp: 1, maxhp: 1, flash: 0 });
+  lk.flash = e.flash; e.cd -= dt;
+  const d = dist(e, P), on = P && !P.dead && dist(P, e.home || e) < (e.terr || TERRITORY_R) && d < 400;
+  e.losT = (e.losT || 0) - dt; if (e.losT <= 0) { e.losT = .2; e.losC = on && los(e, P); }
+  if (!on || !e.losC) { lk.aimT = 0; return; }
+  lk.ang += angDiff(Math.atan2(P.y - e.y, P.x - e.x), lk.ang) * Math.min(1, dt * 12);
+  if (lk.aimT > 0) {
+    lk.aimT -= dt;
+    if (lk.aimT <= 0) { shoot(e, Math.atan2(P.y - e.y, P.x - e.x) + rnd(-.06, .06), { dmg: 7 }); e.cd = 1.4 + rnd(.9); }
+  } else if (e.cd <= 0) lk.aimT = .42;
+}
+
 /* ---------- per tick ---------- */
 function updateAI(dt) {
   let threat = 0;
@@ -371,6 +387,7 @@ function updateAI(dt) {
       case 'civ': aiCivilian(e, dt); break;
       case 'grunt': case 'brute': case 'sup': case 'boss': case 'cop': aiCombat(e, dt); if (e.tgt === P && dist2(e, P) < 520 * 520) threat += e.kind === 'boss' ? 4 : 1; break;
       case 'hideout': aiHideout(e, dt); break;
+      case 'tower': aiTower(e, dt); break;
       case 'car': aiCar(e, dt); break;
     }
   }

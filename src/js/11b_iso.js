@@ -316,7 +316,7 @@ function render(dt) {
   for (const e of _vis) {
     if (e.kind === 'hideout') continue;
     const r = e.r || 10, z = e.z || 0;
-    if (e.kind === 'tower') { addPt(e.x, e.y, e.x + e.y, 18, 50, drawUpright, e); continue; }
+    if (e.kind === 'tower') { addPt(e.x, e.y, e.x + e.y, 18, 66, drawUpright, e); continue; }
     addPt(e.x, e.y, e.state === 'wounded' ? -1e6 : e.x + e.y + z * 4, r * SPR_K * 1.8 + 6, r * SPR_K * 3.2 + z * SPR_K + 10, drawUpright, e);
   }
   if (G.mode !== 'dead' && G.mode !== 'title') addPt(P.x, P.y, P.x + P.y + (P.z || 0) * 4, 20, 34, drawUpright, P);

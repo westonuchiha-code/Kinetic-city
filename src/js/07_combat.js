@@ -160,6 +160,7 @@ function kill(e, info) {
     FX.debris(e.x, e.y, 14, '#6a4a2a', 240); FX.debris(e.x, e.y, 8, '#5a6070', 200); FX.dust(e.x, e.y, 10); FX.smoke(e.x, e.y, 6, '#2a2c34', 1.2);
     sfx('heavy', e.x, e.y); shake(.4); reward(e, byP);
     for (let i = 0; i < 2; i++) { const a = rnd(TAU), c = mk('crate', e.x + Math.cos(a) * 8, e.y + Math.sin(a) * 8); c.vx = Math.cos(a) * 160; c.vy = Math.sin(a) * 160; c.vz = 120; }
+    { const a = rnd(TAU), g = spawnGang('grunt', e.x + Math.cos(a) * 6, e.y + Math.sin(a) * 6, { home: e.home, terr: e.terr, z: 42, vz: 60, stun: 1.3, flung: true, lastHitBy: byP ? 'player' : null }); g.vx = Math.cos(a) * 90; g.vy = Math.sin(a) * 90; g.hp = g.maxhp * .5; }   // the lookout comes down with it, hurt
     if (byP) toast('Watchtower down', '#ffc24a');
   } else if (k === 'boss') {
     releaseLifted(e);

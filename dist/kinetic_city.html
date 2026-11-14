@@ -1232,6 +1232,7 @@ function kill(e, info) {
     FX.debris(e.x, e.y, 14, '#6a4a2a', 240); FX.debris(e.x, e.y, 8, '#5a6070', 200); FX.dust(e.x, e.y, 10); FX.smoke(e.x, e.y, 6, '#2a2c34', 1.2);
     sfx('heavy', e.x, e.y); shake(.4); reward(e, byP);
     for (let i = 0; i < 2; i++) { const a = rnd(TAU), c = mk('crate', e.x + Math.cos(a) * 8, e.y + Math.sin(a) * 8); c.vx = Math.cos(a) * 160; c.vy = Math.sin(a) * 160; c.vz = 120; }
+    { const a = rnd(TAU), g = spawnGang('grunt', e.x + Math.cos(a) * 6, e.y + Math.sin(a) * 6, { home: e.home, terr: e.terr, z: 42, vz: 60, stun: 1.3, flung: true, lastHitBy: byP ? 'player' : null }); g.vx = Math.cos(a) * 90; g.vy = Math.sin(a) * 90; g.hp = g.maxhp * .5; }   // the lookout comes down with it, hurt
     if (byP) toast('Watchtower down', '#ffc24a');
   } else if (k === 'boss') {
     releaseLifted(e);
@@ -1903,6 +1904,22 @@ function aiCar(e, dt) {
   if (Math.hypot(e.vx, e.vy) > 8) e.ang += angDiff(Math.atan2(e.vy, e.vx), e.ang) * Math.min(1, dt * 10);
 }
 
+/* ---------- watchtower lookout ---------- */
+/* A grunt stands on the deck and shoots like any gunman (same aim laser, same bullets) while you are on the
+   hideout's turf and he can see you. He can't be hit up there: bring the tower down and he falls with it. */
+function aiTower(e, dt) {
+  const lk = e.lk || (e.lk = { kind: 'grunt', team: 'gang', id: e.id, did: e.did, x: e.x, y: e.y, z: 56, r: 10, ang: Math.PI / 4, aimT: 0, vx: 0, vy: 0, hp: 1, maxhp: 1, flash: 0 });
+  lk.flash = e.flash; e.cd -= dt;
+  const d = dist(e, P), on = P && !P.dead && dist(P, e.home || e) < (e.terr || TERRITORY_R) && d < 400;
+  e.losT = (e.losT || 0) - dt; if (e.losT <= 0) { e.losT = .2; e.losC = on && los(e, P); }
+  if (!on || !e.losC) { lk.aimT = 0; return; }
+  lk.ang += angDiff(Math.atan2(P.y - e.y, P.x - e.x), lk.ang) * Math.min(1, dt * 12);
+  if (lk.aimT > 0) {
+    lk.aimT -= dt;
+    if (lk.aimT <= 0) { shoot(e, Math.atan2(P.y - e.y, P.x - e.x) + rnd(-.06, .06), { dmg: 7 }); e.cd = 1.4 + rnd(.9); }
+  } else if (e.cd <= 0) lk.aimT = .42;
+}
+
 /* ---------- per tick ---------- */
 function updateAI(dt) {
   let threat = 0;
@@ -1912,6 +1929,7 @@ function updateAI(dt) {
       case 'civ': aiCivilian(e, dt); break;
       case 'grunt': case 'brute': case 'sup': case 'boss': case 'cop': aiCombat(e, dt); if (e.tgt === P && dist2(e, P) < 520 * 520) threat += e.kind === 'boss' ? 4 : 1; break;
       case 'hideout': aiHideout(e, dt); break;
+      case 'tower': aiTower(e, dt); break;
       case 'car': aiCar(e, dt); break;
     }
   }
@@ -2112,7 +2130,7 @@ function populate(save) {
     const d = h.d, hid = d * 3 + hidIdx[d]++;
     if (destroyed[d].includes(hid) || (save && (save.ds[d].bossDone || save.ds[d].hideoutsLeft === 0))) { mk('hideout', h.x, h.y - 48, { did: d, hid, r: 34, spot: h, rect: hideoutRect(h), gateOpen: true, gateT: 1, cleared: true, col: DIST[d].col }); continue; }
     mk('hideout', h.x, h.y - 48, { did: d, hid, r: 34, spot: h, rect: hideoutRect(h), gateOpen: false, col: DIST[d].col });
-    mk('tower', h.x + (hid % 2 ? 88 : -88), h.y + 20, { did: d, ang: 0, col: DIST[d].col });
+    mk('tower', h.x + (hid % 2 ? 88 : -88), h.y + 20, { did: d, ang: 0, col: DIST[d].col, home: { x: h.x, y: h.y + 50 }, terr: 290 });
     for (let i = 0; i < 3 + d; i++) { const p = findFree(h.x, h.y + 60, 70, 12); if (p) spawnGang(i === 0 && d > 0 ? 'brute' : 'grunt', p.x, p.y, { home: { x: h.x, y: h.y + 50 }, terr: 290, guardOf: hid }); }
     for (let i = 0; i < 3; i++) { const p = findFree(h.x, h.y + 40, 110, 14); if (p) mk(i === 2 ? 'barrel' : 'crate', p.x, p.y); }
   }
@@ -3574,7 +3592,7 @@ function render(dt) {
   for (const e of _vis) {
     if (e.kind === 'hideout') continue;
     const r = e.r || 10, z = e.z || 0;
-    if (e.kind === 'tower') { addPt(e.x, e.y, e.x + e.y, 18, 50, drawUpright, e); continue; }
+    if (e.kind === 'tower') { addPt(e.x, e.y, e.x + e.y, 18, 66, drawUpright, e); continue; }
     addPt(e.x, e.y, e.state === 'wounded' ? -1e6 : e.x + e.y + z * 4, r * SPR_K * 1.8 + 6, r * SPR_K * 3.2 + z * SPR_K + 10, drawUpright, e);
   }
   if (G.mode !== 'dead' && G.mode !== 'title') addPt(P.x, P.y, P.x + P.y + (P.z || 0) * 4, 20, 34, drawUpright, P);
@@ -4020,7 +4038,7 @@ const PROPS_ISO = { car: 1, crate: 1, dumpster: 1, barrel: 1 };
 function drawUpright(e) {
   if (PEOPLE[e.kind] || e === P) { artT(); drawChar(e); if (e.aimT > 0 && (e.kind === 'grunt' || e.kind === 'cop')) drawAimLaser(e); return; }
   if (PROPS_ISO[e.kind]) { artT(); drawIsoProp(e); return; }
-  if (e.kind === 'tower') { artT(); drawIsoTower(e); return; }
+  if (e.kind === 'tower') { artT(); drawIsoTower(e); if (e.lk && e.lk.aimT > 0) drawAimLaser(e.lk); return; }
   uprightT(e.x, e.y);
   const ang = e.ang; if (ang !== undefined) e.ang = ang + Math.PI / 4;
   drawEntity(e);
@@ -4243,7 +4261,7 @@ function drawIsoFrame(b) {
 
 /* ---------- gang watchtower: steel legs, plank deck with a rail, tin roof in the gang's colour ---------- */
 function drawIsoTower(e) {
-  const fl = e.flash > 0, P3 = propFrame(e), H = 10, DECK = 34, RAIL = 44, ROOF = 54;
+  const fl = e.flash > 0, P3 = propFrame(e), H = 10, DECK = 34, RAIL = 44, ROOF = 72;
   const steel = fl ? '#ffffff' : '#5a6070', dark = fl ? '#dddddd' : '#343844', wood = fl ? '#ffffff' : '#6a4a2a', tin = fl ? '#ffffff' : shade(e.col, .55);
   const post = (lx, ly, z0, z1, c) => { const a = P3(lx, ly, z0), b = P3(lx, ly, z1), X = Math.round(b[0]), Y = Math.round(b[1]); ctx.fillStyle = OUT; ctx.fillRect(X - 1, Y, 3, Math.round(a[1]) - Y + 1); ctx.fillStyle = c; ctx.fillRect(X - 1, Y, 2, Math.round(a[1]) - Y); };
   const brace = (ax, ay, bx, by, c) => { iline(P3(ax, ay, 2), P3(bx, by, DECK - 4), c); iline(P3(bx, by, 2), P3(ax, ay, DECK - 4), c); iline(P3(ax, ay, DECK * .5), P3(bx, by, DECK * .5), c); };
@@ -4258,6 +4276,7 @@ function drawIsoTower(e) {
   // far rail and roof posts, lookout lamp, near rail
   iline(P3(-R, -R, RAIL), P3(-R, R, RAIL), dark); iline(P3(-R, -R, RAIL), P3(R, -R, RAIL), dark);
   post(-R, -R, DECK + 3, ROOF, dark); post(-R, R, DECK + 3, ROOF, steel); post(R, -R, DECK + 3, ROOF, steel);
+  if (e.lk) { drawChar(e.lk); artT(); ctx.globalAlpha = 1; }   // the lookout, standing on the deck
   if (!fl) { const l = P3(0, 0, ROOF - 3); ipx(l[0], l[1], '#fff'); iglow(l[0], l[1] + 2, 9, e.col, .3 + .08 * Math.sin(G.time * 3 + e.id)); }
   iline(P3(-R, R, RAIL), P3(R, R, RAIL), steel); iline(P3(R, -R, RAIL), P3(R, R, RAIL), shade(steel, .8));
   iline(P3(-R, R, RAIL - 5), P3(R, R, RAIL - 5), dark); iline(P3(R, -R, RAIL - 5), P3(R, R, RAIL - 5), dark);
