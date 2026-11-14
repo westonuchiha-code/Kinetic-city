@@ -30,6 +30,13 @@ fs.mkdirSync(OUT, { recursive: true });
   await p.evaluate(() => { KC.giveXP(400); }); await p.waitForTimeout(600); await shot('08_levelup');
   await tap(9); await shot('09_pause_skills_points'); await tap(9);
   await p.evaluate(() => { KC.P.invT = 0; KC.hurt(KC.P, 9999, { by: 'grunt' }); }); await p.waitForTimeout(1500); await shot('10_dead');
+  // title settings, with a save present so the delete row shows
+  await p.evaluate(() => { saveGame(); }); await p.reload(); await p.waitForTimeout(600);
+  await p.evaluate(() => document.getElementById('bSet').click()); await shot('12_title_settings');
+  await p.evaluate(() => { document.querySelector('.set[data-k="hud"]').click(); });
+  await tap(1); await p.evaluate(() => { document.getElementById('bCont').click(); KC.P.invT = 1e9; }); await p.waitForTimeout(700); await shot('13_hud_110');
+  await p.evaluate(() => { SETTINGS.hud = .7; }); await shot('14_hud_70');
+  await p.evaluate(() => { SETTINGS.hud = 1; saveSettings(); });
   console.log(errs.join('\n') || 'no errors');
   await ctx.close();
   await b.close();

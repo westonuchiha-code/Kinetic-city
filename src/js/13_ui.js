@@ -96,8 +96,9 @@ const UI = (() => {
   /* ---------- pause ---------- */
   function openPause(asControls) {
     fromTitle = !!asControls; G.prevMode = G.mode; if (!fromTitle) G.mode = 'pause';
-    tab = fromTitle ? 'controls' : 'skills';
-    $('ptitle').textContent = fromTitle ? 'Controls' : 'Paused';
+    fromTitle = asControls === 'settings' ? 'settings' : fromTitle ? 'controls' : false; wipeArm = false;
+    tab = fromTitle || 'skills';
+    $('ptitle').textContent = fromTitle === 'settings' ? 'Settings' : fromTitle ? 'Controls' : 'Paused';
     $('tabs').style.display = fromTitle ? 'none' : 'flex';
     $('bQuit').style.display = fromTitle ? 'none' : '';
     $('bResume').textContent = $('backLbl').textContent = fromTitle ? 'Back' : 'Resume';
@@ -105,7 +106,7 @@ const UI = (() => {
   }
   function closePause() {
     hide('pause'); sfx('ui');
-    if (fromTitle) { show('title'); setFocus($('bCtl')); return; }
+    if (fromTitle) { show('title'); $('bCont').disabled = !loadSave(); setFocus($(fromTitle === 'settings' ? 'bSet' : 'bCtl')); return; }
     G.mode = G.prevMode === 'dead' ? 'dead' : 'play';
     if (P && P.holding) Audio2.humStart();
   }
@@ -134,31 +135,60 @@ const UI = (() => {
       body.innerHTML = `<div class="ctl"><div><h3>Controller · ${Input.padStyle === 'ps' ? 'PlayStation' : 'Xbox'} layout</h3><ul>${list('pad')}</ul></div><div><h3>Keyboard and mouse</h3><ul>${list('kbm')}</ul></div></div>`;
       refreshGlyphs(); setFocus($('bResume'));
     } else {
-      const pct = v => Math.round(v * 100) + '%';
-      body.innerHTML = `<div class="setgrid">
-        <button class="set nav" data-k="music"><span>Music volume</span><span class="v">◀ ${pct(SETTINGS.music)} ▶</span></button>
-        <button class="set nav" data-k="sfx"><span>Effects volume</span><span class="v">◀ ${pct(SETTINGS.sfx)} ▶</span></button>
-        <button class="set nav" data-k="rumble"><span>Controller rumble</span><span class="v">${SETTINGS.rumble ? 'On' : 'Off'}</span></button>
-        <button class="set nav" data-k="shake"><span>Screen shake</span><span class="v">${SETTINGS.shake ? 'On' : 'Off'}</span></button></div>`;
+      const row = o => `<button class="set nav ${o.warn ? 'warn' : ''}" data-k="${o.k}"><span>${o.name}</span><span class="v">${o.opts || o.step ? '◀ ' + setLabel(o) + ' ▶' : setLabel(o)}</span></button>`;
+      let h = '', sec = '';
+      for (const o of SETDEFS) { if (o.titleOnly && (!fromTitle || !loadSave())) continue; if (o.sec !== sec) { sec = o.sec; h += `<h3 class="sethead">${sec}</h3>`; } h += row(o); }
+      body.innerHTML = `<div class="setgrid">${h}</div>`;
       body.querySelectorAll('.set').forEach(b => b.onclick = () => adjustSetting(b.dataset.k, 1, true));
-      setFocus(keepId ? body.querySelector(`.set[data-k="${keepId}"]`) : body.querySelector('.set'));
+      setFocus((keepId && body.querySelector(`.set[data-k="${keepId}"]`)) || body.querySelector('.set'));
     }
     document.querySelectorAll('#tabs .tab').forEach(t => t.onclick = () => { tab = t.dataset.tab; renderTab(); });
   }
+  /* Settings rows. step: a number between min and max; opts: named values; neither: on/off or an action. */
+  const SETDEFS = [
+    { sec: 'Sound', k: 'music', name: 'Music volume', min: 0, max: 1, step: .1 },
+    { sec: 'Sound', k: 'sfx', name: 'Effects volume', min: 0, max: 1, step: .1 },
+    { sec: 'Display', k: 'full', name: 'Fullscreen' },
+    { sec: 'Display', k: 'hud', name: 'HUD size', min: .7, max: 1.1, step: .1 },
+    { sec: 'Display', k: 'shake', name: 'Screen shake' },
+    { sec: 'Controls', k: 'rumble', name: 'Controller rumble' },
+    { sec: 'Controls', k: 'deadzone', name: 'Stick dead zone', min: .1, max: .35, step: .05 },
+    { sec: 'Controls', k: 'assist', name: 'Aim assist', opts: [[0, 'Off'], [.5, 'Low'], [1, 'Normal'], [1.5, 'High']] },
+    { sec: 'Save', k: 'wipe', name: 'Delete saved game', titleOnly: true, warn: true }
+  ];
+  let wipeArm = false;
+  function setLabel(o) {
+    if (o.k === 'full') return document.fullscreenElement ? 'On' : 'Off';
+    if (o.k === 'wipe') return wipeArm ? 'Press again to delete' : 'Delete';
+    const v = SETTINGS[o.k];
+    if (o.opts) return (o.opts.find(p => Math.abs(p[0] - v) < 1e-6) || o.opts[2])[1];
+    return o.step ? Math.round(v * 100) + '%' : v ? 'On' : 'Off';
+  }
   function adjustSetting(k, d, wrap) {
-    if (k === 'music' || k === 'sfx') { let v = Math.round((SETTINGS[k] + d * .1) * 10) / 10; if (wrap && v > 1.001) v = 0; SETTINGS[k] = clamp(v, 0, 1); Audio2.applyVolumes(); }
+    const o = SETDEFS.find(x => x.k === k); if (!o) return;
+    if (k !== 'wipe') wipeArm = false;
+    if (k === 'full') { toggleFull(); sfx('ui'); return; }
+    if (k === 'wipe') {
+      if (!wrap) return;   // only a confirm press, never left/right
+      if (!wipeArm) wipeArm = true; else { wipeArm = false; try { localStorage.removeItem(SAVE_KEY); } catch (e) { } $('bCont').disabled = true; }
+      sfx('ui'); renderTab(loadSave() ? k : null); return;
+    }
+    if (o.opts) { let i = o.opts.findIndex(p => Math.abs(p[0] - SETTINGS[k]) < 1e-6); if (i < 0) i = 2; i += d; SETTINGS[k] = o.opts[wrap ? (i + o.opts.length) % o.opts.length : clamp(i, 0, o.opts.length - 1)][0]; }
+    else if (o.step) { let v = Math.round((SETTINGS[k] + d * o.step) * 100) / 100; if (wrap && v > o.max + 1e-6) v = o.min; SETTINGS[k] = clamp(v, o.min, o.max); if (k === 'music' || k === 'sfx') Audio2.applyVolumes(); }
     else { SETTINGS[k] = !SETTINGS[k]; if (k === 'rumble' && SETTINGS.rumble) Input.rumble(.6, .6, 200); }
     saveSettings(); sfx('ui'); renderTab(k);
   }
+  async function toggleFull() { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (e) { } }
+  document.addEventListener('fullscreenchange', () => { if (layer === 'pause' && tab === 'settings') renderTab(focus && focus.dataset.k); });
 
   /* ---------- title actions ---------- */
   function startNew() { Audio2.unlock(); Audio2.startAmbience(); hide('title'); newGame(null); G.mode = 'play'; startStory(); }
   function continueGame() { const s = loadSave(); if (!s) return; Audio2.unlock(); Audio2.startAmbience(); hide('title'); newGame(s); G.mode = 'play'; toast('Game loaded', '#e8ecf7', true); }
   function toTitle() { saveGame(); hide('pause'); Audio2.humStop(); G.mode = 'title'; show('title'); $('bCont').disabled = !loadSave(); setFocus($('bNew')); }
-  $('bNew').onclick = startNew; $('bCont').onclick = continueGame; $('bCtl').onclick = () => openPause(true);
+  $('bNew').onclick = startNew; $('bCont').onclick = continueGame; $('bCtl').onclick = () => openPause(true); $('bSet').onclick = () => openPause('settings');
   $('bResume').onclick = closePause; $('bQuit').onclick = toTitle;
   const goFull = async () => { try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); } catch (e) { } };
-  $('bFull').onclick = goFull; $('bNew').addEventListener('click', goFull); $('bCont').addEventListener('click', goFull);
+  $('bNew').addEventListener('click', goFull); $('bCont').addEventListener('click', goFull);
 
   /* ---------- per-frame ---------- */
   function update(dt) {

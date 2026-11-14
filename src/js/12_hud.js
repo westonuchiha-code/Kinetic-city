@@ -97,7 +97,7 @@ function drawAbilities() {
 
 /* ---------- main HUD ---------- */
 function drawHUD(dt) {
-  hs = clamp(H / 760, .5, 1.6);
+  hs = clamp(H / 760, .5, 1.6) * SETTINGS.hud;
   const p = P, m = 24 * hs;
   if (G.mode === 'map') { drawCityMap(); return; }
   // world-anchored: floating numbers, prompts, objective marker

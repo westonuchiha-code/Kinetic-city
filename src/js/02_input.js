@@ -8,7 +8,7 @@
    Controller layout (standard mapping):
      LS move  RS aim  RT telekinesis (hold grab, release throw)  LT absorb (hold, release = blast)
      RB repulse  LB gravity well  A dash  X heal (hold)  Y drain (hold)  B drop  Start pause  Back map */
-const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true };
+const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1 };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale
 try { const s = JSON.parse(localStorage.getItem('kc_settings') || 'null'); if (s) Object.assign(SETTINGS, s); } catch (e) { }
 function saveSettings() { try { localStorage.setItem('kc_settings', JSON.stringify(SETTINGS)); } catch (e) { } }
 
@@ -101,7 +101,7 @@ const Input = (() => {
         if (now && !was) { active = true; for (const a in PADMAP) if (PADMAP[a] === i) edge(a); }
       }
       const ax = gp.axes || [];
-      const L = deadzone(ax[0] || 0, ax[1] || 0, .18), R = deadzone(ax[2] || 0, ax[3] || 0, .22);
+      const L = deadzone(ax[0] || 0, ax[1] || 0, SETTINGS.deadzone), R = deadzone(ax[2] || 0, ax[3] || 0, SETTINGS.deadzone + .04);
       pad.axes[0] = L[0]; pad.axes[1] = L[1]; pad.axes[2] = R[0]; pad.axes[3] = R[1];
       if (Math.hypot(L[0], L[1]) > .45 || Math.hypot(R[0], R[1]) > .45) active = true;
       if (active) { setDevice('pad'); Audio2.unlock(); }

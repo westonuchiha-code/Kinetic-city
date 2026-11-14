@@ -82,7 +82,8 @@ function dropHeld() {
   h.vx *= .3; h.vy *= .3; h.vz = 0; h.thrownT = .4; if (!h.prop) h.stun = .6;
 }
 function assistTarget(from, ang, spd) {
-  const cone = Input.device === 'pad' ? .27 : .09; let best = null, bs = Infinity;
+  if (!SETTINGS.assist) return null;
+  const cone = (Input.device === 'pad' ? .27 : .09) * SETTINGS.assist; let best = null, bs = Infinity;
   for (const o of act) {
     if (o.dead || o === from || o.held) continue;
     const hostile = (o.team === 'gang') || (o.team === 'police' && !o.ally && G.heat >= 1);
