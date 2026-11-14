@@ -62,7 +62,7 @@ const UI = (() => {
 
   /* ---------- dialogue ---------- */
   let dq = [], dcb = null, cur = null, typed = 0, choiceLock = 0;
-  const WHO_COL = { 'DR. VALE': '#6fe0a0', NARRATOR: '#8790aa', 'MR. CINDER': '#ff8a2a', KRAG: '#ff4a3a', 'THE ARCHITECT': '#b06bff' };
+  const WHO_COL = {};   // speaker name -> colour, for when the story is written
   function say(lines, cb) { dq = lines.slice(); dcb = cb || null; G.mode = 'dialog'; show('dlg'); nextLine(); }
   function nextLine() {
     const l = dq.shift();
@@ -153,7 +153,7 @@ const UI = (() => {
 
   /* ---------- title actions ---------- */
   function startNew() { Audio2.unlock(); Audio2.startAmbience(); hide('title'); newGame(null); G.mode = 'play'; startStory(); }
-  function continueGame() { const s = loadSave(); if (!s) return; Audio2.unlock(); Audio2.startAmbience(); hide('title'); newGame(s); G.mode = 'play'; toast('Welcome back to Halcyon', '#e8ecf7', true); }
+  function continueGame() { const s = loadSave(); if (!s) return; Audio2.unlock(); Audio2.startAmbience(); hide('title'); newGame(s); G.mode = 'play'; toast('Game loaded', '#e8ecf7', true); }
   function toTitle() { saveGame(); hide('pause'); Audio2.humStop(); G.mode = 'title'; show('title'); $('bCont').disabled = !loadSave(); setFocus($('bNew')); }
   $('bNew').onclick = startNew; $('bCont').onclick = continueGame; $('bCtl').onclick = () => openPause(true);
   $('bResume').onclick = closePause; $('bQuit').onclick = toTitle;

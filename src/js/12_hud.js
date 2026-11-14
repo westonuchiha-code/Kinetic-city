@@ -208,7 +208,11 @@ function drawWaypoint() {
       hudText(d + ' m', s.x, y - 18 * hs, 12 * hs, col, 'center', 700);
     } else {
       const cx = W / 2, cy = H / 2, a = Math.atan2(s.y - cy, s.x - cx);
-      const k = Math.min((W / 2 - pad) / Math.abs(Math.cos(a) || 1e-6), (H / 2 - pad) / Math.abs(Math.sin(a) || 1e-6));
+      let k = Math.min((W / 2 - pad) / Math.abs(Math.cos(a) || 1e-6), (H / 2 - pad) / Math.abs(Math.sin(a) || 1e-6));
+      // pull the arrow in along its own direction until it is clear of the HUD panels (status, minimap, objective, abilities)
+      const m = 24 * hs, g = 26 * hs, panels = [[0, 0, m + 350 * hs, 122 * hs], [W - m - 210 * hs, 0, W, m + 156 * hs], [W / 2 - 240 * hs, 0, W / 2 + 240 * hs, 56 * hs], [0, H - 108 * hs, 332 * hs, H]];
+      const hit = (px, py) => panels.some(r => px > r[0] - g && px < r[2] + g && py > r[1] - g && py < r[3] + g);
+      while (k > 60 && hit(cx + Math.cos(a) * k, cy + Math.sin(a) * k)) k -= 4;
       const x = cx + Math.cos(a) * k, y = cy + Math.sin(a) * k;
       ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(14 * hs, 0); ctx.lineTo(-6 * hs, -9 * hs); ctx.lineTo(-2 * hs, 0); ctx.lineTo(-6 * hs, 9 * hs); ctx.fill(); ctx.restore();
       hudText(d + ' m', x - Math.cos(a) * 26 * hs, y - Math.sin(a) * 22 * hs, 12 * hs, col, 'center', 700);
@@ -256,7 +260,7 @@ function star(x, y, r) { ctx.beginPath(); for (let i = 0; i < 10; i++) { const a
 function drawCityMap() {
   ctx.fillStyle = 'rgba(4,5,10,.9)'; ctx.fillRect(0, 0, W, H);
   const pad = 60 * hs, sc = Math.min((W - pad * 2) / WORLD_W, (H - pad * 2 - 110 * hs) / WORLD_H), mw = WORLD_W * sc, mh = WORLD_H * sc, x = (W - mw) / 2, y = (H - mh) / 2;
-  hudText('HALCYON CITY', x, y - 34 * hs, 26 * hs, '#e6fbff', 'left', 700);
+  hudText('CITY MAP', x, y - 34 * hs, 26 * hs, '#e6fbff', 'left', 700);
   hudText(`Kinetic shards ${G.shards}/12 · ${G.saves} civilians saved · ${G.kills} takedowns`, x + mw, y - 30 * hs, 13 * hs, '#8790aa', 'right', 600);
   ctx.imageSmoothingEnabled = false; ctx.drawImage(mmCanvas, x, y, mw, mh); ctx.imageSmoothingEnabled = true;
   for (let d = 0; d < 3; d++) {

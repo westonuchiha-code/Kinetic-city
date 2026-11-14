@@ -142,11 +142,6 @@ function spawnBoss(d) {
   const ammo = ['crate', 'crate', 'barrel', 'barrel', 'crate', 'car', 'car', 'dumpster'];
   for (let i = 0; i < ammo.length; i++) { const a = i / ammo.length * TAU, p = findFree(s.x + Math.cos(a) * 110, s.y + Math.sin(a) * 110, 30, 18); if (p) mk(ammo[i], p.x, p.y, { col: pick(CAR_COLS), ang: rnd(TAU) }); }
   toast(DIST[d].boss + ' has appeared', DIST[d].col, true);
-  const _unused = [
-    [{ who: 'DR. VALE', text: 'All three hideouts are rubble, and Mr. Cinder is coming out himself. He\'s at the plaza. Watch the fire bursts and don\'t stand in his flames.' }],
-    [{ who: 'DR. VALE', text: 'Krag. He charges in straight lines. Stand in front of a wall, sidestep, and let him hit it. A stunned Krag takes double damage.' }],
-    [{ who: 'THE ARCHITECT', text: 'You came all this way. Do you know what you are? A side effect. I built the Flash. Come, little anomaly.' }]
-  ];
 }
 function bossDefeated(d) {
   const st = DS[d]; if (st.bossDone) return; st.bossDying = false; st.bossDone = true; st.status = G.karma >= 0 ? 'liberated' : 'dominated'; G.check = checkpointFor(d);

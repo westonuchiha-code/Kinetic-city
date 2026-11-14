@@ -41,7 +41,7 @@ button{font-family:inherit;color:inherit}
   text-shadow:0 0 6px #fff,0 0 18px var(--cyan),0 0 42px var(--cyan),0 0 80px rgba(60,224,255,.6)}
 .logo span{display:block;color:#ffe0ee;text-shadow:0 0 6px #fff,0 0 18px var(--pink),0 0 42px var(--pink),0 0 80px rgba(255,61,139,.6);animation:flick 6s infinite}
 @keyframes flick{0%,18%,22%,60%,100%{opacity:1}19%,21%{opacity:.35}61%{opacity:.6}}
-.tag{max-width:46ch;font-size:clamp(14px,1.5vw,18px);line-height:1.45;color:#c4cbe0;margin:18px 0 26px}
+#tmenu{margin-top:26px}
 .menu{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .mbtn{background:transparent;border:0;border-left:3px solid transparent;padding:8px 18px 8px 14px;font-size:clamp(18px,2vw,24px);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);cursor:pointer;transition:color .12s,border-color .12s,background .12s}
 .mbtn:hover,.mbtn.focus{color:#fff;border-left-color:var(--cyan);background:linear-gradient(90deg,rgba(60,224,255,.16),rgba(60,224,255,0))}
@@ -106,7 +106,7 @@ button{font-family:inherit;color:inherit}
 .pbtn.focus,.pbtn:hover{border-color:var(--cyan);color:#fff;background:rgba(60,224,255,.12)}
 .hints{display:flex;gap:16px;font-size:13px;color:var(--dim);align-items:center}
 .hints span{display:inline-flex;gap:6px;align-items:center}
-@media (max-height:520px){.tag{margin:8px 0 12px;font-size:13px}.mbtn{padding:4px 14px 4px 12px;font-size:17px}.menu{gap:2px}.padstat{margin-top:12px;font-size:12px}#title{padding-bottom:4vh}
+@media (max-height:520px){#tmenu{margin-top:10px}.mbtn{padding:4px 14px 4px 12px;font-size:17px}.menu{gap:2px}.padstat{margin-top:12px;font-size:12px}#title{padding-bottom:4vh}
   .pwrap{padding:10px 20px 8px;gap:8px}.phead{padding-bottom:6px}.ptitle{font-size:24px}.tab{padding:4px 12px;font-size:13px}.pfoot{padding-top:6px}.pbtn{padding:6px 14px;font-size:13px}
   .ctl{gap:20px}.ctl h3{margin-bottom:5px;font-size:12px}.ctl ul{gap:2px}.ctl li{font-size:12.5px;gap:8px}.ctl li .k{min-width:60px}}
 @media (prefers-reduced-motion:reduce){.logo span{animation:none}}
@@ -117,7 +117,6 @@ button{font-family:inherit;color:inherit}
 
 <div id="title" class="layer on">
   <h1 class="logo">KINETIC<span>CITY</span></h1>
-  <p class="tag">Halcyon City, 3:12 AM. A blue-white flash gave you command of force itself. Lift cars, bend gravity, swallow bullets. The city is watching what you become.</p>
   <div class="menu" id="tmenu">
     <button class="mbtn nav" id="bNew">New game</button>
     <button class="mbtn nav" id="bCont">Continue</button>
