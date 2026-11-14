@@ -2103,10 +2103,27 @@ function streamPopulation(dt) {
     if (e.dead) continue;
     const d = Math.hypot(e.x - P.x, e.y - P.y);
     if (e.kind === 'civ') { if (d > 1000 && e.state !== 'wounded') e.dead = true; else if (d < 650) peds++; }
-    else if (e.kind === 'car' && (e.driving || e.curb)) { if (d > 1200 && !e.held) e.dead = true; else if (d < 900 && e.driving) cars++; }
+    else if (e.kind === 'car' && (e.driving || e.curb)) {
+      // only cars inside the simulated area move, so only those count as traffic; a driver who leaves it is gone (well out of view)
+      const live = Math.abs(e.x - P.x) < ACTIVE_R && Math.abs(e.y - P.y) < ACTIVE_R;
+      if (!e.held && (d > 1200 || (e.driving && !live))) e.dead = true; else if (live && e.driving) cars++;
+    }
   }
   for (let i = 0; i < 2 && peds + i < PED_TARGET; i++) spawnPedNear();
-  if (cars < CAR_TARGET) { const c = spawnTraffic(districtAt(P.x)); if (c && (dist(c, P) < 420 || dist(c, P) > 1000)) c.dead = true; }
+  if (cars < CAR_TARGET) spawnTrafficNear();
+}
+function spawnTrafficNear() {   // a car on a lane inside the simulated area but outside the view, in the player's district
+  const d = districtAt(P.x), R = ACTIVE_R - 30, V = cam.w / 2 + 70;
+  for (let tries = 0; tries < 12; tries++) {
+    let x = P.x + rnd(-R, R), y = P.y + rnd(-R, R), dx = 0, dy = 0;
+    if (Math.max(Math.abs(x - P.x), Math.abs(y - P.y)) < V) continue;
+    if (Math.random() < .5) { dx = Math.random() < .5 ? 1 : -1; y = laneFor(dx, 0, Math.floor(y / BAND) * BAND); }
+    else { dy = Math.random() < .5 ? 1 : -1; x = laneFor(0, dy, Math.floor(x / BAND) * BAND); }
+    if (Math.max(Math.abs(x - P.x), Math.abs(y - P.y)) < V || Math.abs(x - P.x) > R || Math.abs(y - P.y) > R) continue;
+    if (x < 60 || y < 60 || x > WORLD_W - 60 || y > WORLD_H - 60 || districtAt(x) !== d || !roadAt(x, y) || !walkable(x, y, 16)) continue;
+    let clear = true; for (const o of act) if (o.kind === 'car' && Math.abs(o.x - x) < 60 && Math.abs(o.y - y) < 60) { clear = false; break; }
+    if (clear) return mk('car', x, y, { driving: true, hasDriver: true, dx, dy, ang: Math.atan2(dy, dx), col: pick(CAR_COLS) });
+  }
 }
 function spawnPedNear() {
   // half the time walk out of a nearby door, otherwise appear on a sidewalk just out of view
