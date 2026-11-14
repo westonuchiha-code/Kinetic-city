@@ -1,11 +1,11 @@
-// Screenshots of every menu and screen, on a phone-sized landscape view with a controller, for visual review.
+// Screenshots of every menu and screen at 1600x900 with a controller, for visual review.
 const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs');
 const ROOT = path.resolve(__dirname, '..'), OUT = process.argv[2] || ROOT + '/screenshots/ui';
 fs.mkdirSync(OUT, { recursive: true });
 (async () => {
   const b = await chromium.launch();
-  const ctx = await b.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
+  const ctx = await b.newContext({ viewport: { width: 1600, height: 900 } });
   const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
   await p.addInitScript(() => {
     const mkb = () => ({ pressed: false, value: 0 });
@@ -32,8 +32,5 @@ fs.mkdirSync(OUT, { recursive: true });
   await p.evaluate(() => { KC.P.invT = 0; KC.hurt(KC.P, 9999, { by: 'grunt' }); }); await p.waitForTimeout(1500); await shot('10_dead');
   console.log(errs.join('\n') || 'no errors');
   await ctx.close();
-  // portrait phone: rotate prompt
-  const c2 = await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
-  const p2 = await c2.newPage(); await p2.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p2.waitForTimeout(500); await p2.screenshot({ path: `${OUT}/11_portrait.png` });
   await b.close();
 })();

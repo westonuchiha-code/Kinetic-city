@@ -1,6 +1,6 @@
 # Kinetic City: handoff brief
 
-A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 1/2 and Retro City Rampage. The core is telekinesis that turns physics into damage, plus karma and gang districts. It's an isometric pixel-art city that you play on a TV or with a controller.
+A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 1/2 and Retro City Rampage. The core is telekinesis that turns physics into damage, plus karma and gang districts. It's an isometric pixel-art city. **It is a PC game** (played on a computer, with a controller or keyboard and mouse); it is not a phone game.
 
 **Status:** prototype. Gameplay comes first, and there is no story yet.
 
@@ -13,7 +13,7 @@ A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 
 3. **Send a screenshot of every visual change.** The user often can't test personally. Take screenshots with Playwright and send them, along with the rebuilt `kinetic_city.html`.
 4. **Work one step at a time and show results** before moving on.
 5. **No story.** The placeholder story was removed on purpose, and the user hasn't written the real one. Don't add story content or dialogue, and don't run or mention full-story playthroughs.
-6. **Controller first.** The user plays the downloaded HTML file on a phone with a Razer Kishi controller. It must work with any controller that uses the standard Gamepad API mapping. Keyboard and mouse are a fallback.
+6. **PC game, controller first.** This is a PC game; design everything (UI, menus, settings, screen sizes) for a computer. The user only *tests* the downloaded HTML file on a phone with a Razer Kishi controller, so never add phone-specific features (no touch controls, no orientation prompts, no mobile layouts). It must work with any controller that uses the standard Gamepad API mapping, plus keyboard and mouse.
 7. **Listen to the words used.** Do exactly what was asked. When something is ambiguous, ask a short question instead of guessing large.
 8. **Keep replies short and concrete:** what changed, the screenshot, the file, the next step.
 
@@ -23,7 +23,7 @@ A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 
 
 ### Look
 - **Art:** isometric pixel art drawn into a **320×180 art canvas** and scaled up with hard pixels (5× on a 1600×900 frame).
-- **Frame:** fixed 16:9 and letterboxed. Touch devices in portrait get a "rotate" prompt.
+- **Frame:** fixed 16:9 and letterboxed.
 - **Setting:** a neon night city in the rain.
 - **Pixel art:** buildings (lit/dark windows, shopfronts, neon signs, doors, rooftop clutter), hideouts, characters (8 facings, 4-frame walk), vehicles, props and combat effects.
 - **Soft on purpose:** glows and light pools.
@@ -104,7 +104,7 @@ It all becomes one script, so **a later `function` declaration replaces an earli
 
 | File | What it does |
 |---|---|
-| `shell.html` | HTML/CSS shell, title/pause/dialog overlays, rotate prompt |
+| `shell.html` | HTML/CSS shell, title/pause/dialog overlays |
 | `01_core.js` | constants (grid, `IMPACT_K`, `DCOLS`, `GATE_TX`), math/colour helpers, camera object |
 | `02_input.js` | Gamepad API (standard mapping) + keyboard/mouse, glyphs, rumble, settings |
 | `03_audio.js` | synthesized sound effects and music |

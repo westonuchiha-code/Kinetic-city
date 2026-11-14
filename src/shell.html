@@ -27,8 +27,6 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:var(--font-body);color:var(--ink)}
 #game{position:fixed;display:block}
-#rotate{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;text-align:center;background:#000;font-size:22px;padding:24px}
-@media (orientation:portrait) and (pointer:coarse){#rotate{display:flex}}
 #bFull{margin-top:14px}
 .layer{position:fixed;inset:0;display:none;z-index:10}
 .layer.on{display:flex}
@@ -116,7 +114,6 @@ button{font-family:inherit;color:inherit}
 </head>
 <body>
 <canvas id="game"></canvas>
-<div id="rotate">Turn your phone sideways.<br>Kinetic City is played in landscape.</div>
 
 <div id="title" class="layer on">
   <h1 class="logo">KINETIC<span>CITY</span></h1>

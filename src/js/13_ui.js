@@ -157,7 +157,7 @@ const UI = (() => {
   function toTitle() { saveGame(); hide('pause'); Audio2.humStop(); G.mode = 'title'; show('title'); $('bCont').disabled = !loadSave(); setFocus($('bNew')); }
   $('bNew').onclick = startNew; $('bCont').onclick = continueGame; $('bCtl').onclick = () => openPause(true);
   $('bResume').onclick = closePause; $('bQuit').onclick = toTitle;
-  const goFull = async () => { try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); } catch (e) { } try { await screen.orientation.lock('landscape'); } catch (e) { } };
+  const goFull = async () => { try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); } catch (e) { } };
   $('bFull').onclick = goFull; $('bNew').addEventListener('click', goFull); $('bCont').addEventListener('click', goFull);
 
   /* ---------- per-frame ---------- */
