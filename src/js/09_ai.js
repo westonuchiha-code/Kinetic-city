@@ -259,8 +259,8 @@ function aiHideout(e, dt) {
   if (e.cleared) return;
   const gx = e.x, gy = e.rect.y + e.rect.h + 14;
   if (!e.gateOpen) {
-    let left = 0; for (const o of ents) if (!o.dead && o.guardOf === e.hid) left++;
-    e.guardsLeft = left;
+    let left = 0, tower = 0; for (const o of ents) if (!o.dead && o.guardOf === e.hid) { left++; if (o.kind === 'tower') tower++; }   // the watchtower has to come down too
+    e.guardsLeft = left - tower; e.towerUp = tower > 0;
     if (left === 0) {
       e.gateOpen = true; e.gateT = 0; e.wave = 0; e.waveT = 1.8;
       sfx('heavy', gx, gy); shake(.3); FX.dust(gx, gy, 14); FX.flash(gx, gy - 10, 120, e.col, .4);

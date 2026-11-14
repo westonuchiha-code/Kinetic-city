@@ -9,7 +9,7 @@ function populate(save) {
     const d = h.d, hid = d * 3 + hidIdx[d]++;
     if (destroyed[d].includes(hid) || (save && (save.ds[d].bossDone || save.ds[d].hideoutsLeft === 0))) { mk('hideout', h.x, h.y - 48, { did: d, hid, r: 34, spot: h, rect: hideoutRect(h), gateOpen: true, gateT: 1, cleared: true, col: DIST[d].col }); continue; }
     mk('hideout', h.x, h.y - 48, { did: d, hid, r: 34, spot: h, rect: hideoutRect(h), gateOpen: false, col: DIST[d].col });
-    if (!(save && (save.ds[d].towers || []).includes(hid))) mk('tower', h.x + (hid % 2 ? 88 : -88), h.y + 20, { did: d, hid, ang: 0, col: DIST[d].col, home: { x: h.x, y: h.y + 50 }, terr: 290 });
+    if (!(save && (save.ds[d].towers || []).includes(hid))) mk('tower', h.x + (hid % 2 ? 88 : -88), h.y + 20, { did: d, hid, guardOf: hid, ang: 0, col: DIST[d].col, home: { x: h.x, y: h.y + 50 }, terr: 290 });
     for (let i = 0; i < 3 + d; i++) { const p = findFree(h.x, h.y + 60, 70, 12); if (p) spawnGang(i === 0 && d > 0 ? 'brute' : 'grunt', p.x, p.y, { home: { x: h.x, y: h.y + 50 }, terr: 290, guardOf: hid }); }
     for (let i = 0; i < 3; i++) { const p = findFree(h.x, h.y + 40, 110, 14); if (p) mk(i === 2 ? 'barrel' : 'crate', p.x, p.y); }
   }
@@ -169,7 +169,7 @@ function objective() {
     let best = null, bd = Infinity; for (const e of ents) if (e.kind === 'hideout' && !e.cleared && e.did === d) { const dd = dist2(e, P); if (dd < bd) { bd = dd; best = e; } }
     let sub = '';
     if (best && best.gateOpen && dist(best, P) < 600) sub = best.wave >= 3 && !best.waveAlive ? '' : best.wave === 3 ? ' · take down the lieutenant' : ' · wave ' + Math.max(1, best.wave) + '/2';
-    else if (best && !best.gateOpen && dist(best, P) < 600) sub = ' · guards left ' + (best.guardsLeft || 0);
+    else if (best && !best.gateOpen && dist(best, P) < 600) sub = ' · guards left ' + (best.guardsLeft || 0) + (best.towerUp ? ' · tower standing' : '');
     return { text: 'Clear ' + DIST[d].gang + ' hideouts ' + (3 - s.hideoutsLeft) + '/3' + sub, t: best };
   }
   if (!s.bossDone) return { text: 'Wait for ' + DIST[d].boss, t: spots.boss[d] };
