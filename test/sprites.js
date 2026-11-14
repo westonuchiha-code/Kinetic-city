@@ -30,5 +30,8 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..');
   await p.screenshot({ path: ROOT + '/screenshots/sprites_closeup.png' });
   await draw([['civ', 0], ['civ', 1], ['civ', 2], ['civ', 5], ['brute', 0], ['sup'], ['boss', 0]].slice(0, 5), 6, [['S', 0, 0], ['S', 1, 0], ['SE', 0, 0], ['E', 0, 0], ['E', 1, 0], ['E', 3, 0], ['NE', 0, 0], ['N', 0, 0], ['N', 1, 0]], 176, 176, '#2a2f3d');
   await p.screenshot({ path: ROOT + '/screenshots/sprites_closeup2.png' });
+  // the three bosses, larger
+  await draw([['boss', 0], ['boss', 1], ['boss', 2]], 6, [['S', 0, 0], ['S', 1, 0], ['SE', 0, 0], ['E', 0, 0], ['E', 1, 0], ['NE', 0, 0], ['N', 0, 0]], 226, 290, '#2a2f3d');
+  await p.screenshot({ path: ROOT + '/screenshots/sprites_bosses.png' });
   console.log(errs.join('\n') || 'no errors'); await b.close();
 })();
