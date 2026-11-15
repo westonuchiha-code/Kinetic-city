@@ -58,7 +58,7 @@ function addXP(n, x, y) {
   while (G.xp >= xpNeed()) {
     G.xp -= xpNeed(); G.level++; G.points++; P.hp = Math.min(S.maxHp, P.hp + S.maxHp * .35);
     toast('Level ' + G.level + '  ·  +1 skill point', '#ffc24a', true); sfx('level'); FX.ring(P.x, P.y, 120, '#ffc24a', .6, 3);
-    showHint([{ a: 'menu' }, { t: 'Spend your skill point' }], 'skillpt');
+    showHint([{ a: 'menu' }, { t: 'Spend skill points' }], 'skillpt');
     saveGame();
   }
 }

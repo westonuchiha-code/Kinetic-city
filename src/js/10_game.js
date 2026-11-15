@@ -287,6 +287,8 @@ function update(dt) {
   updatePlayer(dt); updateAI(dt); updateWells(dt); physics(dt); updateBullets(dt);
   if (G.mode === 'play') { updateEncounters(dt); updatePickups(dt); tutorial(); }
   streamPopulation(dt);
+  G.gateMsgT = (G.gateMsgT || 0) - dt;
+  if (G.mode === 'play' && G.gateMsgT <= 0) for (let i = 0; i < 2; i++) if (!gatesOpen[i] && Math.abs(P.x - (GATE_TX[i] * TILE + 16)) < 36) { G.gateMsgT = 9; toast('Sealed · take down ' + DIST[i].boss + ' to open the way', '#ff6a80'); }
   const dd = districtAt(P.x);
   if (dd > 0 && !DS[dd].intro && gatesOpen[dd - 1] && G.mode === 'play') { DS[dd].intro = true; G.check = checkpointFor(dd - 1); introDistrict(dd); saveGame(); }
   for (let i = ents.length - 1; i >= 0; i--) if (ents[i].dead) ents.splice(i, 1);

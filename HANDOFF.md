@@ -163,6 +163,11 @@ The tests are Playwright scripts in `test/` (`node test/<name>.js`). They load `
 `mech` (movement/powers/pause), `assault` (hideout waves → clear), `terr` (territories), `street` (street life), `chaos` (save/load), `kbm` (mouse grab/throw), `props`, `cars`.
 Also: `tower` (watchtower, lookout, gate, save), `fixes` (bug-fix checks), `rebind` (rebinding), `audit_ui` (screenshots of every menu into `screenshots/ui/`). Older tests hardcode `/home/claude/kc`; symlink that path to the repo.
 
+**Whole-game sweep** (run these when asked to "look for bugs" or after a big change):
+- `tour` (`node test/tour.js [part]`): plays the game with a mocked controller in real time and saves about 95 screenshots of everything common or interesting to `screenshots/tour/` (not committed; the 12 themed contact sheets in `screenshots/tour_sheets/` are). Parts: `start`, `powers`, `fights`, `people`, `hideout`, `boss`, `city`, `menus`. At every stop it also checks the world for things that should never happen (helpers in `tour_lib.js`).
+- `probe`: what a screenshot cannot show: map edges, sealed barricades, fences, dying mid-action, bosses returning to their plaza, save/load, the barricade message, the fullscreen choice.
+- `soak` (`node test/soak.js [minutes] [hero|villain]`): minutes of random play fast-forwarded, world checked every simulated second; `hero`/`villain` buys every skill of that path first.
+
 **Visual checks:**
 - `iso`, `iso2`: street, hideout and Tower screenshots
 - `sprites`: character sheets (`screenshots/sprites_sheet.png`, `sprites_closeup*.png`); also checks every art row has the right width
@@ -189,6 +194,23 @@ Also: `tower` (watchtower, lookout, gate, save), `fixes` (bug-fix checks), `rebi
 5. Bigger city (4×7 per district)
 6. Open blocks (lot/court/yard)
 7. Traffic variety (6 vehicle types)
+
+**Bug sweep (latest).** The tour, probe and soak above were written for it. Fixed from it:
+- toasts overlapped each other and were unreadable over bright walls (now each on a faint dark plate, rows spaced by their own height);
+- the objective marker was drawn on top of bosses and inside hideout walls (now floats above them);
+- walking into a sealed barricade gave no feedback (now a toast naming the boss to beat);
+- bosses followed you across the district after you died and kept attacking from out of sight (now they return to their plaza and wait, keeping their wounds: `BOSS_LEASH` in 09_ai.js);
+- the game kept running on alt-tab, on a hidden tab and when the controller in use disconnected (now it pauses);
+- the Fullscreen choice was forgotten (`SETTINGS.full`);
+- some yard crates and barrels were generated inside the steel frame or the fence.
+
+**Found in the sweep and left for the user to decide (asked, not answered yet; do not change unasked):**
+1. **A thrown explosive barrel never explodes on impact** (0 of 12 against a goon, a brute, a car, a wall). It only explodes once its 16 hp are gone, which takes a second hit. Recommended: detonate on the first solid hit after a throw. Note the villain skill Chain Reaction ("thrown objects detonate when they hit a wall") overlaps with this.
+2. **The hero disappears behind buildings**: two seconds into a new game, and for much of the Tower district. The setting exists (Hero behind buildings); recommended default is Window.
+3. **Respawn points are far away.** There are only three: the game start, and the previous district's boss plaza. Dying at the first boss means a 150 m walk back. Recommended: also set the checkpoint at each hideout you clear.
+4. **The game starts in the map's corner**, so the first screen is about 40% black void. Options: start a block further in, or draw something past the edge.
+5. **Elites still wear the look the user rejected for the hero** (white spiky hair and shades).
+6. **Esc in fullscreen on a PC browser** leaves fullscreen instead of pausing (browser behaviour; the usual cure is the Keyboard Lock API). Could not be tested here, needs a desktop browser.
 
 **Next, from the user's list:**
 - **Grab & throw feel tuning.** Needs the user's playtest feedback, so ask what feels off and change only that. The relevant knobs:

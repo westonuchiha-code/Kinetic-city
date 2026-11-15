@@ -301,7 +301,7 @@ function rgba(h, a) { const A = rgb(h); return `rgba(${A[0]},${A[1]},${A[2]},${a
    Controller layout (standard mapping):
      LS move  RS aim  RT telekinesis (hold grab, release throw)  LT absorb (hold, release = blast)
      RB repulse  LB gravity well  A dash  X heal (hold)  Y drain (hold)  B drop  Start pause  Back map */
-const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1, see: 0, costume: 'raincoat', binds: { key: {}, pad: {} } };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale; see: how the hero shows behind buildings
+const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1, see: 0, full: true, costume: 'raincoat', binds: { key: {}, pad: {} } };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale; see: how the hero shows behind buildings; full: go fullscreen when a game starts
 try { const s = JSON.parse(localStorage.getItem('kc_settings') || 'null'); if (s) Object.assign(SETTINGS, s); } catch (e) { }
 function saveSettings() { try { localStorage.setItem('kc_settings', JSON.stringify(SETTINGS)); } catch (e) { } }
 
@@ -820,7 +820,8 @@ function openBlock(blk, tx0, ty0) {
     buildings.push(f);
     for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 3; tx++) map[(fy + ty) * MAP_W + fx + tx] = T.BLD;
     const piles = [[ix + 56, iy + 150], [ix + 168, iy + 156], [ix + 70, iy + 96]];
-    for (const [px, py] of piles) { const n = 2 + ((srand() * 3) | 0); for (let i = 0; i < n; i++) spots.props.push({ k: srand() < .3 ? 'barrel' : 'crate', x: px + srange(-18, 18), y: py + srange(-14, 14), ang: srange(0, TAU) }); }
+    for (const [px, py] of piles) { const n = 2 + ((srand() * 3) | 0); for (let i = 0; i < n; i++) { const k = srand() < .3 ? 'barrel' : 'crate', x = px + srange(-18, 18); let y = py + srange(-14, 14); const ang = srange(0, TAU); for (let g = 0; g < 8 && !walkable(x, y, 14); g++) y += 10;   // not inside the steel frame or the fence
+      spots.props.push({ k, x, y, ang }); } }
     spots.props.push({ k: 'dumpster', x: ix + 176, y: iy + 98, ang: 0 });
   }
 }
@@ -1224,7 +1225,7 @@ function addXP(n, x, y) {
   while (G.xp >= xpNeed()) {
     G.xp -= xpNeed(); G.level++; G.points++; P.hp = Math.min(S.maxHp, P.hp + S.maxHp * .35);
     toast('Level ' + G.level + '  ·  +1 skill point', '#ffc24a', true); sfx('level'); FX.ring(P.x, P.y, 120, '#ffc24a', .6, 3);
-    showHint([{ a: 'menu' }, { t: 'Spend your skill point' }], 'skillpt');
+    showHint([{ a: 'menu' }, { t: 'Spend skill points' }], 'skillpt');
     saveGame();
   }
 }
@@ -1799,8 +1800,22 @@ const BOSS_PATS = [
 ];
 function radial(e, n, sp, col, dmg = 9, fire) { const off = rnd(TAU); for (let i = 0; i < n; i++) shoot(e, off + i / n * TAU, { speed: sp, col, dmg, r: 5, life: 3, fire, quiet: i > 0 }); sfx('boom', e.x, e.y, .5); }
 function gangCount() { let n = 0; for (const o of act) if (o.team === 'gang' && !o.static && o.kind !== 'boss' && !o.dead) n++; return n; }
+const BOSS_LEASH = 780;
 function aiBoss(e, dt) {
   const t = P, dx = t.x - e.x, dy = t.y - e.y, d = Math.hypot(dx, dy) || 1;
+  // The fight belongs to the plaza. If you fall or run far off he breaks off, walks back and waits, keeping his wounds;
+  // he no longer follows you across the district or bombards you from out of sight.
+  const home = spots.boss[e.did], pd = dist(P, home);
+  if (e.away) { if (G.mode !== 'dead' && (pd < BOSS_LEASH - 180 || d < 260)) { e.away = false; e.pt = 1.2; } }
+  else if (pd > BOSS_LEASH || G.mode === 'dead') e.away = true;
+  if (e.away) {
+    releaseLifted(e); e.act = ''; e.charging = false; e.awayT = (e.awayT || 0) + dt;
+    const hx = home.x - e.x, hy = home.y - e.y, hd = Math.hypot(hx, hy);
+    if (hd > 40) { if (e.awayT > 4 && !inView(e.x, e.y, 80)) { e.x = home.x; e.y = home.y; e.vx = e.vy = 0; } else { steer(e, hx, hy, e.speed, dt); face(e, Math.atan2(hy, hx), dt, 6); } }
+    else steer(e, 0, 0, 0, dt, 4);
+    return;
+  }
+  e.awayT = 0;
   if (e.stagger > 0) { releaseLifted(e); e.stagger -= dt; steer(e, 0, 0, 0, dt, 4); if (Math.random() < dt * 8) FX.dots(e.x, e.y - e.r, 1, '#ffd23c', 40, .5); return; }
   const ph2 = e.hp < e.maxhp * .5;
   if (ph2 && !e.ph2) { e.ph2 = true; toast(e.name + ' is enraged', '#ff7a3b', true); FX.ring(e.x, e.y, 160, e.col, .5, 5); shake(.4); sfx('charge', e.x, e.y); }
@@ -2523,6 +2538,8 @@ function update(dt) {
   updatePlayer(dt); updateAI(dt); updateWells(dt); physics(dt); updateBullets(dt);
   if (G.mode === 'play') { updateEncounters(dt); updatePickups(dt); tutorial(); }
   streamPopulation(dt);
+  G.gateMsgT = (G.gateMsgT || 0) - dt;
+  if (G.mode === 'play' && G.gateMsgT <= 0) for (let i = 0; i < 2; i++) if (!gatesOpen[i] && Math.abs(P.x - (GATE_TX[i] * TILE + 16)) < 36) { G.gateMsgT = 9; toast('Sealed · take down ' + DIST[i].boss + ' to open the way', '#ff6a80'); }
   const dd = districtAt(P.x);
   if (dd > 0 && !DS[dd].intro && gatesOpen[dd - 1] && G.mode === 'play') { DS[dd].intro = true; G.check = checkpointFor(dd - 1); introDistrict(dd); saveGame(); }
   for (let i = ents.length - 1; i >= 0; i--) if (ents[i].dead) ents.splice(i, 1);
@@ -7654,10 +7671,12 @@ function drawHUD(dt) {
   plate(W / 2 - ow / 2 - 4 * hs, oy - 14 * hs, ow + 8 * hs, 28 * hs, NEON.gold, .6, .05);
   ctx.save(); ctx.translate(W / 2 - ow / 2 + 16 * hs, oy); ctx.rotate(Math.PI / 4); ctx.beginPath(); ctx.rect(-4 * hs, -4 * hs, 8 * hs, 8 * hs); neonFill(NEON.gold); ctx.restore();
   hudText(ob.text, W / 2 + 8 * hs, oy, 15 * hs, '#e8ecf7', 'center', 600);
-  oy += 34 * hs;
+  oy += 19 * hs;
   for (const t of G.toasts) {
-    const a = Math.min(1, t.life, (t.max - t.life) * 6), sz = (t.big ? 20 : 15) * hs;
-    ctx.globalAlpha = a; if (t.big) glowText(t.text, W / 2, oy, sz, t.col, 'center', 700); else hudText(t.text, W / 2, oy, sz, t.col, 'center', 700); ctx.globalAlpha = 1; oy += sz * 1.45;
+    const a = Math.min(1, t.life, (t.max - t.life) * 6), sz = (t.big ? 20 : 15) * hs, row = sz * 1.5;
+    oy += row / 2; ctx.font = font(sz, 700); const tw = ctx.measureText(t.text).width;
+    ctx.globalAlpha = a * .5; slantPath(W / 2 - tw / 2 - 16 * hs, oy - row / 2 + 1, tw + 32 * hs, row - 2); ctx.fillStyle = '#070912'; ctx.fill();   // readable over bright walls and signs
+    ctx.globalAlpha = a; if (t.big) glowText(t.text, W / 2, oy, sz, t.col, 'center', 700); else hudText(t.text, W / 2, oy, sz, t.col, 'center', 700); ctx.globalAlpha = 1; oy += row / 2;
   }
   // ---- combo
   if (G.combo >= 2 && G.comboT > 0) {
@@ -7704,7 +7723,8 @@ function drawWaypoint() {
     const s = toScreen(t.x, t.y), d = Math.round(dist(t, P) / 10), pad = 46 * hs;
     if (s.x > pad && s.x < W - pad && s.y > pad + 40 * hs && s.y < H - pad) {
       if (d < 18) continue;
-      const y = s.y - 48 * hs + Math.sin(G.time * 4) * 3;
+      const lift = t.kind === 'boss' ? 62 : t.kind === 'hideout' ? 80 : 0;   // tall things: sit above the head / the roof sign
+      const y = (lift ? toScreen(t.x, t.y, lift).y - 14 * hs : s.y - 48 * hs) + Math.sin(G.time * 4) * 3;
       ctx.save(); ctx.translate(s.x, y); ctx.rotate(Math.PI / 4); ctx.beginPath(); ctx.rect(-6 * hs, -6 * hs, 12 * hs, 12 * hs); neonFill(col); ctx.restore();
       hudText(d + ' m', s.x, y - 18 * hs, 12 * hs, col, 'center', 700);
     } else {
@@ -8003,7 +8023,7 @@ const UI = (() => {
     else { SETTINGS[k] = !SETTINGS[k]; if (k === 'rumble' && SETTINGS.rumble) Input.rumble(.6, .6, 200); }
     saveSettings(); sfx('ui'); renderTab(k);
   }
-  async function toggleFull() { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (e) { } }
+  async function toggleFull() { const on = !document.fullscreenElement; SETTINGS.full = on; saveSettings(); try { if (on) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } catch (e) { } }   // the choice is kept: off stays off the next time a game starts
   document.addEventListener('fullscreenchange', () => { if (layer === 'pause' && tab === 'settings') renderTab(focus && focus.dataset.k); });
 
   /* ---------- title actions ---------- */
@@ -8012,8 +8032,13 @@ const UI = (() => {
   function toTitle() { saveGame(); hide('pause'); Audio2.humStop(); G.mode = 'title'; show('title'); $('bCont').disabled = !loadSave(); setFocus($('bNew')); }
   $('bNew').onclick = startNew; $('bCont').onclick = continueGame; $('bCtl').onclick = () => openPause(true); $('bSet').onclick = () => openPause('settings');
   $('bResume').onclick = closePause; $('bQuit').onclick = toTitle;
-  const goFull = async () => { try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); } catch (e) { } };
+  const goFull = async () => { if (!SETTINGS.full) return; try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); } catch (e) { } };
   $('bNew').addEventListener('click', goFull); $('bCont').addEventListener('click', goFull);
+  // alt-tab, another tab, or the controller going away mid-game: pause instead of letting the fight run on unattended
+  const autoPause = () => { if ((G.mode === 'play' || G.mode === 'dead') && layer !== 'pause') openPause(); };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });
+  addEventListener('blur', autoPause);
+  addEventListener('gamepaddisconnected', () => { if (Input.device === 'pad') autoPause(); });
 
   /* ---------- per-frame ---------- */
   function update(dt) {

@@ -159,8 +159,22 @@ const BOSS_PATS = [
 ];
 function radial(e, n, sp, col, dmg = 9, fire) { const off = rnd(TAU); for (let i = 0; i < n; i++) shoot(e, off + i / n * TAU, { speed: sp, col, dmg, r: 5, life: 3, fire, quiet: i > 0 }); sfx('boom', e.x, e.y, .5); }
 function gangCount() { let n = 0; for (const o of act) if (o.team === 'gang' && !o.static && o.kind !== 'boss' && !o.dead) n++; return n; }
+const BOSS_LEASH = 780;
 function aiBoss(e, dt) {
   const t = P, dx = t.x - e.x, dy = t.y - e.y, d = Math.hypot(dx, dy) || 1;
+  // The fight belongs to the plaza. If you fall or run far off he breaks off, walks back and waits, keeping his wounds;
+  // he no longer follows you across the district or bombards you from out of sight.
+  const home = spots.boss[e.did], pd = dist(P, home);
+  if (e.away) { if (G.mode !== 'dead' && (pd < BOSS_LEASH - 180 || d < 260)) { e.away = false; e.pt = 1.2; } }
+  else if (pd > BOSS_LEASH || G.mode === 'dead') e.away = true;
+  if (e.away) {
+    releaseLifted(e); e.act = ''; e.charging = false; e.awayT = (e.awayT || 0) + dt;
+    const hx = home.x - e.x, hy = home.y - e.y, hd = Math.hypot(hx, hy);
+    if (hd > 40) { if (e.awayT > 4 && !inView(e.x, e.y, 80)) { e.x = home.x; e.y = home.y; e.vx = e.vy = 0; } else { steer(e, hx, hy, e.speed, dt); face(e, Math.atan2(hy, hx), dt, 6); } }
+    else steer(e, 0, 0, 0, dt, 4);
+    return;
+  }
+  e.awayT = 0;
   if (e.stagger > 0) { releaseLifted(e); e.stagger -= dt; steer(e, 0, 0, 0, dt, 4); if (Math.random() < dt * 8) FX.dots(e.x, e.y - e.r, 1, '#ffd23c', 40, .5); return; }
   const ph2 = e.hp < e.maxhp * .5;
   if (ph2 && !e.ph2) { e.ph2 = true; toast(e.name + ' is enraged', '#ff7a3b', true); FX.ring(e.x, e.y, 160, e.col, .5, 5); shake(.4); sfx('charge', e.x, e.y); }

@@ -1,4 +1,4 @@
-// Checks for bugs fixed after the code review: pad disconnect, pad switching, civilian blame, ally kill, thrown parked car, boss-kill save window, tribute level-up.
+// Checks for bugs fixed after the code review: pad disconnect (and the pause that goes with it), pad switching, civilian blame, ally kill, thrown parked car, boss-kill save window, tribute level-up.
 const { chromium } = require('playwright');
 const path = require('path'); const ROOT = path.resolve(__dirname, '..');
 (async () => {
@@ -17,6 +17,11 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..');
   // disconnect while holding the stick
   await R(() => { __pads[1].connected = false; __pads[1] = null; dispatchEvent(new Event('gamepaddisconnected')); }); await p.waitForTimeout(200);
   ok('stick released when the pad disconnects', await R(() => Math.abs(KC.Input.move().x) < .01));
+  ok('the game pauses when the controller in use disconnects', await R(() => KC.G.mode === 'pause'));
+  await R(() => UI.closePause()); await p.waitForTimeout(100);
+  await R(() => dispatchEvent(new Event('blur'))); await p.waitForTimeout(100);
+  ok('the game pauses when the window loses focus', await R(() => KC.G.mode === 'pause'));
+  await R(() => UI.closePause()); await p.waitForTimeout(100);
   // civilian brushed by the player, later dies to something else: not the player's kill
   ok('brushed civilian killed by others is not blamed on you', await R(() => { const c = spawnCiv(KC.P.x + 60, KC.P.y); c.lastHitBy = 'player'; const k = KC.G.karma, n = KC.G.civKills; KC.kill(c, { by: 'time' }); return KC.G.karma === k && KC.G.civKills === n; }));
   ok('civilian you kill still counts', await R(() => { const c = spawnCiv(KC.P.x + 60, KC.P.y); const n = KC.G.civKills; KC.hurt(c, 999, { by: 'player' }); return KC.G.civKills === n + 1; }));

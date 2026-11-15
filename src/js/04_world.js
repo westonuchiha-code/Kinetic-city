@@ -141,7 +141,8 @@ function openBlock(blk, tx0, ty0) {
     buildings.push(f);
     for (let ty = 0; ty < 2; ty++) for (let tx = 0; tx < 3; tx++) map[(fy + ty) * MAP_W + fx + tx] = T.BLD;
     const piles = [[ix + 56, iy + 150], [ix + 168, iy + 156], [ix + 70, iy + 96]];
-    for (const [px, py] of piles) { const n = 2 + ((srand() * 3) | 0); for (let i = 0; i < n; i++) spots.props.push({ k: srand() < .3 ? 'barrel' : 'crate', x: px + srange(-18, 18), y: py + srange(-14, 14), ang: srange(0, TAU) }); }
+    for (const [px, py] of piles) { const n = 2 + ((srand() * 3) | 0); for (let i = 0; i < n; i++) { const k = srand() < .3 ? 'barrel' : 'crate', x = px + srange(-18, 18); let y = py + srange(-14, 14); const ang = srange(0, TAU); for (let g = 0; g < 8 && !walkable(x, y, 14); g++) y += 10;   // not inside the steel frame or the fence
+      spots.props.push({ k, x, y, ang }); } }
     spots.props.push({ k: 'dumpster', x: ix + 176, y: iy + 98, ang: 0 });
   }
 }

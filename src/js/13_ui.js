@@ -210,7 +210,7 @@ const UI = (() => {
     else { SETTINGS[k] = !SETTINGS[k]; if (k === 'rumble' && SETTINGS.rumble) Input.rumble(.6, .6, 200); }
     saveSettings(); sfx('ui'); renderTab(k);
   }
-  async function toggleFull() { try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); } catch (e) { } }
+  async function toggleFull() { const on = !document.fullscreenElement; SETTINGS.full = on; saveSettings(); try { if (on) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } catch (e) { } }   // the choice is kept: off stays off the next time a game starts
   document.addEventListener('fullscreenchange', () => { if (layer === 'pause' && tab === 'settings') renderTab(focus && focus.dataset.k); });
 
   /* ---------- title actions ---------- */
@@ -219,8 +219,13 @@ const UI = (() => {
   function toTitle() { saveGame(); hide('pause'); Audio2.humStop(); G.mode = 'title'; show('title'); $('bCont').disabled = !loadSave(); setFocus($('bNew')); }
   $('bNew').onclick = startNew; $('bCont').onclick = continueGame; $('bCtl').onclick = () => openPause(true); $('bSet').onclick = () => openPause('settings');
   $('bResume').onclick = closePause; $('bQuit').onclick = toTitle;
-  const goFull = async () => { try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); } catch (e) { } };
+  const goFull = async () => { if (!SETTINGS.full) return; try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); } catch (e) { } };
   $('bNew').addEventListener('click', goFull); $('bCont').addEventListener('click', goFull);
+  // alt-tab, another tab, or the controller going away mid-game: pause instead of letting the fight run on unattended
+  const autoPause = () => { if ((G.mode === 'play' || G.mode === 'dead') && layer !== 'pause') openPause(); };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) autoPause(); });
+  addEventListener('blur', autoPause);
+  addEventListener('gamepaddisconnected', () => { if (Input.device === 'pad') autoPause(); });
 
   /* ---------- per-frame ---------- */
   function update(dt) {

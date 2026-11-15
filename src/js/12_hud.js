@@ -223,10 +223,12 @@ function drawHUD(dt) {
   plate(W / 2 - ow / 2 - 4 * hs, oy - 14 * hs, ow + 8 * hs, 28 * hs, NEON.gold, .6, .05);
   ctx.save(); ctx.translate(W / 2 - ow / 2 + 16 * hs, oy); ctx.rotate(Math.PI / 4); ctx.beginPath(); ctx.rect(-4 * hs, -4 * hs, 8 * hs, 8 * hs); neonFill(NEON.gold); ctx.restore();
   hudText(ob.text, W / 2 + 8 * hs, oy, 15 * hs, '#e8ecf7', 'center', 600);
-  oy += 34 * hs;
+  oy += 19 * hs;
   for (const t of G.toasts) {
-    const a = Math.min(1, t.life, (t.max - t.life) * 6), sz = (t.big ? 20 : 15) * hs;
-    ctx.globalAlpha = a; if (t.big) glowText(t.text, W / 2, oy, sz, t.col, 'center', 700); else hudText(t.text, W / 2, oy, sz, t.col, 'center', 700); ctx.globalAlpha = 1; oy += sz * 1.45;
+    const a = Math.min(1, t.life, (t.max - t.life) * 6), sz = (t.big ? 20 : 15) * hs, row = sz * 1.5;
+    oy += row / 2; ctx.font = font(sz, 700); const tw = ctx.measureText(t.text).width;
+    ctx.globalAlpha = a * .5; slantPath(W / 2 - tw / 2 - 16 * hs, oy - row / 2 + 1, tw + 32 * hs, row - 2); ctx.fillStyle = '#070912'; ctx.fill();   // readable over bright walls and signs
+    ctx.globalAlpha = a; if (t.big) glowText(t.text, W / 2, oy, sz, t.col, 'center', 700); else hudText(t.text, W / 2, oy, sz, t.col, 'center', 700); ctx.globalAlpha = 1; oy += row / 2;
   }
   // ---- combo
   if (G.combo >= 2 && G.comboT > 0) {
@@ -273,7 +275,8 @@ function drawWaypoint() {
     const s = toScreen(t.x, t.y), d = Math.round(dist(t, P) / 10), pad = 46 * hs;
     if (s.x > pad && s.x < W - pad && s.y > pad + 40 * hs && s.y < H - pad) {
       if (d < 18) continue;
-      const y = s.y - 48 * hs + Math.sin(G.time * 4) * 3;
+      const lift = t.kind === 'boss' ? 62 : t.kind === 'hideout' ? 80 : 0;   // tall things: sit above the head / the roof sign
+      const y = (lift ? toScreen(t.x, t.y, lift).y - 14 * hs : s.y - 48 * hs) + Math.sin(G.time * 4) * 3;
       ctx.save(); ctx.translate(s.x, y); ctx.rotate(Math.PI / 4); ctx.beginPath(); ctx.rect(-6 * hs, -6 * hs, 12 * hs, 12 * hs); neonFill(col); ctx.restore();
       hudText(d + ' m', s.x, y - 18 * hs, 12 * hs, col, 'center', 700);
     } else {
