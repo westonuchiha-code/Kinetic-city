@@ -2427,10 +2427,12 @@ function drawChar(e) {
   }
   if (e === P && (P.holding || P.absorbing || P.throwT > 0 || P.chan)) iglow(a[0], a[1] - 8 - lift, 12, kcol(), .6);
   if (e === P && P.absorbing) {
-    const k = P.charge / S.absCap, pu = .5 + .5 * Math.sin(t * 10), cx = Math.round(a[0]) + .5, cy = Math.round(a[1] - 9 - lift) + .5;
-    ctx.fillStyle = `rgba(140,240,255,${.1 + .06 * pu})`; ctx.beginPath(); ctx.arc(cx, cy, 14, 0, TAU); ctx.fill();
-    ctx.strokeStyle = `rgba(160,250,255,${.6 + .3 * pu})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, 14, 0, TAU); ctx.stroke();
-    ctx.strokeStyle = '#ffffff'; ctx.beginPath(); ctx.arc(cx, cy, 16, -Math.PI / 2, -Math.PI / 2 + TAU * k); ctx.stroke();
+    // the shield: a dithered bubble with a hard rim and a glint; the white arc round it fills as it soaks up hits
+    const k = P.charge / S.absCap, pu = Math.sin(t * 10) > 0, cx = Math.round(a[0]), cy = Math.round(a[1] - 9 - lift);
+    ctx.globalAlpha = .3; iblob(cx, cy, 14, 14, '#8cf0ff', 3); ctx.globalAlpha = pu ? 1 : .8;
+    iring(cx, cy, 14, '#a0faff'); ctx.globalAlpha = .55; iring(cx, cy, 13, '#5fd0ea'); ctx.globalAlpha = 1;
+    iarcPx(cx, cy, 11, -2.5, -1.9, '#ffffff'); ipx(cx - 9, cy - 4, '#ffffff');
+    if (k > 0) { iarcPx(cx, cy, 16, -Math.PI / 2, -Math.PI / 2 + TAU * k, '#ffffff'); iarcPx(cx, cy, 17, -Math.PI / 2, -Math.PI / 2 + TAU * k, 'rgba(140,240,255,.7)'); }
   }
   // health bar (art pixels)
   if ((e.team === 'gang' || e.team === 'police') && e.kind !== 'boss' && e.hp < e.maxhp && (e.sinceHit || 0) < 4) {

@@ -20,6 +20,11 @@ const FX = {
   smoke(x, y, n, col = '#3a3d48', big = 1) { for (let i = 0; i < n; i++) { const a = rnd(TAU), s = rnd(5, 40) * big; parts.push({ k: 'm', x: x + rnd(-6, 6), y: y + rnd(-6, 6), vx: Math.cos(a) * s, vy: Math.sin(a) * s - 10, life: rnd(.8, 1.8), max: 1.8, col, w: rnd(8, 16) * big, g: 2.2 }); } },
   debris(x, y, n, col, sp = 200) { for (let i = 0; i < n; i++) { const a = rnd(TAU), s = rnd(.3, 1) * sp; parts.push({ k: 'r', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rnd(.5, 1.1), max: 1.1, col, w: rnd(2, 5), a: rnd(TAU), va: rnd(-14, 14) }); } },
   embers(x, y, n) { for (let i = 0; i < n; i++) parts.push({ k: 'd', x: x + rnd(-8, 8), y: y + rnd(-8, 8), vx: rnd(-20, 20), vy: rnd(-60, -15), life: rnd(.5, 1.2), max: 1.2, col: pick(['#ffb040', '#ff7020', '#ffd080']), w: rnd(1, 2.2) }); },
+  fire(x, y, rad) {   // the body of an explosion: puffs that rise and cool (drawn in 11j_fx.js)
+    const n = Math.round(clamp(rad / 6, 8, 20)), w0 = clamp(rad / 10, 4, 11);
+    for (let i = 0; i < n; i++) { const a = rnd(TAU), d = Math.sqrt(Math.random()) * rad * .34, s = rnd(8, 55), life = rnd(.32, .78); parts.push({ k: 'f', x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, z: rnd(0, 8), vx: Math.cos(a) * s, vy: Math.sin(a) * s, vz: rnd(18, 58), life, max: life * rnd(1, 1.25), w: w0 * rnd(.45, 1) * (1 - d / rad) }); }
+    parts.push({ k: 'f', x, y, z: 4, vx: 0, vy: 0, vz: 30, life: .5, max: .5, w: w0 * 1.25, heart: 1 });   // the heart of it
+  },
   ring(x, y, max, col, life = .35, w = 3, r0 = 4) { rings.push({ x, y, r: r0, max, col, life, ml: life, w }); },
   flash(x, y, r, col, life = .15, a = 1) { dlights.push({ x, y, r, col, life, max: life, a }); if (dlights.length > 60) dlights.shift(); }
 };
@@ -74,7 +79,8 @@ function explosion(x, y, rad, dmg, by) {
   sfx('boom', x, y); shake(.7); hitstop(.06);
   if (by === 'player' || dist({ x, y }, P) < 300) Input.rumble(.9, .7, 260);
   FX.flash(x, y, rad * 3.2, '#ff9a40', .45, 1.2); FX.ring(x, y, rad * 1.1, '#ffb060', .3, 5);
-  FX.dots(x, y, 26, '#ffb030', 260, .7); FX.dots(x, y, 12, '#ff5020', 180, .6); FX.sparks(x, y, 18, '#ffe0a0', 420); FX.smoke(x, y, 12, '#2a2c34', 1.6); FX.debris(x, y, 10, '#555a66', 300);
+  FX.smoke(x, y, 10, '#454852', 1.6); FX.fire(x, y, rad);
+  FX.dots(x, y, 26, '#ffb030', 260, .7); FX.dots(x, y, 12, '#ff5020', 180, .6); FX.sparks(x, y, 18, '#ffe0a0', 420); FX.debris(x, y, 10, '#555a66', 300);
   decals.push({ x, y, r: rad * .55, life: 40, k: 'scorch' }); if (decals.length > 60) decals.shift();
   for (const e of act) {
     if (e.dead || (e.static && e.kind !== 'hideout' && e.kind !== 'tower')) continue;

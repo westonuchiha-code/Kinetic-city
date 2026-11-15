@@ -1,6 +1,6 @@
 /* ============================== 14 MAIN LOOP & DEBUG HOOKS ============================== */
 function updateFX(dt) {
-  for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; const f = p.k === 'm' ? .97 : p.k === 's' ? .9 : .94; p.vx *= f; p.vy *= f; if (p.k === 'r') p.a += p.va * dt; p.life -= dt; }
+  for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; const f = p.k === 'm' ? .97 : p.k === 's' ? .9 : .94; p.vx *= f; p.vy *= f; if (p.k === 'r') p.a += p.va * dt; else if (p.k === 'f') { p.z += p.vz * dt; p.vz *= .95; } p.life -= dt; }
   for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life <= 0) parts.splice(i, 1);
   if (parts.length > 900) parts.splice(0, parts.length - 900);
   for (const t of texts) t.life -= dt; for (let i = texts.length - 1; i >= 0; i--) if (texts[i].life <= 0) texts.splice(i, 1);
