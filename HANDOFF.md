@@ -222,12 +222,8 @@ Also: `tower` (watchtower, lookout, gate, save), `fixes` (bug-fix checks), `rebi
 - **Esc in fullscreen on a PC browser** leaves fullscreen instead of pausing (browser behaviour; the usual cure is the Keyboard Lock API). Could not be tested here, needs a desktop browser.
 
 **Next, from the user's list:**
-- **Grab & throw feel tuning.** Needs the user's playtest feedback, so ask what feels off and change only that. The relevant knobs:
-  - `throwSpeed()`
-  - the hold spring (`k = 320/(1+m*.09)`)
-  - hold energy cost (`4 + m*.9`/s)
-  - aim assist (`assistTarget`)
-  - `IMPACT_K`
+- **Feel is signed off (user playtest):** "grabbing and throwing feels great", the game "feels pretty good in most aspects", and karma falls slowly enough ("true to our inspirations"). **Do not retune** `throwSpeed()`, the hold spring, hold energy cost, aim assist, `IMPACT_K` or the karma table unless the user asks.
+- **Police wanted level, as the user wants it** (they asked that cops must not chase forever): heat (max 5 stars) starts falling 7 s after your last offence at 0.15 stars/s, so it clears in about 8 s from just over 1 star, 20 s from 3 and 34 s from 5. Below 1 star the officers drop you as a target at once and turn on nearby gang members or drift off. Hurting a cop or a civilian resets the 7 s; dying clears it. The knobs are in `updateEncounters` (10_game.js) and `heatAdd` (07_combat.js).
 - **Watchtowers / small structures destroyable from outside.** The user's future idea; main hideouts stay indestructible.
 
 **Shelved:** interior levels. "Outside assault" was chosen instead.
