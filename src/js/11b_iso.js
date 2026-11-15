@@ -84,22 +84,7 @@ function iwin(p, slope, c) { ctx.fillStyle = c; const X = Math.round(p[0]), Y = 
 // drawIsoHideout lives in 11f_blocks.js
 
 /* ---------- trees, lamps, barricades ---------- */
-function drawIsoTree(t) {
-  const b = isoXY(t.x, t.y, 0), c = isoXY(t.x, t.y, t.h), r = t.r * ISO_K * .85;
-  ctx.fillStyle = '#2a1c12'; ctx.fillRect(Math.round(b[0]), Math.round(c[1]), 2, Math.round(b[1] - c[1]));
-  idisc(c[0], c[1] + 1, r, shade(t.c, .7));
-  idisc(c[0] + r * .35, c[1] - r * .2, r * .72, t.c);
-  idisc(c[0] - r * .35, c[1] + r * .15, r * .62, t.c);
-  idisc(c[0] - r * .2, c[1] - r * .4, r * .4, shade(t.c, 1.45));
-}
-function drawIsoLamp(l) {
-  const b = isoXY(l.x, l.y, 0), top = isoXY(l.x, l.y, 64), c = lampCol(l.d);
-  let k = 1; if (l.broken) k = .05; else if (l.flick) k = Math.sin(G.time * 13 + l.ph) > -.7 ? 1 : .25;
-  ctx.fillStyle = '#2a2e3a'; ctx.fillRect(Math.round(b[0]), Math.round(top[1]), 1, Math.round(b[1] - top[1]));
-  ctx.fillStyle = '#4a4e5e'; ctx.fillRect(Math.round(b[0]) - 1, Math.round(b[1]) - 1, 3, 1); ctx.fillRect(Math.round(top[0]) - 1, Math.round(top[1]), 3, 1);
-  ctx.fillStyle = k > .5 ? '#fff6d8' : '#5a5040'; ctx.fillRect(Math.round(top[0]) - 1, Math.round(top[1]) + 1, 3, 1);
-  if (k > .2) iglow(top[0], top[1] + 1, 7, c, .7 * k);
-}
+// drawIsoTree and drawIsoLamp live in 11i_street.js
 function drawGateStripes() { // the barricade's footprint on the ground (affine pass): a dark sill with yellow and red hazard bars
   for (let i = 0; i < 2; i++) {
     if (gatesOpen[i]) continue;
@@ -280,8 +265,9 @@ function render(dt) {
     addPt(e.x, e.y, e.state === 'wounded' ? -1e6 : e.x + e.y + z * 4, r * SPR_K * 1.8 + 6, r * SPR_K * 3.2 + z * SPR_K + 10, drawUpright, e);
   }
   let heroSlot = -1; if (G.mode !== 'dead' && G.mode !== 'title') { const sl = addPt(P.x, P.y, P.x + P.y + (P.z || 0) * 4, 20, 34, drawUpright, P); if (sl !== undefined) heroSlot = sl; }
-  for (const t of trees) if (inView(t.x, t.y, 60)) addPt(t.x, t.y, t.x + t.y, t.r, t.h * ISO_KZ + t.r, drawIsoTree, t);
+  for (const t of trees) if (inView(t.x, t.y, 60)) addPt(t.x, t.y, t.x + t.y, t.r + 4, t.h * ISO_KZ + t.r * 2 + 6, drawIsoTree, t);
   for (const d of decos) if (inView(d.x, d.y, 60)) addPt(d.x, d.y, d.x + d.y, 14, 40, drawIsoHoop, d);
+  for (const sg of streetSignals()) if (inView(sg.x, sg.y, 30)) addPt(sg.x, sg.y, sg.x + sg.y, 4, 24, drawIsoSignal, sg);
   for (const l of lamps) if (inView(l.x, l.y, 40)) addPt(l.x, l.y, l.x + l.y, 3, 20, drawIsoLamp, l);
   for (const p of pickups) if (inView(p.x, p.y, 30)) addPt(p.x, p.y, p.x + p.y, 8, 12, pp => { uprightT(pp.x, pp.y); drawPickup(pp); }, p);
   _pts.sort((a, b) => a.slot - b.slot || a.key - b.key);

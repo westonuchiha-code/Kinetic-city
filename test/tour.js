@@ -59,7 +59,8 @@ const parts = {
     // brute: slam warning, then the charge
     await T.run(() => { stage(1008, 1392); window.__br = KC.spawnGang('brute', P.x + 70, P.y + 10); __br.tgt = P; });
     await T.until(() => __br.state === 'slamWind', 6000); await T.wait(160); await T.shot('32_brute_slam', 'brute winding up a slam');
-    await T.run(() => { KC.tp(P.x - 150, P.y); P.hp = S.maxHp; }); await T.until(() => __br.state === 'chargeWind' || __br.state === 'charging', 8000); await T.wait(250); await T.shot('33_brute_charge', 'brute charging');
+    await T.until(() => __br.state !== 'slamWind', 3000); await T.run(() => { KC.tp(__br.x - 200, __br.y); P.hp = S.maxHp; P.invT = 3; __br.stun = 0; __br.cd2 = 0; __br.cd = 3; __br.losT = 0; });   // 200 px away with his charge ready, so the shot does not depend on luck
+    await T.until(() => __br.state === 'chargeWind' || __br.state === 'charging', 8000); await T.wait(250); await T.shot('33_brute_charge', 'brute charging');
     // elite
     await T.run(() => { stage(1008, 1392); window.__sp = KC.spawnGang('sup', P.x + 150, P.y - 20); __sp.tgt = P; __sp.cd2 = .6; });
     await T.until(() => __sp.dashT > 0, 5000); await T.wait(380); await T.shot('34_elite', 'superpowered elite: dash, then a fan of bolts');
