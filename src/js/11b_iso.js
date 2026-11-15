@@ -240,6 +240,7 @@ function render(dt) {
   // ---- flat pass: ground, light pools, shadows ----
   groundT();
   drawGround();
+  artT(); drawSeaArt(); groundT();
   ctx.globalCompositeOperation = 'lighter'; drawGroundLights(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   drawGateStripes();
   _vis.length = 0;

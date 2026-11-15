@@ -36,7 +36,7 @@ function onWallHit(e, speed, nx, ny) {
   if (e.prop && !e.driving && (e.thrower || e.held)) {
     const dmg = IMPACT_K * .35 * .5 * e.m * speed * speed;
     hurt(e, dmg, { by: e.thrower });
-    if (S.e_chain && e.thrower === 'player' && !e.held && !e.dead && e.thrownT > 0) { e.hp = 0; kill(e, { by: 'player' }); }
+    if ((e.fuse || (S.e_chain && e.thrower === 'player' && e.thrownT > 0)) && !e.held && !e.dead) { e.hp = 0; kill(e, { by: 'player' }); }
     FX.sparks(e.x - nx * e.r, e.y - ny * e.r, 6, '#ffd9a0', speed * .4); sfx(e.m > 4 ? 'heavy' : 'hit', e.x, e.y, .7);
     if (e.m > 4) shake(.25);
   } else if (!e.prop && !e.static && e.stun > 0 && e.flung && e.kind !== 'player' && (e.kind !== 'boss' || e.lastHitBy === 'player')) {
@@ -74,6 +74,7 @@ function impactHurt(src, dst, closing) {
   if (dst.prop && byP && !dst.held) { dst.thrower = 'player'; dst.thrownT = Math.max(dst.thrownT, .6); }
   // the projectile pays for it too: cars crumple, crates splinter
   if (src.prop && !src.held && closing > 220) hurt(src, dmg * .35, { by: src.thrower });
+  if (src.fuse && !src.held && !src.dead) { src.hp = 0; kill(src, { by: 'player' }); }
   impactFeedback(dmg, (src.x + dst.x) / 2, (src.y + dst.y) / 2, byP);
 }
 function resolvePair(a, b) {
@@ -99,7 +100,7 @@ const _grid = new Map();
 function physics(dt) {
   for (const e of act) {
     if (e.static || e.dead) continue;
-    if (e.thrownT > 0) e.thrownT -= dt;
+    if (e.thrownT > 0) e.thrownT -= dt; else if (e.fuse) e.fuse = false;   // a barrel that came to rest without hitting anything is safe again
     const sp0 = Math.hypot(e.vx, e.vy);
     if (e.thrower && !e.held && e.thrownT <= 0 && sp0 < 60) e.thrower = null;
     if (e.prop && !e.held && !e.driving) { const f = Math.pow(e.z > 1 ? .99 : e.def.fric, dt * 60); e.vx *= f; e.vy *= f; }

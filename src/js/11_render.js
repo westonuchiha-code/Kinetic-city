@@ -67,6 +67,8 @@ function circle(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill()
 
 /* ---------- ground ---------- */
 function drawGround() {
+  drawSea();
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, WORLD_W, WORLD_H); ctx.clip();   // road markings and the rest stop at the edge of the map (they used to run on into the dark)
   for (let d = 0; d < 3; d++) {
     const x0 = d === 0 ? 0 : DIST_SPLIT[d - 1], x1 = d === 2 ? WORLD_W : DIST_SPLIT[d];
     ctx.fillStyle = DIST[d].ground; ctx.fillRect(x0, 0, x1 - x0, WORLD_H);
@@ -150,6 +152,7 @@ function drawGround() {
     }
     else if (d.k === 'wreck') { ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.ang || 0); ctx.globalAlpha = a; ctx.fillStyle = '#16171c'; ctx.fillRect(-19, -10, 38, 20); ctx.fillStyle = '#26272e'; ctx.fillRect(-12, -7, 20, 14); ctx.restore(); ctx.globalAlpha = 1; }
   }
+  ctx.restore();
 }
 
 /* ---------- light pass (additive) ---------- */

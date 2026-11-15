@@ -49,6 +49,12 @@ const { open, OUT } = require('./tour_lib');
   // dying while absorbing, with a well out, and mid-dash
   await T.run(() => { stage(1008, 1392); P.invT = 0; btn(6, 1); }); await T.wait(300); await T.run(() => { P.invT = 0; P.absorbing = false; KC.hurt(P, 9999, { by: 'test' }); btn(6, 0); }); await T.until(() => G.mode === 'play', 6000);
   ok('respawn after dying mid-absorb leaves no shield up', await T.run(() => !P.absorbing && P.charge === 0));
+  // ---- clearing a hideout moves the respawn point to its gate
+  const cp = await T.run(() => { G.check = { ...START }; const h = ents.find(e => e.kind === 'hideout' && e.did === 0 && !e.cleared); clearHideout(h); const c = { x: G.check.x, y: G.check.y }; stage(h.x + 300, h.y + 300); P.invT = 0; KC.hurt(P, 9999, { by: 'test' }); return { c, gate: [h.x, h.rect.y + h.rect.h], walk: walkable(c.x, c.y, 10) }; });
+  await T.until(() => G.mode === 'play', 6000);
+  const cp2 = await T.run(() => ({ x: Math.round(P.x), y: Math.round(P.y), saved: (loadSave() || {}).check }));
+  ok('after clearing a hideout you get back up at its gate', cp.walk && Math.hypot(cp2.x - cp.gate[0], cp2.y - cp.gate[1]) < 80, 'respawned at ' + cp2.x + ',' + cp2.y + ', gate at ' + cp.gate.map(Math.round));
+  ok('that respawn point is in the saved game', !!cp2.saved && Math.round(cp2.saved.x) === Math.round(cp.c.x) && Math.round(cp2.saved.y) === Math.round(cp.c.y));
   // ---- dying in a boss fight: he goes back to his plaza and waits, wounds kept; he picks the fight up when you return
   await T.run(() => { for (const e of ents) if (e.did === 0 && (e.kind === 'hideout' || e.guardOf !== undefined)) { if (e.kind === 'hideout') { e.cleared = true; e.gateOpen = true; e.gateT = 1; } else e.dead = true; } DS[0].hideoutsLeft = 0; G.check = { ...START }; const s = spots.boss[0]; stage(s.x - 110, s.y + 60); P.invT = 0; KC.spawnBoss(0); });
   await T.wait(1500); await T.run(() => { G.boss.hp = G.boss.maxhp * .4; P.invT = 0; KC.hurt(P, 9999, { by: 'boss' }); }); await T.until(() => G.mode === 'play', 6000); await T.wait(6000);

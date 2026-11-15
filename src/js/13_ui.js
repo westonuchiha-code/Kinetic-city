@@ -188,7 +188,7 @@ const UI = (() => {
     { sec: 'Save', k: 'wipe', name: 'Delete saved game', titleOnly: true, warn: true }
   ];
   let wipeArm = false;
-  const k0 = o => o.k === 'see' ? 0 : 2;   // which option an unknown stored value falls back to
+  const k0 = o => 2;   // which option an unknown stored value falls back to (Normal aim assist, Window)
   function setLabel(o) {
     if (o.k === 'full') return document.fullscreenElement ? 'On' : 'Off';
     if (o.k === 'wipe') return wipeArm ? 'Press again to delete' : 'Delete';

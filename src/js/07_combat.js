@@ -177,6 +177,7 @@ function clearHideout(e) {
   const d = e.did; DS[d].hideoutsLeft--; DS[d].destroyed = DS[d].destroyed || []; DS[d].destroyed.push(e.hid);
   toast(DIST[d].gang + ' hideout cleared  ' + (3 - DS[d].hideoutsLeft) + '/3', '#ffc24a', true); sfx('level');
   if (DS[d].hideoutsLeft === 0) later(1.6, () => spawnBoss(d));
+  { const c = { x: e.x, y: e.rect.y + e.rect.h + 54 }; if (walkable(c.x, c.y, 12)) G.check = c; }   // you get back up here, not at the far end of the district
   saveGame();
 }
 function playerDie() {

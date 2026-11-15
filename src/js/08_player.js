@@ -63,7 +63,7 @@ function updateTKTarget() {
 }
 function grab(e) {
   const p = P;
-  e.held = true; e.heldBy = p; e.thrower = 'player'; e.thrownT = 99; e.spin = 0;
+  e.held = true; e.heldBy = p; e.thrower = 'player'; e.thrownT = 99; e.spin = 0; e.fuse = false;
   if (e.kind === 'car') { e.curb = false; e.claimed = false; e.parkTo = null; }
   if (e.kind === 'car' && e.driving) ejectDriver(e);
   if (!e.prop) { e.stun = 1; e.tgt = null; e.state = 'grabbed'; }
@@ -104,6 +104,7 @@ function throwHeld() {
   const spd = throwSpeed(h.m), as = assistTarget(h, aim.ang, spd), ang = as ? as.ang : aim.ang;
   h.vx = Math.cos(ang) * spd + p.vx * .4; h.vy = Math.sin(ang) * spd + p.vy * .4; h.vz = 115; h.z = Math.max(h.z, 14);
   h.thrower = 'player'; h.thrownT = 1.5; h.spin = (h.kind === 'car' || h.kind === 'dumpster') ? rnd(-5, 5) : rnd(-15, 15);
+  h.fuse = h.kind === 'barrel';   // a thrown explosive barrel goes off on the first solid thing it hits (physics: impactHurt, onWallHit)
   if (h.kind === 'car') h.ang = ang;
   if (!h.prop) { h.stun = 1.4; h.flung = true; h.lastHitBy = 'player'; }
   p.vx -= Math.cos(ang) * h.m * 9; p.vy -= Math.sin(ang) * h.m * 9; p.throwT = .18;

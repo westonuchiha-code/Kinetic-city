@@ -32,7 +32,7 @@ A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 
 - **Hideouts:** a fortified brick warehouse (`drawIsoHideout` in 11f_blocks.js). South wall: roll-up shutter with hazard strips, status lamp (red blinking = locked, green = open), barred lit windows, graffiti. East wall: the gang's initial sprayed large, a steel side door. Roof: the gang's **neon emblem on a sign that faces the camera** (`HIDE_EMBLEM`: Rustlers a bull's skull, Breakers a bolt cracking a ring, Architects the eye in the pyramid; a future gang needs its own), stair hut, skylight glowing in the gang colour, air-conditioning unit, flag, beacon, razor wire. Cleared = lights and sign off, flag gone, shutter up. An emblem painted flat on the wall was tried first and was unreadable because the wall is sheared; that is why the sign stands upright. The still parts are painted once into a small canvas per hideout (`e._art`) and stamped; wall details are placed by (column, row) through `hideoutGeo(e).S/E`. `node test/structures.js` screenshots all of it.
 - **District barricade:** chunky steel pylons with a hazard foot, three emitters and a warning lamp; beams with a pale core, a red halo and a running spark; yellow and red bars on the ground (`drawIsoGateSeg`, `drawGateStripes` in 11b_iso.js).
 - **Soft on purpose:** glows and light pools.
-- **Occlusion:** things behind buildings are hidden by them, which the user was fine with. Enemies behind buildings show a faint red ring on the ground. Three ways of showing the hero behind a building are built: 1 = his outline on the wall, 2 = a round dithered window in the wall, 3 = the whole wall see-through. They are a setting (**Settings → Display → Hero behind buildings**, `SETTINGS.see`, default 0 = hidden, also `KC.see(n)`), so the user can try them in play. Option sheets are in `screenshots/mock_see/`. The user has been asked twice which they prefer and has not said; do not change the default until they do. `node test/see.js` checks it.
+- **Occlusion:** things behind buildings are hidden by them. Enemies behind buildings show a faint red ring on the ground. Three ways of showing the hero behind a building are built: 1 = his outline on the wall, 2 = a round dithered window in the wall, 3 = the whole wall see-through. They are a setting (**Settings → Display → Hero behind buildings**, `SETTINGS.see`, also `KC.see(n)`). The default is now 2 = Window: the user was asked three times, never picked, and then said "Continue" to the recommendation. Option sheets are in `screenshots/mock_see/`. `node test/see.js` checks it.
 - **Minimap:** north-up even though the view is rotated 45°. The user said this is fine.
 
 ### Controls (standard gamepad)
@@ -133,6 +133,7 @@ It all becomes one script, so **a later `function` declaration replaces an earli
 | `11e_fx.js` | pixel effects: particles, bullets, rings, wells, warnings, fire, telekinesis tether/throw line, aim lasers, splashes |
 | `11f_blocks.js` | fence, basketball hoop, unfinished steel frame, watchtower, **gang hideout** |
 | `11g_buildings.js` | **city buildings**: cached picture per building, roof clutter, rooftop neon signs |
+| `11h_edge.js` | the waterfront past the edge of the map (drawn only) |
 | `12_hud.js` | canvas HUD (neon plates, ability tiles), minimap, city map, button glyphs, world-anchored labels (`toScreen(x, y, height)`) |
 | `13_ui.js` | DOM menus, controller navigation |
 | `14_main.js` | main loop (fixed step, hitstop); `window.KC` debug hooks |
@@ -204,13 +205,15 @@ Also: `tower` (watchtower, lookout, gate, save), `fixes` (bug-fix checks), `rebi
 - the Fullscreen choice was forgotten (`SETTINGS.full`);
 - some yard crates and barrels were generated inside the steel frame or the fence.
 
-**Found in the sweep and left for the user to decide (asked, not answered yet; do not change unasked):**
-1. **A thrown explosive barrel never explodes on impact** (0 of 12 against a goon, a brute, a car, a wall). It only explodes once its 16 hp are gone, which takes a second hit. Recommended: detonate on the first solid hit after a throw. Note the villain skill Chain Reaction ("thrown objects detonate when they hit a wall") overlaps with this.
-2. **The hero disappears behind buildings**: two seconds into a new game, and for much of the Tower district. The setting exists (Hero behind buildings); recommended default is Window.
-3. **Respawn points are far away.** There are only three: the game start, and the previous district's boss plaza. Dying at the first boss means a 150 m walk back. Recommended: also set the checkpoint at each hideout you clear.
-4. **The game starts in the map's corner**, so the first screen is about 40% black void. Options: start a block further in, or draw something past the edge.
-5. **Elites still wear the look the user rejected for the hero** (white spiky hair and shades).
-6. **Esc in fullscreen on a PC browser** leaves fullscreen instead of pausing (browser behaviour; the usual cure is the Keyboard Lock API). Could not be tested here, needs a desktop browser.
+**Then done on the user's "Continue" (they did not pick numbers; these were my recommendations, so each is easy to undo):**
+1. **Thrown barrels explode on the first solid hit** (`fuse` flag set in `throwHeld`, used in `impactHurt` and `onWallHit` in 06_physics.js; cleared when the throw runs out or the barrel is picked up again). 12 of 12 against a goon, brute, car and wall; it was 0 of 12. Your own explosions never hurt you (that was already so). Only barrels you throw: not ones a boss throws, and not ones shoved by Push. The villain skill Chain Reaction still matters for cars. Undo: remove the `h.fuse = ...` line.
+2. **The hero shows through a window in the wall by default** (`SETTINGS.see = 2`; settings saved by older builds are moved over once via `SETTINGS.sv`). Undo: Settings → Display → Hero behind buildings → Hidden, or change the default in 02_input.js.
+3. **Respawn point at every hideout you clear** (`clearHideout` in 07_combat.js sets `G.check` in front of the gate; it is saved). The start of the game and the boss plazas are still checkpoints too.
+4. **Water past the edge of the map** (`11h_edge.js`): the outer ring road is now a waterfront with a kerb, quay walls on the two camera-facing sides, ripples that pick up the district's neon near the shore, and a few blinking buoys. It replaces flat black; nothing there collides or is simulated. This makes the city an island or harbour city, which is a setting choice the user did not ask for: say so if they object. Road markings are now clipped to the map (they used to run on past the edge).
+
+**Still open from the sweep (asked, not answered; do not change unasked):**
+- **Elites still wear the look the user rejected for the hero** (white spiky hair and shades).
+- **Esc in fullscreen on a PC browser** leaves fullscreen instead of pausing (browser behaviour; the usual cure is the Keyboard Lock API). Could not be tested here, needs a desktop browser.
 
 **Next, from the user's list:**
 - **Grab & throw feel tuning.** Needs the user's playtest feedback, so ask what feels off and change only that. The relevant knobs:
@@ -220,7 +223,6 @@ Also: `tower` (watchtower, lookout, gate, save), `fixes` (bug-fix checks), `rebi
   - aim assist (`assistTarget`)
   - `IMPACT_K`
 - **Watchtowers / small structures destroyable from outside.** The user's future idea; main hideouts stay indestructible.
-- **Seeing the hero behind buildings.** Waiting for the user to pick a default (see Occlusion above); once they do, the setting can stay or go, their call.
 
 **Shelved:** interior levels. "Outside assault" was chosen instead.
 

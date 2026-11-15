@@ -34,7 +34,7 @@ const parts = {
     await T.run(() => { stage(1008, 1392); const b = KC.spawn('barrel', P.x + 28, P.y + 6); window.__b = b; for (let i = 0; i < 4; i++) { const g = KC.spawnGang('grunt', P.x + 120 + (i % 2) * 22, P.y - 26 + i * 18); g.cd = 9; g.sight = 0; } aimW(b.x, b.y); });
     await T.wait(600); await T.run(() => btn(7, 1)); await T.wait(600); await T.run(() => aimW(P.x + 130, P.y)); await T.wait(450);
     await T.shot('16_holding_barrel', 'barrel held, gang ahead');
-    await T.run(() => btn(7, 0)); await T.wait(260); await T.shot('17_barrel_thrown', 'barrel hits the group (it does not explode on impact)'); await T.wait(600); await T.shot('18_after_barrel', 'aftermath');
+    await T.run(() => btn(7, 0)); await T.until(() => __b.dead, 2500); await T.wait(90); await T.shot('17_barrel_explosion', 'barrel explodes in the group'); await T.wait(600); await T.shot('18_after_explosion', 'aftermath, combo counter');
     // push
     await T.run(() => { stage(1008, 1392); for (let i = 0; i < 5; i++) { const a = i / 5 * 6.28; KC.spawn(i % 2 ? 'crate' : 'barrel', P.x + Math.cos(a) * 42, P.y + Math.sin(a) * 34); } for (let i = 0; i < 3; i++) { const g = KC.spawnGang('grunt', P.x + 64 + i * 12, P.y - 28 + i * 26); g.cd = 9; } });
     await T.wait(500); await T.shot('19_before_push', 'surrounded'); await T.run(() => { btn(5, 1); }); await T.wait(90); await T.shot('20_push', 'shockwave'); await T.run(() => btn(5, 0)); await T.wait(700);

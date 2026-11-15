@@ -8,8 +8,8 @@
    Controller layout (standard mapping):
      LS move  RS aim  RT telekinesis (hold grab, release throw)  LT absorb (hold, release = blast)
      RB repulse  LB gravity well  A dash  X heal (hold)  Y drain (hold)  B drop  Start pause  Back map */
-const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1, see: 0, full: true, costume: 'raincoat', binds: { key: {}, pad: {} } };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale; see: how the hero shows behind buildings; full: go fullscreen when a game starts
-try { const s = JSON.parse(localStorage.getItem('kc_settings') || 'null'); if (s) Object.assign(SETTINGS, s); } catch (e) { }
+const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1, see: 2, full: true, sv: 2, costume: 'raincoat', binds: { key: {}, pad: {} } };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale; see: how the hero shows behind buildings; full: go fullscreen when a game starts
+try { const s = JSON.parse(localStorage.getItem('kc_settings') || 'null'); if (s) { Object.assign(SETTINGS, s); if (s.sv !== 2) { SETTINGS.see = 2; SETTINGS.sv = 2; } } } catch (e) { }   // sv 2: the hero shows through a window in the wall by default (settings saved before that are moved over once)
 function saveSettings() { try { localStorage.setItem('kc_settings', JSON.stringify(SETTINGS)); } catch (e) { } }
 
 const Input = (() => {
