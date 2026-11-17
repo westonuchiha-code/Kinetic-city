@@ -32,7 +32,7 @@ const UI = (() => {
     box.classList.remove('ok', 'warn');
     if (Input.blocked) { box.classList.add('warn'); t.textContent = 'This frame blocks controller access. Open the game in its own browser tab to use a controller, or play with keyboard and mouse.'; }
     else if (Input.padConnected) { box.classList.add('ok'); t.textContent = 'Controller connected · ' + (Input.padStyle === 'ps' ? 'PlayStation' : 'Xbox') + ' layout. Use the left stick or d-pad and ' + (Input.padStyle === 'ps' ? '✕' : 'A') + ' to choose.'; }
-    else if (matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches) t.textContent = 'Kinetic City is played with a controller. Pair a Bluetooth controller with this device, then press any button on it.';
+    else if (matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches) t.textContent = 'Gravitation is played with a controller. Pair a Bluetooth controller with this device, then press any button on it.';
     else t.textContent = 'No controller detected yet. Press any button on a connected controller, or play with keyboard and mouse.';
   }
 
@@ -131,7 +131,7 @@ const UI = (() => {
       const keep = keepId && body.querySelector(`.card[data-id="${keepId}"]`);
       setFocus(keep || body.querySelector('.card.can') || body.querySelector('.card'));
     } else if (tab === 'looks') {
-      let h = '<p class="lookhint">Pick what the hero wears. The trim on every costume follows your karma.</p><div class="looks">';
+      let h = '<p class="lookhint">Pick what Bary wears. The trim on every costume follows your karma.</p><div class="looks">';
       for (const id in HERO_COSTUMES) { const c = COSTUMES[id], open = costumeUnlocked(id), on = heroCostume === id;
         h += `<button class="look nav ${open ? '' : 'lock'} ${on ? 'on' : ''}" data-id="${id}"><canvas width="18" height="23" data-look="${id}"></canvas><span class="nm">${open ? c.name : '???'}</span><span class="st">${on ? 'Wearing' : open ? 'Wear' : c.how}</span></button>`; }
       body.innerHTML = h + '</div>';

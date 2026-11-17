@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Kinetic City</title>
+<title>Gravitation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Tilt+Neon&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Tilt+Neon&family=Bungee&display=swap" rel="stylesheet">
 <style>
 /* Layout idea: full-bleed game canvas; DOM overlays sit on top as left-anchored neon panels. Single dark theme by design. */
 :root{
@@ -165,13 +165,29 @@ button{font-family:inherit;color:inherit}
   .pwrap{padding:10px 20px 8px;gap:8px}.phead{padding-bottom:6px}.ptitle{font-size:24px}.tab{padding:4px 12px;font-size:13px}.pfoot{padding-top:6px}.pbtn{padding:6px 14px;font-size:13px}
   .ctl{gap:20px}.ctl h3{margin-bottom:5px;font-size:12px}.ctl ul{gap:2px}.ctl li{font-size:12.5px;gap:8px}.ctl li .k{min-width:60px}}
 @media (prefers-reduced-motion:reduce){.logo span{animation:none}}
+/* ---------- title screen: the ordinary-city look (painted signs, no neon). Overrides the neon theme above for the title only. ---------- */
+#title{background:linear-gradient(90deg,rgba(24,16,18,.9) 0%,rgba(24,16,18,.6) 40%,rgba(24,16,18,0) 72%)}
+#title::after{display:none}
+.logo{font-family:"Bungee","Impact","Arial Black",var(--font-body);font-size:clamp(30px,min(7.4vw,12vh),104px);line-height:1;letter-spacing:.01em;color:#f6e7c1;animation:none;
+  text-shadow:.045em .045em 0 #b8412c,.09em .09em 0 #2a1614,0 0 0 transparent;-webkit-text-stroke:.02em #2a1614}
+.logo span{display:inline;color:inherit;text-shadow:inherit;animation:none}
+#tmenu{margin-top:26px;gap:9px;padding-top:20px}
+#tmenu::before{height:4px;border-radius:0;width:min(380px,60vw);background:#f6e7c1;box-shadow:3px 3px 0 #2a1614}
+#title .mbtn{font-family:"Bungee","Impact","Arial Black",var(--font-body);font-weight:400;letter-spacing:.04em;min-width:min(300px,70vw);transform:none;border:3px solid #f6e7c1;border-radius:5px;padding:8px 20px;
+  color:#f6e7c1;background:#1f6b4a;text-shadow:none;box-shadow:4px 4px 0 #2a1614;transition:transform .1s,background .1s,color .1s}
+#title .mbtn:nth-child(n){--c:#e0b040}
+#title .mbtn:hover,#title .mbtn.focus{color:#2a1614;background:#e0b040;border-color:#f6e7c1;transform:translate(10px,0);text-shadow:none;box-shadow:4px 4px 0 #2a1614}
+#title .mbtn.focus::before{left:-22px;width:0;height:0;margin-top:-8px;background:none;transform:none;box-shadow:none;border:8px solid transparent;border-left:11px solid #f6e7c1}
+#title .mbtn[disabled]{opacity:.5;background:#4a4a4a;box-shadow:4px 4px 0 #2a1614}
+#title .padstat{color:#e8dcc0;text-shadow:1px 1px 0 #2a1614}
+#title .padstat.ok .dot{background:#6fd08a;box-shadow:none}#title .padstat.warn .dot{box-shadow:none}
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 
 <div id="title" class="layer on">
-  <h1 class="logo">KINETIC<span>CITY</span></h1>
+  <h1 class="logo">GRAVITATION</h1>
   <div class="menu" id="tmenu">
     <button class="mbtn nav" id="bNew">New game</button>
     <button class="mbtn nav" id="bCont">Continue</button>

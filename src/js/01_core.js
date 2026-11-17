@@ -1,6 +1,6 @@
 'use strict';
 /* =====================================================================================
-   KINETIC CITY  -  rebuilt, controller-first
+   GRAVITATION (working title was Kinetic City)  -  rebuilt, controller-first
    -------------------------------------------------------------------------------------
    One HTML file, no dependencies, Canvas 2D. Built from the original prototype's design:
    physics-as-damage, five force powers, karma with visible consequences, three districts
