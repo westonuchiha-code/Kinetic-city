@@ -1,7 +1,7 @@
 // Shared helpers for the screenshot tour (test/tour.js): opens the game with a mocked Xbox pad, plays in real time,
 // saves screenshots to screenshots/tour/ and runs a sanity check on the world at every stop.
 const { chromium } = require('playwright'); const path = require('path'); const fs = require('fs');
-const ROOT = path.resolve(__dirname, '..'), OUT = ROOT + '/screenshots/tour';
+const ROOT = path.resolve(__dirname, '..'), OUT = process.env.TOUR_OUT || ROOT + '/screenshots/tour', TIME = process.env.TOUR_TIME || '';   // TOUR_TIME=night etc. runs the tour at that time of day
 async function open() {
   fs.mkdirSync(OUT, { recursive: true });
   const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 1600, height: 900 } }); const p = await ctx.newPage();
@@ -34,7 +34,7 @@ async function open() {
     };
   });
   await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(500);
-  await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(700);
+  await p.evaluate((t) => { localStorage.clear(); if (t) localStorage.setItem('grav_settings', JSON.stringify({ time: t, sv: 2 })); }, TIME); await p.reload(); await p.waitForTimeout(700);
   const T = { b, p, log, n: 0, issues: [],
     wait: ms => p.waitForTimeout(ms), run: (f, a) => p.evaluate(f, a),
     until: async (f, ms = 4000, arg) => { try { await p.waitForFunction(f, arg, { timeout: ms, polling: 16 }); return true; } catch (e) { console.log('   (waited ' + ms + ' ms for a moment that never came: ' + String(f).slice(0, 70) + ')'); return false; } },

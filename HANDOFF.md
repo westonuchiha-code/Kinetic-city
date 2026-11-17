@@ -182,6 +182,7 @@ Also: `tower` (watchtower, lookout, gate, save), `fixes` (bug-fix checks), `rebi
 - `probe`: what a screenshot cannot show: map edges, sealed barricades, fences, dying mid-action, bosses returning to their plaza, save/load, the barricade message, the fullscreen choice.
 - `windows`: six PC window shapes (ultrawide, 5:4, 1366×768, 125% scaling, small, narrow): letterboxing, menus, pixel scale, mouse aim.
 - `python3 test/tour_sheets.py` rebuilds the contact sheets after `tour`, `probe` and `windows`.
+- The tour can run at any time of day: `TOUR_TIME=night TOUR_OUT=<folder> node test/tour.js`. A sweep at all three after the palette change found no errors or stuck objects.
 - `soak` (`node test/soak.js [minutes] [hero|villain]`): minutes of random play fast-forwarded, world checked every simulated second; `hero`/`villain` buys every skill of that path first.
 
 **Visual checks:**
