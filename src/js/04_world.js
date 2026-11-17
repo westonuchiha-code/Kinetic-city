@@ -270,10 +270,12 @@ function drawMinimapBase() {
   for (let ty = 0; ty < MAP_H; ty++) for (let tx = 0; tx < MAP_W; tx++) {
     const i = ty * MAP_W + tx, t = map[i], d = districtAt(tx * TILE + 16), st = typeof DS !== 'undefined' ? DS[d].status : 'enemy';
     let k;
+    // the map is drawn in the city's own colours (they follow the time of day): asphalt, pavement, brick, park green
+    const D_ = DIST[d], lit = st === 'liberated' ? [70, 120, 170] : st === 'dominated' ? [170, 60, 50] : null, tone = c => { const a = rgb(c); return lit ? [a[0] * .7 + lit[0] * .3, a[1] * .7 + lit[1] * .3, a[2] * .7 + lit[2] * .3] : a; };
     switch (t) {
-      case T.ROAD: k = [24, 27, 38]; break; case T.WALK: k = [44, 48, 62]; break; case T.PLAZA: k = [54, 56, 72]; break;
-      case T.GRASS: k = [22, 64, 40]; break; case T.TREE: k = [16, 48, 30]; break; case T.GATE: k = [255, 51, 85]; break; case T.FENCE: k = [80, 78, 72]; break;
-      default: { const b = rgb(DIST[d].col); k = [70 + b[0] * .12, 74 + b[1] * .12, 96 + b[2] * .12]; if (st === 'liberated') k = [56, 110, 140]; if (st === 'dominated') k = [120, 52, 60]; }
+      case T.ROAD: k = rgb(shade(D_.ground, .8)); break; case T.WALK: k = rgb(shade(D_.side, .78)); break; case T.PLAZA: k = rgb(shade(D_.plaza, .85)); break;
+      case T.GRASS: k = [52, 96, 58]; break; case T.TREE: k = [36, 74, 42]; break; case T.GATE: k = [200, 60, 46]; break; case T.FENCE: k = [110, 104, 96]; break;
+      default: k = tone(D_.wall);
     }
     im.data[i * 4] = k[0]; im.data[i * 4 + 1] = k[1]; im.data[i * 4 + 2] = k[2]; im.data[i * 4 + 3] = 255;
   }

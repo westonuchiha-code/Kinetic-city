@@ -336,20 +336,20 @@ function star(x, y, r) { ctx.beginPath(); for (let i = 0; i < 10; i++) { const a
 
 /* ---------- full city map (Back / M) ---------- */
 function drawCityMap() {
-  ctx.fillStyle = 'rgba(4,5,10,.9)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(30,22,22,.94)'; ctx.fillRect(0, 0, W, H);   // the same warm dark as the pause menu
   const pad = 60 * hs, sc = Math.min((W - pad * 2) / WORLD_W, (H - pad * 2 - 110 * hs) / WORLD_H), mw = WORLD_W * sc, mh = WORLD_H * sc, x = (W - mw) / 2, y = (H - mh) / 2;
-  glowText('CITY MAP', x, y - 36 * hs, 26 * hs, NEON.cyan, 'left', 700, '#ffffff');
-  { const lg = ctx.createLinearGradient(x, 0, x + mw, 0); lg.addColorStop(0, NEON.cyan); lg.addColorStop(.55, NEON.pink); lg.addColorStop(1, rgba(NEON.pink, 0));
-    ctx.beginPath(); ctx.moveTo(x, y - 14 * hs); ctx.lineTo(x + mw, y - 14 * hs); ctx.strokeStyle = lg; ctx.globalAlpha = .25; ctx.lineWidth = 6 * hs; ctx.stroke(); ctx.globalAlpha = 1; ctx.lineWidth = 2 * hs; ctx.stroke(); }
-  hudText(`Kinetic shards ${G.shards}/12 · ${G.saves} civilians saved · ${G.kills} takedowns`, x + mw, y - 34 * hs, 13 * hs, '#8790aa', 'right', 600);
+  glowText('CITY MAP', x, y - 36 * hs, 26 * hs, '#f6e7c1', 'left', 700);
+  ctx.fillStyle = '#170e0c'; ctx.fillRect(x + 2 * hs, y - 14 * hs, mw, 4 * hs); ctx.fillStyle = '#f6e7c1'; ctx.fillRect(x, y - 16 * hs, mw, 4 * hs);   // painted rule, as in the pause menu
+  hudText(`Kinetic shards ${G.shards}/12 · ${G.saves} civilians saved · ${G.kills} takedowns`, x + mw, y - 34 * hs, 13 * hs, '#b5a68e', 'right', 600);
+  ctx.fillStyle = '#170e0c'; ctx.fillRect(x + 5 * hs, y + 5 * hs, mw, mh);   // hard shadow under the map
   ctx.imageSmoothingEnabled = false; ctx.drawImage(mmCanvas, x, y, mw, mh); ctx.imageSmoothingEnabled = true;
-  ctx.beginPath(); ctx.rect(x, y, mw, mh); neonStroke(NEON.cyan, .5);
+  ctx.strokeStyle = '#f6e7c1'; ctx.lineWidth = 3 * hs; ctx.strokeRect(x, y, mw, mh);
   for (let d = 0; d < 3; d++) {
     const x0 = d === 0 ? 0 : DIST_SPLIT[d - 1], x1 = d === 2 ? WORLD_W : DIST_SPLIT[d], st = DS[d].status, locked = d > 0 && !gatesOpen[d - 1];
-    if (locked) { ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(x + x0 * sc, y, (x1 - x0) * sc, mh); }
-    const col = st === 'liberated' ? '#38d0ff' : st === 'dominated' ? '#ff3355' : DIST[d].col;
+    if (locked) { ctx.fillStyle = 'rgba(23,14,12,.62)'; ctx.fillRect(x + x0 * sc, y, (x1 - x0) * sc, mh); }
+    const col = st === 'liberated' ? '#5aa8e0' : st === 'dominated' ? '#d0503a' : DIST[d].col;
     glowText(DIST[d].name, x + (x0 + x1) / 2 * sc, y + mh + 20 * hs, 15 * hs, col, 'center', 700);
-    hudText(locked ? 'SEALED' : st === 'enemy' ? DIST[d].gang + ' territory · ' + (3 - DS[d].hideoutsLeft) + '/3 hideouts' : st.toUpperCase(), x + (x0 + x1) / 2 * sc, y + mh + 40 * hs, 12 * hs, '#8790aa', 'center', 600);
+    hudText(locked ? 'SEALED' : st === 'enemy' ? DIST[d].gang + ' territory · ' + (3 - DS[d].hideoutsLeft) + '/3 hideouts' : st.toUpperCase(), x + (x0 + x1) / 2 * sc, y + mh + 40 * hs, 12 * hs, '#b5a68e', 'center', 600);
   }
   for (const e of ents) {
     if (e.dead) continue;
