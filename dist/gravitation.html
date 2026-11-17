@@ -181,6 +181,32 @@ button{font-family:inherit;color:inherit}
 #title .mbtn[disabled]{opacity:.5;background:#4a4a4a;box-shadow:4px 4px 0 #2a1614}
 #title .padstat{color:#e8dcc0;text-shadow:1px 1px 0 #2a1614}
 #title .padstat.ok .dot{background:#6fd08a;box-shadow:none}#title .padstat.warn .dot{box-shadow:none}
+/* ---------- pause menu: painted-sign look to match the title (no glow). Scoped to #pause so it wins over the neon theme above. ---------- */
+#pause{--gold:#e0b040;--good:#5aa8e0;--evil:#d0503a;--ink:#f1e6cc;--dim:#b5a68e;background:rgba(30,22,22,.9);backdrop-filter:blur(3px);color:var(--ink)}
+#pause .phead{border-bottom:4px solid #f6e7c1;border-image:none;box-shadow:0 3px 0 #170e0c}
+#pause .pfoot{border-top:4px solid #f6e7c1;border-image:none}
+#pause .ptitle{font-family:"Bungee","Impact","Arial Black",var(--font-body);font-size:38px;color:#f6e7c1;text-shadow:.05em .05em 0 #b8412c,.1em .1em 0 #170e0c}
+#pause .tab{font-family:"Bungee","Impact","Arial Black",var(--font-body);font-weight:400;letter-spacing:.06em;transform:none;border:3px solid transparent;border-radius:5px;color:var(--dim);text-shadow:none;box-shadow:none;background:transparent}
+#pause .tab.sel{color:#f6e7c1;background:#1f6b4a;border-color:#f6e7c1;box-shadow:3px 3px 0 #170e0c}
+#pause .tab.focus{border-color:#e0b040;box-shadow:3px 3px 0 #170e0c}
+#pause .stats b,#pause .col h3,#pause .card.can .st,#pause .set .v,#pause .ctl h3{text-shadow:none}
+#pause .col{--cc:#e0b040}#pause .col.good{--cc:var(--good)}#pause .col.evil{--cc:var(--evil)}
+#pause .card,#pause .set,#pause .look{background:#2e2422;border:2px solid #4a3a36;border-radius:5px;box-shadow:3px 3px 0 #170e0c}
+#pause .card{border-left:7px solid var(--cc)}
+#pause .card .ds{color:#d2c4a8}
+#pause .card:hover,#pause .card.focus,#pause .set:hover,#pause .set.focus,#pause .look:hover,#pause .look.focus{background:#3d302b;border-color:#f6e7c1;box-shadow:3px 3px 0 #170e0c}
+#pause .card:hover,#pause .card.focus{border-left-color:var(--cc)}
+#pause .pips i{background:#4a3a36}#pause .pips i.f{background:#e0b040;box-shadow:none}
+#pause .sethead{color:#e0b040;text-shadow:none;font-family:"Bungee","Impact","Arial Black",var(--font-body);font-weight:400;letter-spacing:.08em}
+#pause .set{border-left:7px solid #3a6aa8}#pause .set.warn{border-left-color:#d0503a}
+#pause .set .v{color:#e0b040}
+#pause .ctl h3{color:#e0b040}#pause .ctl>div:nth-child(2) h3{color:#d0503a}
+#pause .ctl li span.d{color:#d2c4a8}
+#pause .bind:hover,#pause .bind.focus{border-color:#e0b040;background:rgba(224,176,64,.12);box-shadow:none}
+#pause .look.on{border-color:#e0b040}#pause .look.on .st{color:#e0b040}
+#pause .pbtn{font-family:"Bungee","Impact","Arial Black",var(--font-body);font-weight:400;letter-spacing:.06em;transform:none;border:3px solid #f6e7c1;border-radius:5px;color:#f6e7c1;background:#1f6b4a;text-shadow:none;box-shadow:3px 3px 0 #170e0c}
+#pause #bQuit{background:#a8402c}#pause .rst{background:#8a6420}
+#pause .pbtn:hover,#pause .pbtn.focus{color:#2a1614;background:#e0b040;border-color:#f6e7c1;box-shadow:3px 3px 0 #170e0c}
 </style>
 </head>
 <body>
@@ -8235,7 +8261,7 @@ function drawHUD(dt) {
     if (fr > 0) { slantPath(x, y, w * fr + bh2 * .45 * (1 - fr), bh2, .45); neonFill(bc, .9); slantPath(x + bh2 * .32, y + bh2 * .14, w * fr + bh2 * .45 * (1 - fr) - bh2 * .2, bh2 * .28, .45); ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fill(); }
     slantPath(x + w * .5 - 1, y, 2 + bh2 * .45, bh2, .45); ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fill();
     if (b.stagger > 0) glowText('STAGGERED · DOUBLE DAMAGE', W / 2, y + 28 * hs, 12 * hs, NEON.gold, 'center', 700);
-    bottomY = y - 40 * hs;
+    bottomY = y - 56 * hs;   // keeps the hint plate clear of the boss name
   }
   // ---- abilities + hint
   if (G.mode === 'play' || G.mode === 'dead') drawAbilities();
@@ -8347,6 +8373,35 @@ function drawCityMap() {
   if (G.marker) { ctx.fillStyle = '#38d0ff'; circle(x + G.marker.x * sc, y + G.marker.y * sc, 5); }
   ctx.save(); ctx.translate(x + P.x * sc, y + P.y * sc); ctx.rotate(P.ang); ctx.fillStyle = kcol(); ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-7, -7); ctx.lineTo(-3, 0); ctx.lineTo(-7, 7); ctx.fill(); ctx.restore();
   glyphLine([{ a: 'back' }, { t: 'Close' }], x + mw - 90 * hs, y - 62 * hs, 22 * hs);
+}
+
+/* ============================== 12b HUD, PAINTED ============================== */
+/* The HUD in the ordinary-city look, matching the title screen and pause menu: flat painted plates with a hard drop
+   shadow instead of glowing neon edges. Same layout; only the helpers that 12_hud.js draws with are replaced, plus
+   its colours (NEON keeps its old name). */
+Object.assign(NEON, { cyan: '#4a90d0', pink: '#c8452e', gold: '#e0b040', purple: '#8a64b8', green: '#3a9a64' });
+const PAINT = { ink: '#f6e7c1', shadow: '#170e0c', panel: '#2e2422' };
+const SIGN_FONT = '"Bungee","Impact","Arial Black",sans-serif';
+function slantPath(x, y, w, h) { rr(x, y, w, h, Math.min(5 * hs, h / 3)); }   // plain sign plates, no lean
+function neonStroke(col, a = 1, lw = 1.5 * hs) {                               // a painted outline with a hard shadow
+  ctx.lineJoin = 'round';
+  ctx.save(); ctx.translate(2 * hs, 2 * hs); ctx.globalAlpha *= a; ctx.strokeStyle = PAINT.shadow; ctx.lineWidth = lw + hs; ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.globalAlpha *= Math.min(1, a); ctx.strokeStyle = col; ctx.lineWidth = lw + hs * .5; ctx.stroke(); ctx.restore();
+}
+function neonFill(col, a = 1) {                                                 // a flat fill with a hard shadow
+  ctx.save(); ctx.translate(1.5 * hs, 1.5 * hs); ctx.globalAlpha *= Math.min(1, a); ctx.fillStyle = PAINT.shadow; ctx.fill(); ctx.restore();
+  ctx.save(); ctx.globalAlpha *= Math.min(1, a); ctx.fillStyle = col; ctx.fill(); ctx.restore();
+}
+function plate(x, y, w, h, col, a = .8, tint = .07) {                          // dark painted plate, coloured border, hard shadow
+  slantPath(x + 3 * hs, y + 3 * hs, w, h); ctx.fillStyle = 'rgba(23,14,12,.85)'; ctx.fill();
+  slantPath(x, y, w, h); ctx.fillStyle = 'rgba(46,36,34,.92)'; ctx.fill();
+  if (tint) { ctx.fillStyle = rgba(col, Math.min(.55, tint * 1.6)); ctx.fill(); }
+  ctx.strokeStyle = col; ctx.globalAlpha = Math.min(1, .55 + a * .45); ctx.lineWidth = 2 * hs; ctx.stroke(); ctx.globalAlpha = 1;
+}
+function glowText(str, x, y, px, col, align = 'left', w = 700) {               // sign lettering: solid colour over a hard shadow
+  ctx.save(); ctx.font = `${Math.round(px)}px ${SIGN_FONT}`; ctx.textAlign = align; ctx.textBaseline = 'middle';
+  const d = Math.max(1, px * .07); ctx.fillStyle = PAINT.shadow; ctx.fillText(str, x + d, y + d); ctx.fillStyle = col; ctx.fillText(str, x, y);
+  const tw = ctx.measureText(str).width; ctx.restore(); return tw;
 }
 
 /* ============================== 13 UI (DOM overlays) ============================== */

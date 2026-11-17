@@ -249,7 +249,7 @@ function drawHUD(dt) {
     if (fr > 0) { slantPath(x, y, w * fr + bh2 * .45 * (1 - fr), bh2, .45); neonFill(bc, .9); slantPath(x + bh2 * .32, y + bh2 * .14, w * fr + bh2 * .45 * (1 - fr) - bh2 * .2, bh2 * .28, .45); ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fill(); }
     slantPath(x + w * .5 - 1, y, 2 + bh2 * .45, bh2, .45); ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.fill();
     if (b.stagger > 0) glowText('STAGGERED · DOUBLE DAMAGE', W / 2, y + 28 * hs, 12 * hs, NEON.gold, 'center', 700);
-    bottomY = y - 40 * hs;
+    bottomY = y - 56 * hs;   // keeps the hint plate clear of the boss name
   }
   // ---- abilities + hint
   if (G.mode === 'play' || G.mode === 'dead') drawAbilities();
