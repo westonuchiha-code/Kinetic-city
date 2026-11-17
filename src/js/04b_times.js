@@ -56,3 +56,18 @@ function updateWeather(dt) {
   WEATHER.rain = approach(WEATHER.rain, WEATHER.wet ? 1 : 0, dt / 6);
   if (typeof Audio2 !== 'undefined' && Audio2.setRain) Audio2.setRain(WEATHER.rain);
 }
+
+/* ---------- scenes: the switches the story will use ----------
+   No story exists yet (rule 5). This is only the mechanism, so that a story section can say "this happens at night in
+   the rain, starting here" in one call when the user writes it:
+     setScene({ time: 'night', weather: 'rain', at: { x, y } })   // any part can be left out
+     clearScene()                                                 // back to the player's settings and normal weather
+   While a scene is set it overrides Settings > Time of day; it is kept in the saved game and put back on load. */
+const SCENE = { time: null, weather: null };
+function setScene(o = {}) {
+  if (o.time && TIMES[o.time]) { SCENE.time = o.time; applyTime(o.time); }
+  if (o.weather) { SCENE.weather = o.weather; setWeather(o.weather); }
+  if (o.at && typeof P !== 'undefined' && P) { P.x = o.at.x; P.y = o.at.y; P.vx = P.vy = 0; if (typeof snapCamera === 'function') snapCamera(); }
+}
+function clearScene() { SCENE.time = SCENE.weather = null; applyTime(SETTINGS.time); setWeather('auto'); }
+const timeNow = () => SCENE.time || SETTINGS.time;   // what the world should look like right now

@@ -240,7 +240,7 @@ function saveGame() {
   for (let d = 0; d < 3; d++) if (DS[d].bossDying) bossDefeated(d);   // never save the moment between a boss falling and the district changing hands
   const data = {
     v: 2, karma: G.karma, xp: G.xp, level: G.level, points: G.points, ups: { ...ups }, shards: G.shards, shardIds: G.shardIds, kills: G.kills, civKills: G.civKills, saves: G.saves,
-    ds: DS.map(s => ({ hideoutsLeft: s.hideoutsLeft, destroyed: s.destroyed || [], towers: s.towers || [], bossDone: s.bossDone, status: s.status, intro: s.intro })), gates: gatesOpen.slice(), check: G.check, finished: G.finished, seen: G.seen
+    ds: DS.map(s => ({ hideoutsLeft: s.hideoutsLeft, destroyed: s.destroyed || [], towers: s.towers || [], bossDone: s.bossDone, status: s.status, intro: s.intro })), gates: gatesOpen.slice(), check: G.check, scene: { ...SCENE }, finished: G.finished, seen: G.seen
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch (e) { }
 }
@@ -256,7 +256,9 @@ function resetState() {
   tkTarget = null; traj = null;
 }
 function newGame(save) {
-  resetState(); buildCity(); applyTime(SETTINGS.time); if (WEATHER.hold === null) startWeather();
+  resetState(); buildCity(); SCENE.time = SCENE.weather = null; WEATHER.hold = null;
+  if (save && save.scene) Object.assign(SCENE, save.scene);   // a story scene saved mid-way comes back as it was
+  applyTime(timeNow()); if (SCENE.weather) setWeather(SCENE.weather); else startWeather();
   heroCostume = costumeUnlocked(SETTINGS.costume) && HERO_COSTUMES[SETTINGS.costume] ? SETTINGS.costume : 'raincoat';
   if (save) {
     Object.assign(G, { karma: save.karma, xp: save.xp, level: save.level, points: save.points, shards: save.shards, shardIds: save.shardIds.slice(), kills: save.kills, civKills: save.civKills, saves: save.saves || 0, check: save.check, finished: save.finished, seen: save.seen || {} });

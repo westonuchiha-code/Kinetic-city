@@ -71,7 +71,8 @@ window.KC = {
   },
   costume(n) { if (HERO_COSTUMES[n]) heroCostume = n; return heroCostume; },
   weather(m) { if (m !== undefined) setWeather(m); return { rain: WEATHER.rain, wet: WEATHER.wet, hold: WEATHER.hold }; },   // 'rain' | 'dry' | 'auto'
-  time(n) { if (n !== undefined) { SETTINGS.time = n; applyTime(n); } return LIGHT.name; },   // 'sunset' | 'night' | 'day'
+  time(n) { if (n !== undefined) { SETTINGS.time = n; applyTime(n); } return LIGHT.name; },
+  scene(o) { if (o === null) clearScene(); else if (o) setScene(o); return { ...SCENE, now: LIGHT.name }; },   // story switches: { time, weather, at }   // 'sunset' | 'night' | 'day'
   see(n) { if (n !== undefined) SETTINGS.see = n; return SETTINGS.see; },   // how the hero shows behind buildings: 0 hidden, 1 silhouette, 2 window, 3 see-through wall
   spawn: mk, spawnGang, spawnBoss, render, drawHUD, snapCamera, hurt, kill, explosion
 };

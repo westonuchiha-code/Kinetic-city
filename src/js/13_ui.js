@@ -210,7 +210,7 @@ const UI = (() => {
     if (o.opts) { let i = o.opts.findIndex(p => same(p[0], SETTINGS[k])); if (i < 0) i = k0(o); i += d; SETTINGS[k] = o.opts[wrap ? (i + o.opts.length) % o.opts.length : clamp(i, 0, o.opts.length - 1)][0]; }
     else if (o.step) { let v = Math.round((SETTINGS[k] + d * o.step) * 100) / 100; if (wrap && v > o.max + 1e-6) v = o.min; SETTINGS[k] = clamp(v, o.min, o.max); if (k === 'music' || k === 'sfx') Audio2.applyVolumes(); }
     else { SETTINGS[k] = !SETTINGS[k]; if (k === 'rumble' && SETTINGS.rumble) Input.rumble(.6, .6, 200); }
-    if (k === 'time') applyTime(SETTINGS.time);
+    if (k === 'time' && !SCENE.time) applyTime(SETTINGS.time);   // a story scene keeps its own time of day
     saveSettings(); sfx('ui'); renderTab(k);
   }
   async function toggleFull() { const on = !document.fullscreenElement; SETTINGS.full = on; saveSettings(); try { if (on) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } catch (e) { } }   // the choice is kept: off stays off the next time a game starts
