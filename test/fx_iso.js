@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message + e.stack));
-  await p.goto('file:///home/claude/kc/dist/kinetic_city.html'); await p.waitForTimeout(500);
+  await p.goto('file:///home/claude/kc/dist/gravitation.html'); await p.waitForTimeout(500);
   await p.evaluate(() => { KC.start(); KC.skip(); KC.tp(1*384+48, 2*384+150); KC.P.invT = 999; KC.P.hp = 1e6; });
   await p.waitForTimeout(800);
   // 1: explosion + debris + sparks + shockwave + a gravity well + a brute's warning + fire trail

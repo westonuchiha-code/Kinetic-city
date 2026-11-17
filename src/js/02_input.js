@@ -9,8 +9,9 @@
      LS move  RS aim  RT telekinesis (hold grab, release throw)  LT absorb (hold, release = blast)
      RB repulse  LB gravity well  A dash  X heal (hold)  Y drain (hold)  B drop  Start pause  Back map */
 const SETTINGS = { music: .6, sfx: .8, rumble: true, shake: true, deadzone: .18, assist: 1, hud: 1, see: 2, time: 'sunset', full: true, sv: 2, costume: 'raincoat', binds: { key: {}, pad: {} } };   // deadzone: left stick (right stick +.04); assist: aim-assist cone multiplier; hud: HUD scale; see: how the hero shows behind buildings; full: go fullscreen when a game starts
-try { const s = JSON.parse(localStorage.getItem('kc_settings') || 'null'); if (s) { Object.assign(SETTINGS, s); if (s.sv !== 2) { SETTINGS.see = 2; SETTINGS.sv = 2; } } } catch (e) { }   // sv 2: the hero shows through a window in the wall by default (settings saved before that are moved over once)
-function saveSettings() { try { localStorage.setItem('kc_settings', JSON.stringify(SETTINGS)); } catch (e) { } }
+try { for (const [o, n] of [['kc_settings', 'grav_settings'], ['kc_costumes', 'grav_costumes'], ['kinetic_city_v2', 'gravitation_v2']]) { const v = localStorage.getItem(o); if (v !== null) { if (localStorage.getItem(n) === null) localStorage.setItem(n, v); localStorage.removeItem(o); } } } catch (e) { }   // one-time move of settings, costumes and the save from the game's old working title
+try { const s = JSON.parse(localStorage.getItem('grav_settings') || 'null'); if (s) { Object.assign(SETTINGS, s); if (s.sv !== 2) { SETTINGS.see = 2; SETTINGS.sv = 2; } } } catch (e) { }   // sv 2: the hero shows through a window in the wall by default (settings saved before that are moved over once)
+function saveSettings() { try { localStorage.setItem('grav_settings', JSON.stringify(SETTINGS)); } catch (e) { } }
 
 const Input = (() => {
   const KEYMAP = {

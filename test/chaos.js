@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message + ' ' + (e.stack || '').split('\n')[1]));
   p.on('console', m => { if (m.type() === 'error') errs.push('CONSOLE ' + m.text()); });
-  await p.goto('file:///home/claude/kc/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file:///home/claude/kc/dist/gravitation.html'); await p.waitForTimeout(400);
   const R = (f, a) => p.evaluate(f, a);
   await R(() => { KC.start(); KC.skip(); });
   // police heat

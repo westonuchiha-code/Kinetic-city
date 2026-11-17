@@ -4,7 +4,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && errs.length < 3) errs.push(m.text().slice(0, 300)); });
   const ok = (n, v) => console.log((v ? 'ok   ' : 'FAIL ') + n);
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(400);
   await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(600);
   await p.evaluate(() => { KC.start(); KC.skip(); G.seen = new Proxy({}, { get: () => 1, set: () => true }); gatesOpen[0] = gatesOpen[1] = true; SETTINGS.hud = .7; KC.weather('dry'); });
   ok('a new game starts at sunset', await p.evaluate(() => KC.time() === 'sunset'));

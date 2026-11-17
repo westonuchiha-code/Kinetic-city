@@ -1,9 +1,9 @@
-"""Mock-up only: builds a double-resolution variant of dist/kinetic_city.html (640x360 art instead of 320x180).
+"""Mock-up only: builds a double-resolution variant of dist/gravitation.html (640x360 art instead of 320x180).
 Everything drawn from world coordinates gets twice the pixels; things drawn in fixed pixels are patched here
 (characters use the redrawn sprites in mockups/chars32.js).
 Usage: python3 mockups/hires_mock.py <out.html>"""
 import sys
-s = open('dist/kinetic_city.html').read()
+s = open('dist/gravitation.html').read()
 def sub(a, b, n=1):
     global s
     assert s.count(a) == n, (a, s.count(a)); s = s.replace(a, b)

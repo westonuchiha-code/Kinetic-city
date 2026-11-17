@@ -5,7 +5,7 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..');
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message + e.stack));
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(400);
   await p.evaluate(() => { KC.start(); KC.skip(); });
   const sheet = (rows, Z, angs, file) => p.evaluate(([rows, Z, angs]) => {
     const AW = Math.floor(1600 / Z), AH = Math.floor(900 / Z), c = document.createElement('canvas'); c.width = AW; c.height = AH; const old = ctx; ctx = c.getContext('2d');

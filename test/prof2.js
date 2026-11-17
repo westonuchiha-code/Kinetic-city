@@ -1,7 +1,7 @@
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
-  await p.goto('file:///home/claude/kc/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file:///home/claude/kc/dist/gravitation.html'); await p.waitForTimeout(400);
   for (const [d, x, y] of [[0, 1*384+48, 2*384+150], [2, 7*384+48, 2*384+200]]) {
   const r = await p.evaluate(([d, x, y]) => {
     if (KC.G.mode === 'title') { KC.start(); KC.skip(); }

@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file:///home/claude/kc/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file:///home/claude/kc/dist/gravitation.html'); await p.waitForTimeout(400);
   const R = f => p.evaluate(f);
   await R(() => { KC.start(); KC.G.seen.move = 1; KC.G.hint = null; window.HO = KC.ents.find(e => e.kind === 'hideout' && e.did === 0); KC.tp(HO.x + 70, HO.rect.y + HO.rect.h + 120); KC.P.invT = 1e9; });
   await R(() => { for (const g of KC.ents.filter(e => e.guardOf === HO.hid)) KC.hurt(g, 9999, { by: 'player' }); });

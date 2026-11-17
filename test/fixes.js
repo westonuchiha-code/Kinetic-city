@@ -8,7 +8,7 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..');
     const mk = i => ({ buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })), axes: [0, 0, 0, 0], connected: true, id: 'pad' + i, index: i, mapping: 'standard' });
     window.__pads = [mk(0), mk(1)]; navigator.getGamepads = () => window.__pads;
   });
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(400);
   const R = f => p.evaluate(f); const ok = (n, v) => console.log((v ? 'ok   ' : 'FAIL ') + n);
   await R(() => { KC.start(); KC.skip(); KC.tp(200, 816); KC.P.invT = 1e9; });
   // pad switching: silent pad 0, real pad 1 pushes the stick and presses A

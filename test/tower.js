@@ -4,7 +4,7 @@ const ROOT = path.resolve(__dirname, '..');
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message + e.stack));
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(500);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(500);
   await p.evaluate(() => { KC.start(); KC.skip(); });
   const n = await p.evaluate(() => KC.ents.filter(e => e.kind === 'tower').length);
   console.log('towers:', n);

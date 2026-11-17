@@ -25,7 +25,7 @@ const LOOKS = {
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && errs.length < 3) errs.push(m.text().slice(0, 300)); });
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(500);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(500);
   await p.evaluate(() => { localStorage.clear(); KC.start(); KC.skip(); G.seen = new Proxy({}, { get: () => 1, set: () => true }); gatesOpen[0] = gatesOpen[1] = true; SETTINGS.hud = .7; window.__orig = { iglow, drawGroundLights, drawRain, glow }; });
   for (const [name, L] of Object.entries(LOOKS)) {
     if (L) await p.evaluate((L) => {

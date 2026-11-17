@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
     navigator.getGamepads = () => [window.__pad];
     window.tap = async (i) => { window.__pad.buttons[i] = { pressed: true, value: 1 }; await new Promise(r => setTimeout(r, 70)); window.__pad.buttons[i] = { pressed: false, value: 0 }; await new Promise(r => setTimeout(r, 90)); };
   });
-  await p.goto('file:///home/claude/kc/dist/kinetic_city.html'); await p.waitForTimeout(500);
+  await p.goto('file:///home/claude/kc/dist/gravitation.html'); await p.waitForTimeout(500);
   const foc = () => p.evaluate(() => { const f = document.querySelector('.focus'); return f ? f.textContent.trim().slice(0, 30) : null; });
   console.log('title focus', await foc());
   await p.evaluate(() => tap(13)); await p.evaluate(() => tap(13)); console.log('after down x2', await foc());

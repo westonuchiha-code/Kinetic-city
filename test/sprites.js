@@ -5,7 +5,7 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..');
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message + e.stack));
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(400);
   await p.evaluate(() => { KC.start(); KC.skip(); });
   const bad = await p.evaluate(() => { const bad = [], chk = (rows, n, w) => rows && rows.forEach((r, i) => { if (r.length !== w) bad.push(n + ' row ' + i + ': ' + r); });
     for (const [set, w] of [[CHAR_ART, 16], [BIG_ART, 22]]) for (const d in set) { const A = set[d]; chk(A.head, d + ' head', 16); A.torso.forEach((t, i) => chk(t, d + ' torso ' + i, w)); chk(A.cheer, d + ' cheer', w); A.legs.forEach((t, i) => chk(t, d + ' legs ' + i, w)); for (const k in A.pose || {}) chk(A.pose[k], d + ' pose ' + k, w); }

@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message));
-  await p.goto('file:///home/claude/kc/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file:///home/claude/kc/dist/gravitation.html'); await p.waitForTimeout(400);
   await p.keyboard.press('Enter'); await p.waitForTimeout(200);
   for (let i = 0; i < 12; i++) { await p.keyboard.press('Enter'); await p.waitForTimeout(60); }
   console.log('mode', await p.evaluate(() => KC.G.mode));

@@ -12,7 +12,7 @@ const { chromium } = require('playwright');
     navigator.getGamepads = () => [window.__pad];
     window.press = (i, v = 1) => { window.__pad.buttons[i] = { pressed: v > .5, value: v }; };
   });
-  await p.goto('file:///home/claude/kc/dist/kinetic_city.html');
+  await p.goto('file:///home/claude/kc/dist/gravitation.html');
   await p.waitForTimeout(1500);
   await p.screenshot({ path: '/home/claude/kc/shots/01_title.png' });
   await p.evaluate(() => { KC.start(); });

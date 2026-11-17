@@ -11,7 +11,7 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..'), OUT = 
     navigator.getGamepads = () => [window.__pad];
     window.tap = async (i) => { window.__pad.buttons[i] = { pressed: true, value: 1 }; await new Promise(r => setTimeout(r, 70)); window.__pad.buttons[i] = { pressed: false, value: 0 }; await new Promise(r => setTimeout(r, 90)); };
   });
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(400);
   await p.evaluate(() => { localStorage.clear(); }); await p.reload(); await p.waitForTimeout(400);
   await p.evaluate(() => { KC.start(); KC.skip(); KC.P.invT = 1e9; });
   await p.evaluate(() => tap(14)); await p.waitForTimeout(600);

@@ -7,7 +7,7 @@ const path = require('path'); const fs = require('fs'); const ROOT = path.resolv
   for (const [w, h, dpr, nm] of [[2560, 1080, 1, 'ultrawide'], [1280, 1024, 1, 'tall_5x4'], [1366, 768, 1, 'laptop_1366'], [1536, 864, 1.25, 'windows_125pct'], [960, 540, 1, 'small_window'], [700, 900, 1, 'narrow_window']]) {
     const p = await (await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: dpr })).newPage();
     const errs = []; p.on('pageerror', e => errs.push(e.message));
-    await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(500);
+    await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(500);
     await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(600);
     await p.screenshot({ path: OUT + '/w_' + nm + '_title.png' });
     const title = await p.evaluate(() => { const r = document.getElementById('bNew').getBoundingClientRect(), l = document.querySelector('.logo').getBoundingClientRect(); return { btn: [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)], logo: [Math.round(l.left), Math.round(l.top), Math.round(l.right), Math.round(l.bottom)], frame: [Math.round(FRAME.x), Math.round(FRAME.y), Math.round(W), Math.round(H)] }; });

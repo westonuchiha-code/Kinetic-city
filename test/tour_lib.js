@@ -33,7 +33,7 @@ async function open() {
       return bad;
     };
   });
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(500);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(500);
   await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(700);
   const T = { b, p, log, n: 0, issues: [],
     wait: ms => p.waitForTimeout(ms), run: (f, a) => p.evaluate(f, a),

@@ -15,7 +15,7 @@ fs.mkdirSync(OUT, { recursive: true });
   });
   const shot = async n => { await p.waitForTimeout(250); await p.screenshot({ path: `${OUT}/${n}.png` }); };
   const tap = i => p.evaluate(i => tap(i), i);
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(600);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(600);
   await shot('01_title');
   await p.evaluate(() => document.getElementById('bCtl').click()); await shot('02_title_controls');
   await tap(1);

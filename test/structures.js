@@ -5,7 +5,7 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..');
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 2 })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message + e.stack));
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(400);
   await p.evaluate(() => { localStorage.clear(); }); await p.reload(); await p.waitForTimeout(600);
   await p.evaluate(() => { KC.start(); KC.skip(); KC.P.invT = 0; G.hint = null; G.seen = new Proxy({}, { get: () => 1 }); gatesOpen[0] = gatesOpen[1] = true; });
   const shot = async (name, did, setup) => {

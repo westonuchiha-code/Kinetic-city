@@ -5,7 +5,7 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..'), PRE = 
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message + (e.stack || '').split('\n').slice(0, 3).join(' | ')));
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(400);
   await p.evaluate(() => { localStorage.clear(); }); await p.reload(); await p.waitForTimeout(600);
   await p.evaluate(() => { KC.start(); KC.skip(); KC.P.invT = 0; G.hint = null; G.seen = new Proxy({}, { get: () => 1, set: () => true }); gatesOpen[0] = gatesOpen[1] = true; SETTINGS.hud = .7; });
   const spots = [['gz_crossing', 432, 432], ['gz_park', 1008, 250], ['gz_lot', 1392, 250], ['gz_court', 624, 1400], ['gz_plaza', 1008, 1392], ['slums_crossing', 1968, 816], ['slums_yard', 2544, 640], ['tower_crossing', 3504, 816], ['tower_park', 3696, 250]];

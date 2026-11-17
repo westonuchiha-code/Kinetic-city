@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
     window.btn = (i, v = 1) => { window.__pad.buttons[i] = { pressed: v > .5, value: v }; };
     window.ax = (a) => { window.__pad.axes = a; };
   });
-  await p.goto('file:///home/claude/kc/dist/kinetic_city.html');
+  await p.goto('file:///home/claude/kc/dist/gravitation.html');
   await p.waitForTimeout(800);
   const log = async (label) => console.log(label, JSON.stringify(await p.evaluate(() => ({ mode: KC.G.mode, dev: KC.Input.device, P: [Math.round(KC.P.x), Math.round(KC.P.y)], hold: KC.P.holding && KC.P.holding.kind, tk: KC.tkTarget && KC.tkTarget.kind, en: Math.round(KC.P.energy), hp: Math.round(KC.P.hp) }))));
   // press A on title to start (focus is on New game)

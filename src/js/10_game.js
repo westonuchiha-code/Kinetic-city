@@ -223,7 +223,7 @@ const COSTUMES = {
   headband:   { name: 'Headband', how: 'Free or take over The Slums', ok: () => DS[1].bossDone },
   glowhood:   { name: 'Glow hood', how: 'Find all 12 kinetic shards', ok: () => G.shards >= 12 }
 };
-const COSTUME_KEY = 'kc_costumes';
+const COSTUME_KEY = 'grav_costumes';
 let costumesOpen = []; try { costumesOpen = JSON.parse(localStorage.getItem(COSTUME_KEY) || '[]') || []; } catch (e) { }
 const costumeUnlocked = id => id === 'raincoat' || costumesOpen.includes(id);
 function checkCostumes() {
@@ -234,7 +234,7 @@ function checkCostumes() {
 }
 function setCostume(id) { if (!HERO_COSTUMES[id] || !costumeUnlocked(id)) return false; heroCostume = id; SETTINGS.costume = id; saveSettings(); return true; }
 
-const SAVE_KEY = 'kinetic_city_v2';
+const SAVE_KEY = 'gravitation_v2';
 function saveGame() {
   if (!G.started) return;
   for (let d = 0; d < 3; d++) if (DS[d].bossDying) bossDefeated(d);   // never save the moment between a boss falling and the district changing hands

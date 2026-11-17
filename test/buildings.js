@@ -1,7 +1,7 @@
 // Building art: two street views per district, same spots every run. Writes screenshots/bld_<district>_<n>.png.
 // Run after changing 11g_buildings.js.
 const { chromium } = require('playwright');
-const path = require('path'); const ROOT = path.resolve(__dirname, '..'), url = 'file://' + ROOT + '/dist/kinetic_city.html';
+const path = require('path'); const ROOT = path.resolve(__dirname, '..'), url = 'file://' + ROOT + '/dist/gravitation.html';
 (async () => {
   const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1600, height: 900 } })).newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message + e.stack));

@@ -6,7 +6,7 @@ const { chromium } = require('playwright');
   const errs = [];
   p.on('pageerror', e => errs.push('PAGEERR ' + e.message + '\n' + e.stack));
   p.on('console', m => { if (m.type() === 'error') errs.push('CONSOLE ' + m.text()); });
-  await p.goto('file:///home/claude/kc/dist/kinetic_city.html');
+  await p.goto('file:///home/claude/kc/dist/gravitation.html');
   await p.waitForTimeout(600);
   await p.evaluate(() => { KC.start(); KC.skip(); });
   const shot = async (name, fn) => { await p.evaluate(fn); await p.waitForTimeout(1200); await p.screenshot({ path: '/home/claude/' + name }); };

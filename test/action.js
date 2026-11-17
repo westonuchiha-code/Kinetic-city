@@ -9,7 +9,7 @@ const { chromium } = require('playwright');
     window.btn = (i, v = 1) => { window.__pad.buttons[i] = { pressed: v > .5, value: v }; };
     window.ax = (a) => { window.__pad.axes = a; };
   });
-  await p.goto('file:///home/claude/kc/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file:///home/claude/kc/dist/gravitation.html'); await p.waitForTimeout(400);
   await p.evaluate(() => { KC.start(); KC.skip(); KC.G.seen.move = 1; KC.G.hint = null; });
   // set up: player near hideout 0, a car next to player, grunts in front
   await p.evaluate(() => {

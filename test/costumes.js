@@ -11,7 +11,7 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..');
     navigator.getGamepads = () => [window.__pad];
     window.tap = async (i) => { window.__pad.buttons[i] = { pressed: true, value: 1 }; await new Promise(r => setTimeout(r, 70)); window.__pad.buttons[i] = { pressed: false, value: 0 }; await new Promise(r => setTimeout(r, 90)); };
   });
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(400);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(400);
   await p.evaluate(() => { KC.start(); KC.skip(); });
   await p.evaluate(() => {
     const SC = 6, c = document.createElement('canvas'); c.width = 1600; c.height = 900; const x = c.getContext('2d');
@@ -32,7 +32,7 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..');
   await p.screenshot({ path: ROOT + '/screenshots/hero_costumes.png' });
   // unlocking and choosing
   const ok = (n, v) => console.log((v ? 'ok   ' : 'FAIL ') + n);
-  await p.evaluate(() => { localStorage.removeItem('kc_costumes'); localStorage.removeItem('kc_settings'); }); await p.reload(); await p.waitForTimeout(400);
+  await p.evaluate(() => { localStorage.removeItem('grav_costumes'); localStorage.removeItem('grav_settings'); }); await p.reload(); await p.waitForTimeout(400);
   await p.evaluate(() => { KC.start(); KC.skip(); KC.P.invT = 1e9; });
   ok('only the rain jacket is open at the start', await p.evaluate(() => Object.keys(COSTUMES).filter(costumeUnlocked).join() === 'raincoat'));
   ok('a locked costume cannot be worn', await p.evaluate(() => setCostume('scarf') === false && heroCostume === 'raincoat'));

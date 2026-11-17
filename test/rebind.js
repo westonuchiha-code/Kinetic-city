@@ -11,8 +11,8 @@ const path = require('path'); const ROOT = path.resolve(__dirname, '..');
   });
   const R = (f, a) => p.evaluate(f, a), ok = (n, v) => console.log((v ? 'ok   ' : 'FAIL ') + n), tap = i => R(i => tap(i), i);
   const g = (dev, a) => R(([dev, a]) => Input.glyph(a, dev).text, [dev, a]);
-  await p.goto('file://' + ROOT + '/dist/kinetic_city.html'); await p.waitForTimeout(400);
-  await R(() => { localStorage.removeItem('kc_settings'); }); await p.reload(); await p.waitForTimeout(400);
+  await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(400);
+  await R(() => { localStorage.removeItem('grav_settings'); }); await p.reload(); await p.waitForTimeout(400);
   await R(() => { KC.start(); KC.skip(); KC.P.invT = 1e9; KC.tp(200, 816); });
   await tap(9); await tap(5); await tap(5); await p.waitForTimeout(150);         // pause -> controls tab
   ok('controls tab focuses the telekinesis row', await R(() => document.querySelector('.focus').dataset.act === 'tk'));
