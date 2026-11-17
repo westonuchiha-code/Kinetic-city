@@ -2,11 +2,12 @@
 /* The city is ringed by roads, so nothing leads off the map; past the outer road there used to be flat black. Now the
    outer road is a waterfront: a kerb, a quay wall on the two sides that face the camera, and dark water with slow
    ripples and the odd channel buoy. Nothing here collides or is simulated; it is only drawn. */
-const SEA = { base: '#0b1729', deep: '#081120', kerb: '#4a5163', wallS: '#262b38', wallE: '#1a1e28', rip: '#1d3458', hi: '#3d6399' };
+const SEA0 = { base: '#0b1729', deep: '#081120', kerb: '#4a5163', wallS: '#262b38', wallE: '#1a1e28', rip: '#1d3458', hi: '#3d6399' }, SEA = { ...SEA0 }; let _seaFor = '';
+function seaColours() { if (_seaFor === LIGHT.name) return; _seaFor = LIGHT.name; for (const k in SEA0) { const quay = k === 'kerb' || k === 'wallS' || k === 'wallE'; let c = shade(SEA0[k], quay ? 1 + (LIGHT.sea - 1) * .45 : LIGHT.sea); if (LIGHT.seaTint && !quay) c = mix(c, LIGHT.seaTint, .3); SEA[k] = c; } }   // the water follows the time of day
 function seaInView() { return cam.x < 0 || cam.y < 0 || cam.x + cam.w > WORLD_W || cam.y + cam.h > WORLD_H; }
 // ground pass (affine): water under everything, a paler band near the shore, the kerb along the edge of the road
 function drawSea() {
-  if (!seaInView()) return;
+  if (!seaInView()) return; seaColours();
   const x0 = cam.x - 80, y0 = cam.y - 80, w = cam.w + 160, h = cam.h + 160;
   ctx.fillStyle = SEA.deep; ctx.fillRect(x0, y0, w, h);
   ctx.fillStyle = SEA.base; ctx.fillRect(-150, -150, WORLD_W + 300, WORLD_H + 300);           // shallower, a touch lighter, near the quay

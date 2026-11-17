@@ -256,7 +256,7 @@ function resetState() {
   tkTarget = null; traj = null;
 }
 function newGame(save) {
-  resetState(); buildCity();
+  resetState(); buildCity(); applyTime(SETTINGS.time); if (WEATHER.hold === null) startWeather();
   heroCostume = costumeUnlocked(SETTINGS.costume) && HERO_COSTUMES[SETTINGS.costume] ? SETTINGS.costume : 'raincoat';
   if (save) {
     Object.assign(G, { karma: save.karma, xp: save.xp, level: save.level, points: save.points, shards: save.shards, shardIds: save.shardIds.slice(), kills: save.kills, civKills: save.civKills, saves: save.saves || 0, check: save.check, finished: save.finished, seen: save.seen || {} });
@@ -277,7 +277,7 @@ function buildActive() {
   for (const e of ents) { if (e.dead) continue; if (e === P || e.static || e.kind === 'boss' || (Math.abs(e.x - P.x) < ACTIVE_R && Math.abs(e.y - P.y) < ACTIVE_R)) act.push(e); }
 }
 function update(dt) {
-  G.time += dt;
+  G.time += dt; updateWeather(dt);
   if (G.comboT > 0) { G.comboT -= dt; if (G.comboT <= 0) G.combo = 0; }
   G.civHitT -= dt;
   G.curD = DS.findIndex(s => !s.bossDone); if (G.curD < 0) G.curD = 2;

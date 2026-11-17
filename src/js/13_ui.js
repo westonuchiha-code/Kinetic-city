@@ -181,6 +181,7 @@ const UI = (() => {
     { sec: 'Display', k: 'full', name: 'Fullscreen' },
     { sec: 'Display', k: 'hud', name: 'HUD size', min: .7, max: 1.1, step: .1 },
     { sec: 'Display', k: 'shake', name: 'Screen shake' },
+    { sec: 'Display', k: 'time', name: 'Time of day', opts: [['sunset', 'Sunset'], ['night', 'Night'], ['day', 'Day']] },
     { sec: 'Display', k: 'see', name: 'Hero behind buildings', opts: [[0, 'Hidden'], [1, 'Outline'], [2, 'Window'], [3, 'See-through wall']] },
     { sec: 'Controls', k: 'rumble', name: 'Controller rumble' },
     { sec: 'Controls', k: 'deadzone', name: 'Stick dead zone', min: .1, max: .35, step: .05 },
@@ -188,12 +189,13 @@ const UI = (() => {
     { sec: 'Save', k: 'wipe', name: 'Delete saved game', titleOnly: true, warn: true }
   ];
   let wipeArm = false;
-  const k0 = o => 2;   // which option an unknown stored value falls back to (Normal aim assist, Window)
+  const same = (a, b) => typeof a === 'string' ? a === b : Math.abs(a - b) < 1e-6;
+  const k0 = o => o.k === 'time' ? 0 : 2;   // which option an unknown stored value falls back to (Normal aim assist, Window)
   function setLabel(o) {
     if (o.k === 'full') return document.fullscreenElement ? 'On' : 'Off';
     if (o.k === 'wipe') return wipeArm ? 'Press again to delete' : 'Delete';
     const v = SETTINGS[o.k];
-    if (o.opts) return (o.opts.find(p => Math.abs(p[0] - v) < 1e-6) || o.opts[k0(o)])[1];
+    if (o.opts) return (o.opts.find(p => same(p[0], v)) || o.opts[k0(o)])[1];
     return o.step ? Math.round(v * 100) + '%' : v ? 'On' : 'Off';
   }
   function adjustSetting(k, d, wrap) {
@@ -205,9 +207,10 @@ const UI = (() => {
       if (!wipeArm) wipeArm = true; else { wipeArm = false; try { localStorage.removeItem(SAVE_KEY); } catch (e) { } $('bCont').disabled = true; }
       sfx('ui'); renderTab(loadSave() ? k : null); return;
     }
-    if (o.opts) { let i = o.opts.findIndex(p => Math.abs(p[0] - SETTINGS[k]) < 1e-6); if (i < 0) i = k0(o); i += d; SETTINGS[k] = o.opts[wrap ? (i + o.opts.length) % o.opts.length : clamp(i, 0, o.opts.length - 1)][0]; }
+    if (o.opts) { let i = o.opts.findIndex(p => same(p[0], SETTINGS[k])); if (i < 0) i = k0(o); i += d; SETTINGS[k] = o.opts[wrap ? (i + o.opts.length) % o.opts.length : clamp(i, 0, o.opts.length - 1)][0]; }
     else if (o.step) { let v = Math.round((SETTINGS[k] + d * o.step) * 100) / 100; if (wrap && v > o.max + 1e-6) v = o.min; SETTINGS[k] = clamp(v, o.min, o.max); if (k === 'music' || k === 'sfx') Audio2.applyVolumes(); }
     else { SETTINGS[k] = !SETTINGS[k]; if (k === 'rumble' && SETTINGS.rumble) Input.rumble(.6, .6, 200); }
+    if (k === 'time') applyTime(SETTINGS.time);
     saveSettings(); sfx('ui'); renderTab(k);
   }
   async function toggleFull() { const on = !document.fullscreenElement; SETTINGS.full = on; saveSettings(); try { if (on) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } catch (e) { } }   // the choice is kept: off stays off the next time a game starts

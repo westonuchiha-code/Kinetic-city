@@ -30,8 +30,8 @@ function paintGroundCell(kx, ky) {
   if (d === 1) for (let i = 0; i < 3; i++) { const x = R(X0 + 10, X1 - 10), y = R(Y0 + 10, Y1 - 10), r = R(4, 8); if (!onRoad(x - r, y - r) || !onRoad(x + r, y + r)) continue; gDisc(x, y, r, '#09080c'); gDisc(x + 1, y + 1, r * .55, '#1a2230'); gPx(x - 1, y - 1, '#4a5a78'); }
   for (let i = 0; i < 2; i++) { const along = i === 0, x = along ? R(X0 + 130, X0 + 350) : X0 + (rnd() < .5 ? 24 : 72), y = along ? Y0 + (rnd() < .5 ? 24 : 72) : R(Y0 + 130, Y0 + 350); if (!onRoad(x - 6, y - 6) || !onRoad(x + 6, y + 6)) continue; gDisc(x, y, 5.5, shade(g, 1.75)); gDisc(x, y, 4, shade(g, .9)); gLine(x - 3, y, x + 3, y, shade(g, 1.5)); }
   // ---- paint: centre dashes and zebra crossings
-  const dashC = d === 2 ? mix(g, '#7affea', .5) : mix(g, '#ffcd6e', d === 1 ? .2 : .36), zebra = mix(g, d === 2 ? '#bfeaff' : '#d7def0', d === 1 ? .13 : .2);
-  if (hasH) for (let x = X0 + 96; x < X1; x += 32) { if (d === 1 && hash2(x, Y0) % 10 < 3) continue; gLine(x + 4, Y0 + 47, x + 20, Y0 + 47, dashC); gLine(x + 4, Y0 + 49, x + 20, Y0 + 49, dashC); if (d === 2) gPx(x + 4, Y0 + 48, '#e8fbff'); }
+  const dashC = d === 2 ? mix(g, '#f0f0f4', .45) : mix(g, '#ffcd6e', d === 1 ? .3 : .5), zebra = mix(g, '#eef0f6', d === 1 ? .2 : .32);
+  if (hasH) for (let x = X0 + 96; x < X1; x += 32) { if (d === 1 && hash2(x, Y0) % 10 < 3) continue; gLine(x + 4, Y0 + 47, x + 20, Y0 + 47, dashC); gLine(x + 4, Y0 + 49, x + 20, Y0 + 49, dashC); }
   if (hasV) for (let y = Y0 + 96; y < Y1; y += 32) { if (d === 1 && hash2(X0, y) % 10 < 3) continue; gLine(X0 + 47, y + 4, X0 + 47, y + 20, dashC); gLine(X0 + 49, y + 4, X0 + 49, y + 20, dashC); if (d === 2) gPx(X0 + 48, y + 4, '#e8fbff'); }
   const bar = (x, y, w, h) => { if (x + w > X1 || y + h > Y1) return; if (d === 1 && hash2(x | 0, y | 0) % 10 < 2) return; gR(x, y, w, h, zebra); };
   for (let i = 0; i < 7; i++) {
@@ -40,7 +40,7 @@ function paintGroundCell(kx, ky) {
     if (hasH) { bar(X0 + 100, Y0 + o, 20, 6); if (X0 + BAND < WORLD_W) bar(X0 + 360, Y0 + o, 20, 6); }
   }
   if (d === 2) {   // lit strips along the kerbs
-    const c = mix(g, D_.col, .42);
+    const c = shade(g, 1.3);
     if (hasH) { gLine(X0 + 100, Y0 + 4, X1 - 4, Y0 + 4, c); gLine(X0 + 100, Y0 + 92, X1 - 4, Y0 + 92, c); }
     if (hasV) { gLine(X0 + 4, Y0 + 100, X0 + 4, Y1 - 4, c); gLine(X0 + 92, Y0 + 100, X0 + 92, Y1 - 4, c); }
   }
@@ -58,19 +58,19 @@ function paintGroundCell(kx, ky) {
   if (d === 1) for (let i = 0; i < 26; i++) { const e = (rnd() * 4) | 0, u = R(4, b.w - 4), v = R(3, 29), x = e < 2 ? b.x + u : (e === 2 ? b.x + v : b.x + b.w - v), y = e < 2 ? (e === 0 ? b.y + v : b.y + b.h - v) : b.y + u; gPx(x, y, rnd() < .4 ? '#2c4a2c' : rnd() < .5 ? '#6a6458' : '#3a3440'); }   // weeds and litter
   const tact = mix(side, '#e8b830', d === 1 ? .2 : .32);
   for (const o of [4, 264]) { gR(b.x + o, b.y + 1, 20, 5, tact); gR(b.x + o, b.y + b.h - 6, 20, 5, tact); gR(b.x + 1, b.y + o, 5, 20, tact); gR(b.x + b.w - 6, b.y + o, 5, 20, tact); }
-  const kerb = d === 2 ? mix(side, D_.col, .62) : mix(side, '#bec8e1', d === 1 ? .22 : .36);
+  const kerb = mix(side, '#e6e8f0', d === 1 ? .22 : .36);
   gLine(b.x, b.y, b.x + b.w, b.y, kerb); gLine(b.x, b.y, b.x, b.y + b.h, kerb); gLine(b.x, b.y + b.h - 1, b.x + b.w, b.y + b.h - 1, kerb); gLine(b.x + b.w - 1, b.y, b.x + b.w - 1, b.y + b.h, kerb);
   gLine(b.x - 2, b.y + b.h + 2, b.x + b.w + 2, b.y + b.h + 2, shade(g, .55)); gLine(b.x + b.w + 2, b.y - 2, b.x + b.w + 2, b.y + b.h + 2, shade(g, .55));   // gutter shadow on the two near sides
   for (const [x, y] of [[b.x + 40, b.y - 4], [b.x + b.w - 46, b.y + b.h + 2], [b.x - 5, b.y + b.h - 46], [b.x + b.w + 2, b.y + 40]]) gR(x, y, 6, 3, '#07080b');   // drains
   const inner = shade(side, .74);
   gR(ix, iy, iw, iw, inner);
   if (b.kind === 'park') {
-    const grass = d === 1 ? '#161f15' : d === 2 ? '#0e2a22' : '#10281b', path = side;
+    const grass = shade(d === 1 ? '#161f15' : d === 2 ? '#0e2a22' : '#10281b', LIGHT.green), path = side;
     gR(ix, iy, iw, iw, grass);
     for (let i = 0; i < 110; i++) { const x = ix + R(2, iw - 2), y = iy + R(2, iw - 2), v = rnd(); gPx(x, y, v < .45 ? shade(grass, 1.45) : v < .8 ? shade(grass, .62) : shade(grass, 1.8)); if (v > .9) gPx(x + 2, y, shade(grass, 1.45)); }
     if (d === 1) for (let i = 0; i < 6; i++) gDisc(ix + R(14, iw - 14), iy + R(14, iw - 14), R(6, 12), '#1c1712');
     gR(ix + 3 * TILE, iy, TILE, iw, path); gR(ix, iy + 3 * TILE, iw, TILE, path);
-    const pe = d === 2 ? mix(path, D_.col, .55) : shade(path, 1.3);
+    const pe = shade(path, 1.3);
     for (const o of [3 * TILE, 4 * TILE - 1]) for (const [a0, a1] of [[0, 3 * TILE], [4 * TILE, iw]]) { gLine(ix + o, iy + a0, ix + o, iy + a1, pe); gLine(ix + a0, iy + o, ix + a1, iy + o, pe); }
     for (let i = 1; i < 7; i++) { gLine(ix + 3 * TILE, iy + i * TILE, ix + 4 * TILE, iy + i * TILE, shade(path, .72)); gLine(ix + i * TILE, iy + 3 * TILE, ix + i * TILE, iy + 4 * TILE, shade(path, .72)); }
     const fl = d === 1 ? ['#8a8460'] : ['#ff8fb8', '#ffe08a', '#e8f0ff', '#9ad0ff'];
@@ -156,7 +156,7 @@ function lampArm(l) {
 }
 function drawIsoLamp(l) {
   const b = isoXY(l.x, l.y, 0), X = Math.round(b[0]), Y = Math.round(b[1]), c = lampCol(l.d), d = l.d;
-  let k = 1; if (l.broken) k = .05; else if (l.flick) k = Math.sin(G.time * 13 + l.ph) > -.7 ? 1 : .25;
+  let k = 1; if (l.broken || !LIGHT.lamps) k = .05; else if (l.flick) k = Math.sin(G.time * 13 + l.ph) > -.7 ? 1 : .25;
   const lit = k > .5, px1 = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
   if (d === 2) {            // Tower: a slim post whose top third is a light bar
     px1(X - 1, Y - 1, 3, 2, '#14151f'); px1(X, Y - 12, 1, 11, '#3d4058'); px1(X - 1, Y - 13, 3, 1, '#14151f');
@@ -181,6 +181,7 @@ function treeArt(t) {
   const d = districtAt(t.x), rnd = mulberry(hash2(Math.round(t.x), Math.round(t.y))), r = Math.round(t.r * ISO_K * .85), trunkH = Math.round(t.h * ISO_KZ) - 1;
   const bare = d === 1 && rnd() < .35, blossom = d === 2 && rnd() < .55;
   const leaf = blossom ? ['#3a1c3a', '#5c2a56', '#8e3f7a', '#d766b0', '#ffa6dc'] : d === 1 ? ['#10190f', '#1b2a17', '#27391e', '#35482a', '#4a5c38'] : ['#081a12', '#0f2a1c', '#174028', '#1f5634', '#2f7446'];
+  for (let i = 0; i < leaf.length; i++) leaf[i] = shade(leaf[i], 1 + (LIGHT.green - 1) * .55);   // brighter by day
   const W = r * 2 + 8, H = r * 2 + trunkH + 8, cv = document.createElement('canvas'); cv.width = W; cv.height = H; const g = cv.getContext('2d'), cx = W >> 1, base = H - 3, cy = base - trunkH - r + 2;
   const px1 = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
   // trunk with a root flare

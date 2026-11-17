@@ -2418,7 +2418,7 @@ function drawChar(e) {
   if (gun && gy >= -.1) drawGun();
   ctx.globalAlpha = 1;
   // extras
-  if (e.kind === 'civ' && e.umb && e.state !== 'cheer') drawUmbrella(a[0], Y + spr.top - 1, e.umb, e.state === 'flee');
+  if (e.kind === 'civ' && e.umb && e.state !== 'cheer' && WEATHER.rain > .3) drawUmbrella(a[0], Y + spr.top - 1, e.umb, e.state === 'flee');
   if (e.kind === 'sup') { const p = .5 + .5 * Math.sin(t * 8 + e.id); ctx.globalAlpha = .4 + .4 * p; ctx.strokeStyle = '#c080ff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(Math.round(a[0]) + .5, Math.round(a[1]) + .5, 10, 5, 0, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1; }
   if (e.kind === 'boss') {
     if (e.stagger > 0) for (let i = 0; i < 3; i++) { const an = t * 4 + i * TAU / 3; ipx(a[0] + Math.cos(an) * 10, Y + spr.top - 3 + Math.sin(an) * 3, '#ffd23c'); }

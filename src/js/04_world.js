@@ -23,7 +23,7 @@ const DIST = [
   { name: 'THE TOWER', gang: 'ARCHITECTS', boss: 'THE ARCHITECT', col: '#b06bff', neon: ['#b26bff', '#5ab4ff', '#ff6bf1', '#7affea'], lamp: '#cfe0ff',
     roof: ['#2a2846', '#312e54', '#25233e', '#3a3768'], wall: '#433f72', ground: '#100f1a', side: '#1c1b2a', plaza: '#1a1928', ht: [110, 240], lit: .45 }
 ];
-const NEON_GOOD = ['#3ce0ff', '#6bffd6', '#9fdcff', '#58a6ff'], NEON_EVIL = ['#ff2a4a', '#ff5a2a', '#d0143c', '#ff3d8b'];
+const NEON_GOOD = ['#c8452e', '#2e7a5a', '#e0b040', '#3a6aa8'], NEON_EVIL = ['#a83228', '#7a2e2a', '#b8642a', '#6a3038'];   // not neon any more: painted shop signs (red, green, mustard, blue), and all reds where a district is dominated
 // per district: block (column within the district, row) of each hideout, the boss arena and the parks
 const LAYOUT = [
   { hide: [[0, 1], [3, 2], [1, 5]], boss: [2, 3], parks: [[2, 0], [0, 3], [3, 5], [2, 6]], open: [[3, 0, 'lot'], [1, 3, 'court'], [2, 4, 'yard'], [0, 6, 'lot']] },

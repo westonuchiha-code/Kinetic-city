@@ -66,7 +66,7 @@ function idisc(cx, cy, r, c) {
   ctx.fillStyle = c; cx = Math.round(cx); cy = Math.round(cy);
   for (let dy = -Math.floor(r); dy <= r; dy++) { const h = Math.round(Math.sqrt(Math.max(0, r * r - dy * dy))); if (h > 0) ctx.fillRect(cx - h, cy + dy, h * 2, 1); }
 }
-function iglow(x, y, r, col, a) { ctx.globalCompositeOperation = 'lighter'; glow(x, y, r, col, a); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
+function iglow(x, y, r, col, a) { ctx.globalCompositeOperation = 'lighter'; const k = _glowK; _glowK = LIGHT.glow; glow(x, y, r, col, a); _glowK = k; ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
 // a small box sitting on a surface at height z0 (roof clutter, gate posts)
 function ibox(x, y, w, d, z0, hz, top, south, east) {
   const P_ = (a, b, z) => isoXY(a, b, z);
@@ -138,8 +138,9 @@ function initRain() {
   rain = []; for (let i = 0; i < 110; i++) rain.push({ x: rnd(ART_W), y: rnd(ART_H), l: rnd(3, 6) | 0, s: rnd(150, 230) });
 }
 function drawRain(dt) {
-  ctx.fillStyle = 'rgba(170,195,240,.28)';
-  for (const r of rain) {
+  const n = Math.round(rain.length * WEATHER.rain); if (!n) return;   // fewer streaks as a shower starts or thins out
+  ctx.fillStyle = LIGHT.name === 'night' ? 'rgba(170,195,240,.28)' : 'rgba(225,235,250,.34)';
+  for (let i = 0; i < n; i++) { const r = rain[i];
     r.y += r.s * dt; r.x += r.s * .16 * dt; if (r.y > ART_H) { r.y = -r.l; r.x = rnd(-20, ART_W); } if (r.x > ART_W) r.x -= ART_W + 10;
     const X = Math.round(r.x), Y = Math.round(r.y);
     for (let k = 0; k < r.l; k++) ctx.fillRect(X - (k / 6 | 0), Y - k, 1, 1);
@@ -226,7 +227,7 @@ function render(dt) {
   groundT();
   drawGround();
   artT(); drawSeaArt(); groundT();
-  ctx.globalCompositeOperation = 'lighter'; drawGroundLights(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'lighter'; _glowK = LIGHT.pools; drawGroundLights(); _glowK = 1; ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   drawGateStripes();
   _vis.length = 0;
   for (const e of ents) if (!e.dead && inView(e.x, e.y, 60) && e !== P) _vis.push(e);
@@ -285,7 +286,7 @@ function render(dt) {
   for (const e of ISO.lasers) drawAimLaser(e);
   drawHostileMarks();
   drawTKOverlay(); drawCharsFlatOver(); drawEffects();
-  updateSplashes(dt);
+  if (WEATHER.rain > .15) updateSplashes(dt);
   artT(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   drawRain(dt);
   // ---- scale the art up with hard pixels, then full-res post effects ----
@@ -293,6 +294,8 @@ function render(dt) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false; ctx.drawImage(artCv, 0, 0, cv.width, cv.height); ctx.imageSmoothingEnabled = true;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (G.mode !== 'title') {
+    if (LIGHT.tint) { ctx.fillStyle = LIGHT.tint; ctx.fillRect(0, 0, W, H); }
+    if (WEATHER.rain > 0 && LIGHT.name !== 'night') { ctx.fillStyle = `rgba(52,62,84,${(.2 * WEATHER.rain).toFixed(3)})`; ctx.fillRect(0, 0, W, H); }   // overcast while it rains   // the time of day's wash (sunset)
     if (G.karma > 15) { ctx.fillStyle = `rgba(60,160,255,${.05 * G.karma / 100})`; ctx.fillRect(0, 0, W, H); }
     else if (G.karma < -15) { ctx.fillStyle = `rgba(255,30,50,${.09 * -G.karma / 100})`; ctx.fillRect(0, 0, W, H); }
   }

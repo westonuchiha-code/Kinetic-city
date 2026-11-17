@@ -84,12 +84,14 @@ const Audio2 = (() => {
   const PROG = [[62, 65, 69, 38], [58, 62, 65, 34], [55, 58, 62, 31], [57, 61, 64, 33]];
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
   let nextT = 0, step = 0;
+  let rainGain = null, rainK = 1;
+  function setRain(k) { rainK = k; if (rainGain) rainGain.gain.value = .045 * k; }   // the rain hiss follows the weather
   function startAmbience() {
     if (!ac || started) return; started = true;
     const rain = ac.createBufferSource(); rain.buffer = noiseBuf; rain.loop = true;
     const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
     const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 7000;
-    const g = ac.createGain(); g.gain.value = .045; rain.connect(hp); hp.connect(lp); lp.connect(g); g.connect(sfxBus); rain.start();
+    const g = ac.createGain(); g.gain.value = .045 * rainK; rainGain = g; rain.connect(hp); hp.connect(lp); lp.connect(g); g.connect(sfxBus); rain.start();
     const rum = ac.createBufferSource(); rum.buffer = noiseBuf; rum.loop = true; rum.playbackRate.value = .5;
     const lp2 = ac.createBiquadFilter(); lp2.type = 'lowpass'; lp2.frequency.value = 160;
     const g2 = ac.createGain(); g2.gain.value = .05; rum.connect(lp2); lp2.connect(g2); g2.connect(sfxBus); rum.start();
@@ -144,7 +146,7 @@ const Audio2 = (() => {
     h.o.stop(t + .15); h.o2.stop(t + .15);
   }
   return {
-    unlock, sfx, startAmbience, applyVolumes, humStart, humSet, humStop,
+    unlock, sfx, startAmbience, setRain, applyVolumes, humStart, humSet, humStop,
     setIntensity(v) { targetI = clamp(v, 0, 1); },
     get ready() { return !!ac; }
   };

@@ -49,6 +49,7 @@ function updateCamera(dt) {
 
 /* ---------- glow sprites ---------- */
 const glowCache = new Map();
+let _glowK = 1;   // LIGHT.pools for light on the ground, LIGHT.glow inside iglow
 function glowSprite(col) {
   let c = glowCache.get(col); if (c) return c;
   if (glowCache.size > 300) glowCache.clear();
@@ -57,7 +58,7 @@ function glowSprite(col) {
   gr.addColorStop(0, `rgba(${r},${gg},${b},1)`); gr.addColorStop(.22, `rgba(${r},${gg},${b},.5)`); gr.addColorStop(.55, `rgba(${r},${gg},${b},.13)`); gr.addColorStop(1, `rgba(${r},${gg},${b},0)`);
   g.fillStyle = gr; g.fillRect(0, 0, 64, 64); glowCache.set(col, c); return c;
 }
-function glow(x, y, r, col, a = 1, sy = 1, sx = 1) { if (a <= .01) return; ctx.globalAlpha = Math.min(1, a); ctx.drawImage(glowSprite(col), x - r * sx, y - r * sy, r * 2 * sx, r * 2 * sy); }
+function glow(x, y, r, col, a = 1, sy = 1, sx = 1) { a *= _glowK; if (a <= .01) return; ctx.globalAlpha = Math.min(1, a); ctx.drawImage(glowSprite(col), x - r * sx, y - r * sy, r * 2 * sx, r * 2 * sy); }
 const kcol = () => karmaColor(Math.round(G.karma / 5) * 5);
 function neonPal(d) { const s = DS[d].status; return s === 'liberated' ? NEON_GOOD : s === 'dominated' ? NEON_EVIL : DIST[d].neon; }
 function lampCol(d) { const s = DS[d].status; return s === 'liberated' ? '#bfeaff' : s === 'dominated' ? '#ff5a4a' : DIST[d].lamp; }
