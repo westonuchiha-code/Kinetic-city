@@ -10,6 +10,8 @@ A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 
 
 **Push finished work to `main` (the user's OK, 2026-11-27).** The user's PC launcher pulls `main` from GitHub, runs `python build.py` and plays `dist/gravitation.html` fullscreen on the TV with a controller. After each finished change, push to `main` as well as the work branch; keep `build.py` and the `dist/gravitation.html` name working.
 
+**The game never draws more than 1920×1080 pixels** (`resize` in 11_render.js); on the 4K TV the browser doubles the pixels. Drawing at 3840×2160 ran at a third of the frame rate for no visible gain, since the art is 320×180.
+
 **Playtest screenshots from the TV** arrive on the orphan branch `xmb-playtest` (screenshots only, never code, never merge it). The user presses Home in the game and picks "Send Screenshot to GitHub". When the user mentions a playtest screenshot: `git fetch origin xmb-playtest`, read `git show origin/xmb-playtest:screenshots/INDEX.md` (one line per shot, newest last: time | Gravitation | build sha | commit message | file), then `git show origin/xmb-playtest:screenshots/<file>.png > <scratchpad>/shot.png` and look at it. Shots are 3840x2160; scale them down before reading.
 
 

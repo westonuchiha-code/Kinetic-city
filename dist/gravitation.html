@@ -2696,7 +2696,11 @@ function resize() {
   const sw = innerWidth, sh = innerHeight; W = Math.min(sw, sh * 16 / 9); H = W * 9 / 16;
   FRAME.x = (sw - W) / 2; FRAME.y = (sh - H) / 2;
   cv.style.left = FRAME.x + 'px'; cv.style.top = FRAME.y + 'px'; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  // Never draw more than 1920x1080 pixels. The art is 320x180, so a 4K TV gains nothing from a bigger canvas, only a
+  // four times bigger bill for the HUD and the full-screen passes; the browser doubles the pixels on the way out.
+  DPR = Math.min(DPR, 1920 / W);
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  cv.style.imageRendering = W * DPR < W * (window.devicePixelRatio || 1) - 1 ? 'pixelated' : 'auto';
   lightCv = document.createElement('canvas'); lightCv.width = Math.ceil(cv.width / LIGHT_DS); lightCv.height = Math.ceil(cv.height / LIGHT_DS); lightCtx = lightCv.getContext('2d');
   vignette = document.createElement('canvas'); vignette.width = 256; vignette.height = 256;
   const g = vignette.getContext('2d'), gr = g.createRadialGradient(128, 128, 60, 128, 128, 182);
