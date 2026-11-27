@@ -10,6 +10,8 @@ A prototype of a top-down superhero/supervillain game inspired by inFamous, GTA 
 
 **Push finished work to `main` (the user's OK, 2026-11-27).** The user's PC launcher pulls `main` from GitHub, runs `python build.py` and plays `dist/gravitation.html` fullscreen on the TV with a controller. After each finished change, push to `main` as well as the work branch; keep `build.py` and the `dist/gravitation.html` name working.
 
+**Playtest screenshots from the TV** arrive on the orphan branch `xmb-playtest` (screenshots only, never code, never merge it). The user presses Home in the game and picks "Send Screenshot to GitHub". When the user mentions a playtest screenshot: `git fetch origin xmb-playtest`, read `git show origin/xmb-playtest:screenshots/INDEX.md` (one line per shot, newest last: time | Gravitation | build sha | commit message | file), then `git show origin/xmb-playtest:screenshots/<file>.png > <scratchpad>/shot.png` and look at it. Shots are 3840x2160; scale them down before reading.
+
 
 1. **Don't overcorrect.** When something is wrong, find the *single* main cause and fix only that. Ask before making any other change. Never rebuild systems over a small issue, and never change several things at once to fix one complaint.
 2. **Keep the atmosphere.** Rain, window glow, light pools and the karma ring under the player were chosen early on. (Neon was on this list; the user has since dropped the neon cyberpunk look for an ordinary city, see "Setting" below.) Don't remove them. If a feature gets in the way, hide it rather than delete it.
