@@ -236,7 +236,7 @@ Also: `tower` (watchtower, lookout, gate, save), `fixes` (bug-fix checks), `rebi
 
 **Still open from the sweep (asked, not answered; do not change unasked):**
 - **Elites still wear the look the user rejected for the hero** (white spiky hair and shades).
-- **Esc in fullscreen on a PC browser** leaves fullscreen instead of pausing (browser behaviour; the usual cure is the Keyboard Lock API). Could not be tested here, needs a desktop browser.
+- **Esc in fullscreen:** now asks the browser to keep Esc (Keyboard Lock, in `13_ui.js`), so in Edge/Chrome fullscreen Esc pauses and holding it exits. Not yet confirmed on a real desktop browser.
 
 **Next, from the user's list:**
 - **Feel is signed off (user playtest):** "grabbing and throwing feels great", the game "feels pretty good in most aspects", and karma falls slowly enough ("true to our inspirations"). **Do not retune** `throwSpeed()`, the hold spring, hold energy cost, aim assist, `IMPACT_K` or the karma table unless the user asks.
