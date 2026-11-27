@@ -218,14 +218,15 @@ function roofPlan(b) {
     const kind = rnd() < .45 ? 'pic' : rnd() < .5 ? 'txt' : 'both';
     place('bill', kind === 'pic' ? 26 : 44, 6, { kind, pic: (rnd() * SIGN_PIC.length) | 0, g: [(rnd() * 6) | 0, (rnd() * 6) | 0, (rnd() * 6) | 0], ci: (rnd() * 4) | 0, mode: rnd() < .6 ? 0 : rnd() < .5 ? 1 : 2, ph: rnd() * 10 }, .45);
   }
-  const menu = [[['ac', 3], ['hut', 1.2], ['sky', 1.5], ['tank', 1], ['vent', 2], ['dish', 1], ['mast', .7]],
-                [['tank', 2], ['tarp', 2], ['line', 1.6], ['hut', 1], ['vent', 2], ['ac', 1], ['sky', .5]],
-                [['ac', 3], ['solar', 2.6], ['dish', 1.4], ['mast', 1], ['sky', 1], ['vent', 1]]][d];
-  const size = { ac: [18, 12], hut: [20, 16], sky: [22, 14], tank: [14, 14], vent: [4, 4], dish: [8, 8], mast: [4, 4], tarp: [20, 14], line: [28, 4], solar: [30, 16] };
+  // the world: people power and feed themselves (solar everywhere, rooftop gardens, home-made turbines)
+  const menu = [[['ac', 2], ['hut', 1.2], ['sky', 1], ['tank', 1], ['vent', 1.5], ['dish', 1], ['mast', .5], ['solar', 2.2], ['garden', 1.6], ['turbine', .7], ['green', .6]],
+                [['tank', 2], ['tarp', 2], ['line', 1.6], ['hut', 1], ['vent', 1.5], ['solar', 1.6], ['garden', 2.2], ['turbine', 1], ['green', .5]],
+                [['ac', 2], ['solar', 3], ['dish', 1.2], ['mast', .8], ['sky', 1], ['vent', 1], ['green', 1.2], ['garden', .8], ['turbine', .5]]][d];
+  const size = { ac: [18, 12], hut: [20, 16], sky: [22, 14], tank: [14, 14], vent: [4, 4], dish: [8, 8], mast: [4, 4], tarp: [20, 14], line: [28, 4], solar: [30, 16], garden: [30, 20], green: [26, 18], turbine: [6, 6] };
   const total = menu.reduce((a, m) => a + m[1], 0), n = clamp(Math.round(w * h / 2400), 2, 16);
   for (let i = 0; i < n; i++) {
     let r = rnd() * total, k = menu[0][0]; for (const m of menu) { if (r < m[1]) { k = m[0]; break; } r -= m[1]; }
-    if ((k === 'hut' || k === 'mast') && R.some(o => o.k === k)) k = 'vent';
+    if ((k === 'hut' || k === 'mast' || k === 'green') && R.some(o => o.k === k)) k = 'vent';
     place(k, size[k][0], size[k][1], { c: (rnd() * 4) | 0 });
   }
   if ((hash2(b.x, b.y) & 3) === 0 && !R.some(o => o.k === 'mast')) place('mast', 4, 4, {});   // the old red rooftop light keeps its place in the skyline
@@ -317,11 +318,38 @@ function paintRoof(b, st, fx, pal, litK) {
       for (const p of [a, c]) { ctx.fillStyle = '#4a4e5a'; ctx.fillRect(Math.round(p[0]), Math.round(p[1]) - 6, 1, 6); }
       iline([a[0], a[1] - 6], [c[0], c[1] - 6], '#2e3038');
       const n = Math.round(c[0] - a[0]); for (let i = 2, k = (o.c | 0); i < n - 1; i += 3, k++) { ctx.fillStyle = cols[k % cols.length]; ctx.fillRect(Math.round(a[0]) + i, Math.round(lerp(a[1], c[1], i / n)) - 5, 2, 2 + (k & 1)); }
-    } else if (o.k === 'solar') {
-      const q = [isoXY(X, Y, ht + 2), isoXY(X + o.w, Y, ht + 2), isoXY(X + o.w, Y + o.h, ht + 2), isoXY(X, Y + o.h, ht + 2)];
-      ipoly(q.map(p => [p[0], p[1] + 1]), '#0a0c12'); ipoly(q, '#1a2c52');
-      for (let u = 6; u < o.w; u += 6) iline(isoXY(X + u, Y, ht + 2), isoXY(X + u, Y + o.h, ht + 2), '#35548e');
-      iline(isoXY(X, cy, ht + 2), isoXY(X + o.w, cy, ht + 2), '#35548e'); iline(q[0], q[1], '#5a7cc0');
+    } else if (o.k === 'solar') {   // rows of panels tilted up to the sky on steel legs
+      for (let r0 = 0; r0 + 6 <= o.h; r0 += 8) {
+        const lo = ht + 2, hi = ht + 8, q = [isoXY(X, Y + r0, hi), isoXY(X + o.w, Y + r0, hi), isoXY(X + o.w, Y + r0 + 6, lo), isoXY(X, Y + r0 + 6, lo)];
+        for (const u of [2, o.w - 2]) iline(isoXY(X + u, Y + r0, ht), isoXY(X + u, Y + r0, hi), '#3a3e4a');
+        ipoly(q.map(p => [p[0] + 1, p[1] + 1]), '#0a0c12'); ipoly(q, '#1c2e50');
+        for (let u = 5; u < o.w; u += 5) iline(isoXY(X + u, Y + r0, hi), isoXY(X + u, Y + r0 + 6, lo), '#2f4a7a');
+        iline(q[0], q[1], '#8aa6d8'); iline(q[3], q[2], '#121a2c');
+        if ((hash2(X + r0, Y) & 3) === 0) { const g = isoXY(X + 4 + (hash2(X, Y + r0) % Math.max(1, o.w - 8)), Y + r0 + 2, hi - 2); ipx(g[0], g[1], '#c8d8f0'); }   // sun glint
+      }
+    } else if (o.k === 'garden') {   // raised beds: timber edges, soil, rows of greens (tomatoes, beans on canes)
+      const bed = (bx, by, bw, bh) => {
+        ibox(bx, by, bw, bh, ht, 4, '#3a2a1c', '#6a4a2a', '#4a3220');
+        const top = [isoXY(bx + 1, by + 1, ht + 4), isoXY(bx + bw - 1, by + 1, ht + 4), isoXY(bx + bw - 1, by + bh - 1, ht + 4), isoXY(bx + 1, by + bh - 1, ht + 4)]; ipoly(top, '#2c2018');
+        for (let u = 3; u < bw - 2; u += 4) for (let v = 2; v < bh - 1; v += 3) { const p = isoXY(bx + u, by + v, ht + 4), hh = hash2(bx + u * 7, by + v * 13), gc = ['#2e6a2a', '#3e7e32', '#4e8e3a', '#2a5a24'][hh & 3];
+          ctx.fillStyle = gc; ctx.fillRect(Math.round(p[0]), Math.round(p[1]) - 2, 2, 2); ctx.fillStyle = shade(gc, 1.3); ctx.fillRect(Math.round(p[0]), Math.round(p[1]) - 3, 1, 1);
+          if ((hh >> 4) % 7 === 0) ipx(p[0] + 1, p[1] - 2, '#d04a32'); else if ((hh >> 4) % 9 === 0) ipx(p[0] + 1, p[1] - 2, '#e0b040'); }   // tomatoes, squash flowers
+      };
+      bed(X, Y, o.w, Math.floor(o.h / 2) - 1); bed(X, Y + Math.ceil(o.h / 2) + 1, o.w, Math.floor(o.h / 2) - 1);
+      if (o.s < .5) for (const u of [4, o.w - 4]) { const a = isoXY(X + u, Y + o.h / 2, ht), c = isoXY(X + u, Y + o.h / 2, ht + 18); iline(a, c, '#7a6040'); ipx(c[0] - 1, c[1] + 2, '#3e7e32'); ipx(c[0] + 1, c[1] + 4, '#3e7e32'); }   // bean canes
+      { const p = isoXY(X + o.w + 3, Y + 3, ht); ctx.fillStyle = '#3a5a8a'; ctx.fillRect(Math.round(p[0]) - 1, Math.round(p[1]) - 4, 3, 4); ctx.fillStyle = '#5a7aaa'; ctx.fillRect(Math.round(p[0]) - 1, Math.round(p[1]) - 4, 3, 1); }   // rain barrel
+    } else if (o.k === 'green') {   // a lean-to greenhouse: timber frame, glass, plants inside, a warm grow-light at night
+      const hz = 12, gl = '#6a8a90';
+      ibox(X, Y, o.w, o.h, ht, hz, mix('#a8c8c0', roof, .3), mix(gl, '#2a4a30', .35), mix(gl, '#1a3020', .45));
+      for (let u = 4; u < o.w; u += 5) { iline(isoXY(X + u, Y + o.h, ht), isoXY(X + u, Y + o.h, ht + hz), '#5a4a3a'); }
+      for (let v = 4; v < o.h; v += 5) iline(isoXY(X + o.w, Y + v, ht), isoXY(X + o.w, Y + v, ht + hz), '#4a3a2a');
+      iline(isoXY(X, Y + o.h, ht + hz), isoXY(X + o.w, Y + o.h, ht + hz), '#6a5a48');
+      for (let u = 3; u < o.w - 2; u += 3) { const p = isoXY(X + u, Y + o.h, ht + 3 + (u * 7) % 4); ipx(p[0], p[1], '#4e8e3a'); ipx(p[0], p[1] - 1, '#3e7e32'); }
+      fx.glow.push({ x: cx, y: Y + o.h, z: ht + 6, r: 9, col: '#ffcf90', a: .3 });
+    } else if (o.k === 'turbine') {   // home-made wind turbine: a pole, a hub, three blades (they turn: drawn live)
+      const p = isoXY(cx, cy, ht), PX = Math.round(p[0]), PY = Math.round(p[1]);
+      ctx.fillStyle = '#2a2d38'; ctx.fillRect(PX - 1, PY - 1, 3, 1); ctx.fillStyle = '#7a7f8c'; ctx.fillRect(PX, PY - 20, 1, 20); ctx.fillStyle = '#4a4e5a'; ctx.fillRect(PX - 1, PY - 22, 3, 3);
+      fx.turbines.push({ x: cx, y: cy, ph: o.s * 6.28, sp: 3 + o.s * 3 });
     } else if (o.k === 'bill') {
       const p = isoXY(cx, cy, ht), dims = { pic: [13, 13], txt: [21, 11], both: [25, 13] }[o.kind], SX = Math.round(p[0]) - (dims[0] >> 1), SY = Math.round(p[1]) - dims[1] - 4;
       signPanel(o, pal, SX, SY, false);
@@ -366,7 +394,7 @@ const BLD_TAGS = [['#..#.', '#.#.#', '.#..#'], ['.##..', '#..#.', '#.###'], ['#.
 function paintBuilding(b, st) {
   const x0 = b.x, y0 = b.y, x1 = b.x + b.w, y1 = b.y + b.h, ht = b.ht, d = b.d, wall = b.wall;
   const pal = neonPal(d), litK = st === 'liberated' ? 1.35 : st === 'dominated' ? .75 : 1;
-  const fx = { flick: [], glow: [], steam: [], bills: [], beacons: [], blades: [] };
+  const fx = { flick: [], glow: [], steam: [], bills: [], beacons: [], blades: [], turbines: [] };
   const g = wallGeo(b), { S, E, nS, nE, nR } = g, cw = ctx.canvas.width, ch = ctx.canvas.height, img = ctx.createImageData(cw, ch), data = img.data;
   const rr = mulberry(hash2(b.x * 3 + 17, b.y * 5 + 29));
   const setRGB = (X, Y, c, k) => { if (X < 0 || Y < 0 || X >= cw || Y >= ch) return; const o = (Y * cw + X) * 4; data[o] = Math.min(255, c[0] * k); data[o + 1] = Math.min(255, c[1] * k); data[o + 2] = Math.min(255, c[2] * k); data[o + 3] = 255; };
@@ -410,6 +438,26 @@ function paintBuilding(b, st) {
     if (on && wn.roll < .08) fx.glow.push({ x: wx, y: wy, z: wz, r: 6, col: lc0, a: .3 });
     // an air conditioner hanging under the odd window
     if (!glass && (hash2(ic + b.x, jc * 7 + b.y + side) % 100) < (d === 1 ? 14 : 7) && jc > 9) { put(W(ic, jc - 3), side ? '#7c8290' : '#aab0bc'); put(W(ic + 1, jc - 3), side ? '#565b68' : '#7c8290'); put(W(ic, jc - 4), shade(wall, side ? .45 : .7)); }
+  }
+  // ---- moss and ivy: the city has been left to the weather a while. Damp bases, streaks under ledges and sills, a few
+  //      buildings with ivy climbing a corner. Most in the Slums, some in Ground Zero, little on the Tower's glass.
+  { const mossK = [.55, 1, .18][d], mr = mulberry(hash2(b.x + 41, b.y + 97)), mc = ['#2e4a24', '#3a5a2a', '#4a6a30', '#243c1e'];
+    for (let side = 0; side < 2; side++) {
+      const n = side ? nE : nS, W = side ? E : S, dk = side ? .72 : 1;
+      for (let i = 0; i < n; i++) {   // damp base: a ragged band of moss along the foot of the wall
+        const hgt = Math.floor((Math.sin(i * .7 + b.x) * .5 + .5) * 3 * mossK + mr() * 2 * mossK);
+        for (let j = 1; j <= hgt; j++) if (mr() < .78) put(W(i, j), shade(mc[(mr() * 4) | 0], dk));
+      }
+      if (mossK > .3) for (let k = 0, m = Math.round(n / 14 * mossK); k < m; k++) {   // streaks running down from the roof edge
+        const i = 2 + ((mr() * (n - 4)) | 0), len = 3 + ((mr() * 8 * mossK) | 0);
+        for (let j = nR - 2, q = 0; q < len && j > 1; j--, q++) if (mr() < .85 - q * .06) put(W(i + (mr() < .2 ? 1 : 0), j), shade(mc[(mr() * 4) | 0], dk * (1 - q * .03)));
+      }
+      if (mr() < .45 * mossK && n > 12) {   // ivy up one stretch of wall: a twisting stem with leaves on both sides
+        let i = 2 + ((mr() * (n - 6)) | 0); const top = Math.min(nR - 2, 6 + ((mr() * nR) | 0));
+        for (let j = 1; j < top; j++) { i += mr() < .3 ? (mr() < .5 ? -1 : 1) : 0; i = clamp(i, 1, n - 2); put(W(i, j), shade('#2a3a1c', dk));
+          if (mr() < .7) put(W(i - 1, j), shade(mc[1 + ((mr() * 3) | 0)], dk)); if (mr() < .7) put(W(i + 1, j), shade(mc[1 + ((mr() * 3) | 0)], dk)); if (mr() < .3) put(W(i + (mr() < .5 ? -2 : 2), j), shade(mc[2], dk)); }
+      }
+    }
   }
   // ---- drainpipes, fire escape
   if (d !== 2) {
@@ -520,6 +568,11 @@ function drawIsoBuilding(b) {
     if (!on) continue;
     const p = isoXY(s.x, s.y, ht), SX = Math.round(p[0]) + s.dx, SY = Math.round(p[1]) + s.dy;
     ctx.drawImage(s.cv, SX, SY); iglow(SX + s.w / 2, SY + s.h / 2, s.w * .9, s.col, .42);
+  }
+  for (const tb of (fx.turbines || [])) {   // home-made turbines: three blades turning (pixel lines from the hub)
+    const p = isoXY(tb.x, tb.y, ht), hx = Math.round(p[0]), hy = Math.round(p[1]) - 21, a0 = t * tb.sp + tb.ph;
+    for (let k = 0; k < 3; k++) { const a = a0 + k * 2.094; iline([hx, hy], [hx + Math.cos(a) * 7, hy + Math.sin(a) * 5], '#d8d4c8'); }
+    ipx(hx, hy, '#2a2d38');
   }
   for (const m of fx.beacons) { const on = Math.sin(t * 2.4 + b.x + m.x) > 0, p = isoXY(m.x, m.y, ht), PX = Math.round(p[0]), PY = Math.round(p[1]) - m.hh - 1; ctx.fillStyle = on ? '#ff2a2a' : '#401010'; ctx.fillRect(PX, PY, 1, 2); if (on) iglow(PX + .5, PY + 1, 6, '#ff2a2a', .7); }
   for (const v of fx.steam) {
