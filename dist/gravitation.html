@@ -8642,6 +8642,10 @@ const UI = (() => {
     if (k === 'time' && !SCENE.time) applyTime(SETTINGS.time);   // a story scene keeps its own time of day
     saveSettings(); sfx('ui'); renderTab(k);
   }
+  // In fullscreen Edge and Chrome let a page keep Esc for itself (Keyboard Lock), so Esc pauses instead of leaving
+  // fullscreen; holding Esc still gets you out. Other browsers simply ignore it.
+  const lockEsc = () => { try { if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock(['Escape']).catch(() => { }); } catch (e) { } };
+  document.addEventListener('fullscreenchange', () => { if (document.fullscreenElement) lockEsc(); });
   async function toggleFull() { const on = !document.fullscreenElement; SETTINGS.full = on; saveSettings(); try { if (on) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } catch (e) { } }   // the choice is kept: off stays off the next time a game starts
   document.addEventListener('fullscreenchange', () => { if (layer === 'pause' && tab === 'settings') renderTab(focus && focus.dataset.k); });
 
