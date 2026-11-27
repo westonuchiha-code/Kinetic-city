@@ -403,6 +403,7 @@ function updateAI(dt) {
       case 'hideout': aiHideout(e, dt); break;
       case 'tower': aiTower(e, dt); break;
       case 'car': aiCar(e, dt); break;
+      default: if (MACH[e.kind]) { aiMachine(e, dt); if (e.team === 'gang' && e.tgt === P) threat++; }
     }
   }
   Audio2.setIntensity(threat / 4);

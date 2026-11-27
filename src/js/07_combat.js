@@ -144,6 +144,13 @@ function kill(e, info) {
   if (e.dead) return; e.dead = true; info = info || {};
   const k = e.kind, byP = info.by === 'player' || (k !== 'civ' && e.lastHitBy === 'player');   // a civilian you once brushed is not your kill when someone else finishes them
   if (e.held || e === (P && P.holding)) { e.held = false; if (P && P.holding === e) dropHeld(); }
+  if (MACH[k] || k === 'cell') {   // machines: they break up in sparks; batteries and crawlers go off
+    FX.sparks(e.x, e.y, 12, ZAP_COL, 240); FX.debris(e.x, e.y, k === 'loader' ? 14 : 6, '#5a5e6a', 200); FX.smoke(e.x, e.y, 3, '#3a3d48', .8); sfx('hit', e.x, e.y);
+    if (k === 'crawler' || k === 'cell') elecBurst(e.x, e.y, k === 'cell' ? 84 : 72, k === 'cell' ? 30 : 22, byP ? 'player' : (info.by || 'gang'));
+    if (e.team === 'gang') reward(e, byP); else if (k === 'cell' && byP) comboHit();
+    if (k !== 'cell' && Math.random() < (k === 'sweeper' ? .5 : .35)) pickups.push({ x: e.x, y: e.y, vx: rnd(-40, 40), vy: rnd(-40, 40), type: 'en', life: 16 });   // solar cells: a bit of energy
+    return;
+  }
   if (k === 'civ') {
     FX.dots(e.x, e.y, 8, '#a03040', 70, .6);
     if (byP) { karmaAdd(KARMA.civKill); heatAdd(.9); G.civKills++; toast('Civilian casualty', '#ff3355'); sfx('bad'); G.combo = 0; }

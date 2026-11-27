@@ -21,6 +21,7 @@ function populate(save) {
   }
   for (const s of spots.props) mk(s.k, s.x, s.y, { ang: s.ang, col: pick(CAR_COLS) });   // parked cars and material piles in open blocks
   for (const s of spots.shards) if (!(save && save.shardIds.includes(s.id))) pickups.push({ x: s.x, y: s.y, type: 'shard', id: s.id, life: 1e9 });
+  populateMachines();
   if (!save) { // a small kit of throwables right where the game starts
     mk('crate', START.x + 26, START.y - 60); mk('crate', START.x - 14, START.y + 70, { ang: .4 }); mk('barrel', START.x + 70, START.y + 36);
     mk('car', 112, START.y + 120, { col: '#2f5fb8', ang: Math.PI / 2 });
@@ -286,7 +287,7 @@ function update(dt) {
   buildActive();
   computeFlow(P.x, P.y);
   if (G.mode === 'dead') { G.deadT -= dt; if (G.deadT <= 0) respawn(); }
-  updatePlayer(dt); updateAI(dt); updateWells(dt); physics(dt); updateBullets(dt);
+  updatePlayer(dt); updateAI(dt); updateHazards(dt); updateWells(dt); physics(dt); updateBullets(dt);
   if (G.mode === 'play') { updateEncounters(dt); updatePickups(dt); tutorial(); }
   streamPopulation(dt);
   G.gateMsgT = (G.gateMsgT || 0) - dt;

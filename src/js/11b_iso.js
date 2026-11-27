@@ -282,10 +282,10 @@ function render(dt) {
   ISO.upright = false;
   // ---- overlays on the ground (pixel effects, art space): warnings, aim lasers, hostile markers, telekinesis, effects, splashes ----
   artT();
-  drawWarns();
+  drawWarns(); drawHazards();
   for (const e of ISO.lasers) drawAimLaser(e);
   drawHostileMarks();
-  drawTKOverlay(); drawCharsFlatOver(); drawEffects();
+  drawTKOverlay(); drawCharsFlatOver(); drawEffects(); drawZaps();
   if (WEATHER.rain > .15) updateSplashes(dt);
   artT(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   drawRain(dt);
