@@ -287,7 +287,7 @@ function update(dt) {
   buildActive();
   computeFlow(P.x, P.y);
   if (G.mode === 'dead') { G.deadT -= dt; if (G.deadT <= 0) respawn(); }
-  updatePlayer(dt); updateAI(dt); updateHazards(dt); updateWells(dt); physics(dt); updateBullets(dt);
+  updatePlayer(dt); updateAI(dt); updateHazards(dt); updateSkyDrones(dt); updateWells(dt); physics(dt); updateBullets(dt);
   if (G.mode === 'play') { updateEncounters(dt); updatePickups(dt); tutorial(); }
   streamPopulation(dt);
   G.gateMsgT = (G.gateMsgT || 0) - dt;
