@@ -13,9 +13,11 @@ Object.assign(DEFS, {
   cell:    { r: 10, m: 3, hp: 20, team: 'prop', prop: 1, grab: 1, rest: .35, fric: .93, elec: 1 },
   hive:    { r: 13, m: 6, hp: 90, team: 'gang', static: 1, rest: .2, xp: 25 },
   scanner: { r: 8, m: 1, hp: 22, team: 'gang', rest: .4, grab: 1, xp: 10, speed: 70, hover: 30 },
-  mirror:  { r: 9, m: 4, hp: 60, team: 'gang', static: 1, rest: .2, xp: 10 }
+  mirror:  { r: 9, m: 4, hp: 60, team: 'gang', static: 1, rest: .2, xp: 10 },
+  vendbot: { r: 9, m: 4, hp: 40, team: 'bot', rest: .3, grab: 1, speed: 26 },
+  fixer:   { r: 7, m: 1, hp: 20, team: 'bot', rest: .4, grab: 1, speed: 80, hover: 26 }
 });
-const MACH = { sweeper: 1, zapper: 1, crawler: 1, sentry: 1, loader: 1, mite: 1, hive: 1, scanner: 1, mirror: 1 };
+const MACH = { sweeper: 1, zapper: 1, crawler: 1, sentry: 1, loader: 1, mite: 1, hive: 1, scanner: 1, mirror: 1, vendbot: 1, fixer: 1 };
 const ZAP_COL = '#fff2b0', ZAP_HOT = '#ffffff';
 const zaps = [];          // lightning drawn for a moment: { pts, life, max }
 const hazards = [];       // downed power lines: { x0, y0, x1, y1, t, arc, warn }
@@ -57,6 +59,33 @@ function aiMachine(e, dt) {
     if (e.scared > 0) { e.scared -= dt; steer(e, e.fx, e.fy, 120, dt); face(e, Math.atan2(e.fy, e.fx), dt, 8); return; }
     wander(e, dt, e.speed, civWalk); face(e, Math.atan2(e.vy, e.vx), dt, 4);
     if (Math.random() < dt * .8) FX.dust(e.x + Math.cos(e.ang) * 8, e.y + Math.sin(e.ang) * 8, 1, '#6a6458');
+    return;
+  }
+  if (k === 'vendbot') {   // a walking vending machine: trundles the pavement, stops for customers, and if you stand by it, hands you a drink (energy)
+    if (e.scared > 0) { e.scared -= dt; steer(e, e.fx, e.fy, 70, dt); return; }
+    const pd = P ? dist(P, e) : 1e9;
+    if (pd < 34 && G.mode === 'play') { steer(e, 0, 0, 0, dt); face(e, Math.atan2(P.y - e.y, P.x - e.x), dt, 6); e.sell = (e.sell || 0) + dt;
+      if (e.sell > 1.2 && e.cd <= 0) { e.cd = 25; e.sell = 0; pickups.push({ x: e.x + Math.cos(e.ang) * 12, y: e.y + Math.sin(e.ang) * 12, vx: 0, vy: 0, type: 'en', life: 20 }); sfx('pickup', e.x, e.y, .5); civSay(e, '☕', 1.4); }
+      return; }
+    e.sell = 0; let cust = 0; for (const o of act) if (o.kind === 'civ' && !o.dead && o.faceTo === e) cust++;
+    if (cust) { steer(e, 0, 0, 0, dt); return; }
+    wander(e, dt, e.speed, civWalk); face(e, Math.atan2(e.vy, e.vx), dt, 4);
+    for (const o of act) if (o.kind === 'civ' && !o.dead && !(o.pauseT > 0) && o.role && o.role !== 'jogger' && !o.fixed && dist2(o, e) < 30 * 30 && Math.random() < dt * .3) { o.pauseT = rnd(2, 4); o.faceTo = e; civSay(o, '?', 1); }
+    if (e.say) { e.say.t -= dt; if (e.say.t <= 0) e.say = null; }
+    return;
+  }
+  if (k === 'fixer') {     // repair drone: flies to downed power lines and makes them safe for a while, otherwise tends the charging posts
+    if (e.say) { e.say.t -= dt; if (e.say.t <= 0) e.say = null; }
+    if (!e.job || e.job.done) {
+      let best = null, bd = 900 * 900; for (const h of hazards) { if (h.safeT > 0) continue; const mx = (h.x0 + h.x1) / 2, my = (h.y0 + h.y1) / 2, d = (mx - e.x) ** 2 + (my - e.y) ** 2; if (d < bd) { bd = d; best = h; } }
+      if (best) e.job = { h: best, x: (best.x0 + best.x1) / 2, y: (best.y0 + best.y1) / 2, t: 0 };
+      else { const ks = streetFurniture().filter(f => f.k === 'kiosk' && Math.hypot(f.x - e.x, f.y - e.y) < 700); const kk = ks.length ? pick(ks) : null; e.job = kk ? { x: kk.x + 2, y: kk.y + 2, t: 0, kiosk: true } : { x: e.home.x + rnd(-200, 200), y: e.home.y + rnd(-200, 200), t: 0, kiosk: true }; }
+    }
+    const j = e.job, dx = j.x - e.x, dy = j.y - e.y, d = Math.hypot(dx, dy);
+    if (d > 10) { steer(e, dx, dy, e.speed, dt, 4); face(e, Math.atan2(dy, dx), dt, 6); return; }   // flies straight over everything
+    steer(e, 0, 0, 0, dt, 6); j.t += dt; if (Math.random() < dt * 8) FX.sparks(e.x, e.y, 2, '#ffd27a', 100);
+    if (j.h && j.t > 4) { j.h.safeT = 60; j.h.arc = 0; j.done = true; civSay(e, '!', 1); }
+    else if (j.kiosk && j.t > rnd(5, 9)) j.done = true;
     return;
   }
   if (k === 'sentry') {    // a turret on a post: sweeps, locks on, fires three-round bursts
@@ -132,6 +161,7 @@ function aiMachine(e, dt) {
 function updateHazards(dt) {
   for (const h of hazards) {
     if (Math.abs((h.x0 + h.x1) / 2 - P.x) > ACTIVE_R || Math.abs((h.y0 + h.y1) / 2 - P.y) > ACTIVE_R) continue;
+    if (h.safeT > 0) { h.safeT -= dt; h.arc = 0; continue; }   // patched by a repair drone for a while
     h.t -= dt;
     if (h.arc > 0) {
       h.arc -= dt; h.tick = (h.tick || 0) - dt;
@@ -150,6 +180,8 @@ function updateHazards(dt) {
 function populateMachines() {
   hazards.length = 0; zaps.length = 0;
   for (let d = 0; d < 3; d++) for (let i = 0; i < [6, 4, 7][d]; i++) { const p = randomInDistrict(d, t => t === T.WALK, 10); if (p) mk('sweeper', p.x, p.y, { col: '#e0a030' }); }
+  for (let d = 0; d < 3; d++) for (let i = 0; i < [4, 3, 5][d]; i++) { const p = randomInDistrict(d, t => t === T.WALK, 10); if (p) mk('vendbot', p.x, p.y, { col: pick(['#c8452e', '#2e7a5a', '#3a6aa8']), home: p }); }
+  for (let d = 0; d < 3; d++) for (let i = 0; i < 2; i++) { const p = randomInDistrict(d, t => t === T.ROAD, 10); if (p) mk('fixer', p.x, p.y, { home: p }); }
   for (const b of blocks) {
     const cx = b.x + b.w / 2, cy = b.y + b.h / 2, d = b.d, home = { x: cx, y: cy };
     if (b.kind === 'yard') {   // the machine yard: a loader and its crawlers

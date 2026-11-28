@@ -68,6 +68,25 @@ function drawMachine(e) {
     if (e.hp < e.maxhp) { const top = P3(0, 0, 31), bw = 12, bx = Math.round(top[0] - 6), by = Math.round(top[1]); ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(bx - 1, by - 1, bw + 2, 3); ctx.fillStyle = '#ff3d5a'; ctx.fillRect(bx, by, Math.max(0, Math.round(bw * e.hp / e.maxhp)), 1); }
     return;
   }
+  if (k === 'vendbot') {   // walking vending machine: a tall box on short legs, a glass front of cans, a coin slot, a solar lid
+    const P3 = mframe(e), g = Math.floor(e.walk * 3) & 1; mshadow(e, 8, 4);
+    for (const [ly, ph] of [[-3, 0], [3, 1]]) { const up = (ph ^ g) ? 1.5 : 0; pixBox(e, P3, 0, 3, 3, up, 4 + up, W('#2a2d36'), W('#3a3e4a')); }
+    pixBox(e, P3, 0, 10, 12, 4, 26, W(e.col), W(shade(e.col, 1.2)), (i, quad) => {
+      if (i === 0) { quad(i, .12, .62, 9, 23, '#1a2028'); for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) quad(i, .17 + c * .15, .25 + c * .15, 11 + r * 4, 13 + r * 4, ['#e0b040', '#c8452e', '#f6e7c1', '#4e8e3a'][(r + c + e.id) % 4]); quad(i, .72, .86, 15, 19, '#3a3e4a'); quad(i, .72, .86, 9, 10.5, '#0a0a0e'); }
+      quad(i, 0, 1, 4, 5.5, W(shade(e.col, .6)));
+    }, tp => solarTop(tp));
+    if (e.say) drawCivExtras(e, P3(0, 0, 0)[0], P3(0, 0, 26)[1]);
+    return;
+  }
+  if (k === 'fixer') {     // repair drone: a small yellow body, a camera eye, a welding arm underneath
+    const hov = (e.def.hover || 26) + Math.sin(t * 5 + e.id) * 1.2, P3 = mframe(e, hov); mshadow(e, 5, 2.5);
+    const spin = Math.floor(t * 30) & 1;
+    for (const [ax, ay] of [[5, 5], [5, -5], [-5, 5], [-5, -5]]) { iline(P3(0, 0, 3), P3(ax, ay, 3), '#3a3e4a'); const c = P3(ax, ay, 4.5); iellipse(c[0], c[1], 2.6, 1.2, spin ? 'rgba(200,204,214,.75)' : 'rgba(122,127,140,.75)'); }
+    pixBox(e, P3, 0, 8, 6, 0, 5, W('#e0b040'), W('#f0c860'), (i, quad) => { if (i === 0) quad(i, .35, .65, 1.5, 3.5, '#1a2028'); quad(i, 0, 1, 0, 1, W('#8a6a20')); });
+    const arm = P3(3, 0, -2); iline(P3(2, 0, 0), arm, '#5a5e6a'); if (e.job && e.job.t > 0) { ipx(arm[0], arm[1], '#ffffff'); iglow(arm[0], arm[1], 6, '#ffd27a', .6); }
+    if (e.say) drawCivExtras(e, P3(0, 0, 0)[0], P3(0, 0, 8)[1]);
+    return;
+  }
   if (k === 'hive') {      // mite hive: a hexagonal-ish stack of boxes, a solar lid, mites' doorways that glow
     const P3 = mframe(e); mshadow(e, 13, 6.5);
     pixBox(e, P3, 0, 22, 22, 0, 10, W('#5a5e4a'), W('#6a6e58'), (i, quad) => { for (let q = .15; q < .9; q += .25) quad(i, q, q + .1, 3, 7, '#0e0e0a'); quad(i, 0, 1, 0, 1.4, '#2a2c22'); });

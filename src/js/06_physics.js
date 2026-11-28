@@ -7,6 +7,7 @@
 const invM = e => e.static ? 0 : 1 / e.m;
 
 function collideTiles(e) {
+  if (e.kind === 'fixer' && !e.held && e.stun <= 0) return;   // the repair drone flies above the roofs
   const r = e.r, x0 = Math.floor((e.x - r) / TILE), x1 = Math.floor((e.x + r) / TILE), y0 = Math.floor((e.y - r) / TILE), y1 = Math.floor((e.y + r) / TILE);
   let worst = 0, nxW = 0, nyW = 0;
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
