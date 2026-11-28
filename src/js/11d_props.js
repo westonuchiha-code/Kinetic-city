@@ -264,7 +264,7 @@ const PROPS_ISO = { car: 1, crate: 1, dumpster: 1, barrel: 1 };
 // every person and prop is now pixel art; anything else (none at the moment) falls back to the old drawing
 function drawUpright(e) {
   if (PEOPLE[e.kind] || e === P) { artT(); drawChar(e); if (e.aimT > 0 && (e.kind === 'grunt' || e.kind === 'cop')) drawAimLaser(e); return; }
-  if (MACH[e.kind] || e.kind === 'cell') { artT(); drawMachine(e); return; }
+  if (MACH[e.kind] || e.kind === 'cell' || e.kind === 'panels' || e.kind === 'wtank') { artT(); drawMachine(e); return; }
   if (PROPS_ISO[e.kind]) { artT(); drawIsoProp(e); return; }
   if (e.kind === 'tower') { artT(); drawIsoTower(e); if (e.lk && e.lk.aimT > 0) drawAimLaser(e.lk); return; }
   uprightT(e.x, e.y);

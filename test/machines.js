@@ -7,9 +7,9 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await p.goto('file://' + ROOT + '/dist/gravitation.html'); await p.waitForTimeout(400);
   await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(500);
   await p.evaluate(() => { KC.start(); KC.skip(); G.seen = new Proxy({}, { get: () => 1, set: () => true }); KC.time('day'); KC.weather('dry'); SETTINGS.hud = .7; });
-  const counts = await p.evaluate(() => { const c = {}; for (const e of ents) if (!e.dead && (MACH[e.kind] || e.kind === 'cell')) c[e.kind] = (c[e.kind] || 0) + 1; c.powerLines = hazards.length; return c; });
+  const counts = await p.evaluate(() => { const c = {}; for (const e of ents) if (!e.dead && (MACH[e.kind] || e.kind === 'cell' || e.kind === 'panels' || e.kind === 'wtank')) c[e.kind] = (c[e.kind] || 0) + 1; c.powerLines = hazards.length; return c; });
   console.log('in the world:', JSON.stringify(counts));
-  ok('every machine is placed in the world', ['sweeper', 'zapper', 'crawler', 'sentry', 'loader', 'cell', 'hive', 'scanner', 'mirror'].every(k => counts[k] > 0) && counts.powerLines > 0);
+  ok('every machine is placed in the world', ['sweeper', 'zapper', 'crawler', 'sentry', 'loader', 'cell', 'hive', 'scanner', 'mirror', 'vendbot', 'fixer', 'panels', 'wtank', 'courier'].every(k => counts[k] > 0) && counts.powerLines > 0);
   const stage = async (setup, ms, name) => { await p.evaluate(setup); await p.waitForTimeout(ms); await p.evaluate(() => { G.hint = null; G.toasts.length = 0; }); await p.screenshot({ path: ROOT + '/screenshots/machines_' + name + '.png' }); };
   const clear = `const x = 1008, y = 1392; for (const e of ents) if (e !== P && !e.dead && e.kind !== 'hideout' && e.kind !== 'tower' && Math.hypot(e.x - x, e.y - y) < 600) e.dead = true; KC.tp(x, y); P.invT = 1e9; P.hp = S.maxHp; P.energy = S.maxEn;`;
   // line-up: everything standing still, facing the camera
@@ -25,6 +25,10 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await stage(new Function(clear + `spawnGang('hive', P.x + 110, P.y - 20, { home: { x: P.x + 110, y: P.y - 20 }, terr: 400 });`), 3500, 'hive');
   await stage(new Function(clear + `const s = spawnGang('scanner', P.x + 90, P.y - 40, { home: { x: P.x, y: P.y }, terr: 600 }); s.sweep = Math.atan2(40, -90); s.ang = s.sweep; s.sweepT = 9; for (let i = 0; i < 2; i++) spawnGang('grunt', P.x + 200, P.y + 100 + i * 20, { home: { x: P.x + 200, y: P.y + 100 }, terr: 50 }).cd = 9;`), 900, 'scanner');
   await stage(new Function(clear + `KC.time('day'); spawnGang('mirror', P.x + 120, P.y - 60, { home: { x: P.x, y: P.y }, terr: 400 }); spawnGang('mirror', P.x - 60, P.y + 120, { home: { x: P.x, y: P.y }, terr: 400 });`), 2200, 'mirror');
+  await stage(new Function(clear + `KC.time('day'); const c = spawnGang('courier', P.x + 100, P.y - 40, { home: { x: P.x, y: P.y }, terr: 500 }); c.cd = 0;`), 1500, 'courier');
+  await stage(new Function(clear + `const w = mk('panels', P.x + 70, P.y - 10, { ang: 0 }); mk('wtank', P.x - 70, P.y + 60); for (let i = 0; i < 3; i++) { const g = spawnGang('crawler', P.x + 120 + i * 14, P.y - 40 + i * 20, { home: { x: P.x + 2000, y: P.y }, terr: 1 }); g.speed = 0; } KC.hurt(w, 99, { by: 'player' });`), 160, 'panels_shatter');
+  await stage(new Function(`const t = ents.find(e => e.kind === 'wtank' && !e.dead && Math.hypot(e.x - P.x, e.y - P.y) < 200); for (let i = 0; i < 3; i++) { const g = spawnGang('crawler', t.x + 20 + i * 12, t.y + 10, { home: { x: t.x + 2000, y: t.y }, terr: 1 }); g.speed = 0; } KC.hurt(t, 999, { by: 'player' });`), 1400, 'flood');
+  ok('a burst tank floods the street and shorts the machines in it', await p.evaluate(() => floods.length > 0 && ents.some(e => e.kind === 'crawler' && (e.dead || e.hp < e.maxhp))));
   const h = await p.evaluate(() => { const h = hazards[0]; KC.tp(h.x1 + 30, h.y1 + 30); P.invT = 1e9; return { x: h.x1, y: h.y1 }; });
   await p.waitForTimeout(1200); await p.evaluate(() => { const h = hazards[0]; h.arc = .9; h.t = 0; G.hint = null; G.toasts.length = 0; }); await p.waitForTimeout(250); await p.screenshot({ path: ROOT + '/screenshots/machines_power_line.png' });
   await stage(new Function(`KC.time('sunset'); const s = ents.find(e => e.kind === 'sweeper' && !e.dead); KC.tp(s.x + 40, s.y + 30); P.invT = 1e9;`), 1500, 'sweeper_street');

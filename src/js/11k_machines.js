@@ -68,6 +68,28 @@ function drawMachine(e) {
     if (e.hp < e.maxhp) { const top = P3(0, 0, 31), bw = 12, bx = Math.round(top[0] - 6), by = Math.round(top[1]); ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(bx - 1, by - 1, bw + 2, 3); ctx.fillStyle = '#ff3d5a'; ctx.fillRect(bx, by, Math.max(0, Math.round(bw * e.hp / e.maxhp)), 1); }
     return;
   }
+  if (k === 'panels') {   // spare solar panels stood on edge in a timber rack
+    const P3 = mframe(e); mshadow(e, 14, 6);
+    pixBox(e, P3, 0, 26, 6, 0, 3, W('#5a3c1e'), W('#6a4a2a'));
+    for (let i = 0; i < 4; i++) pixBox(e, P3, -9 + i * 6, 2, 16, 3, 22 - i, W('#1c2e50'), W('#2f4a7a'), (s, quad, line) => { if (s === 0 || s === 2) return; line(s, 0, 21 - i, 1, 21 - i, '#8aa6d8'); line(s, .5, 3, .5, 21 - i, '#2f4a7a'); });
+    if (e.hp < e.maxhp && Math.random() < .2) FX.sparks(e.x, e.y, 1, '#c8d8f0', 60);
+    return;
+  }
+  if (k === 'wtank') {    // a street water tank: a timber barrel on steel legs, banded, with a tap
+    const P0 = propFrame({ x: e.x, y: e.y, ang: 0, z: 0 }); mshadow(e, 13, 6);
+    for (const [lx, ly] of [[-8, -8], [8, -8], [-8, 8], [8, 8]]) iline(P0(lx, ly, 0), P0(lx * .9, ly * .9, 12), '#3a3d48');
+    pixBox({ ang: 0 }, P0, 0, 22, 22, 12, 34, W('#7a5636'), W('#5c4a44'), (i, quad) => { for (const z of [15, 23, 31]) quad(i, 0, 1, z, z + 1.2, '#2b2d36'); for (let q = .2; q < 1; q += .2) quad(i, q, q + .02, 12, 34, '#5a3c22'); if (i === 0) quad(i, .45, .55, 13, 14.5, '#9aa0aa'); }, tp => { ipoly([tp(.2, .2), tp(.8, .2), tp(.8, .8), tp(.2, .8)], '#3a2e2c'); });
+    if (e.hp < e.maxhp && Math.random() < .3) parts.push({ k: 'd', x: e.x + rnd(-6, 6), y: e.y + 6, vx: rnd(-10, 10), vy: 30, life: .5, max: .5, col: '#7aa8d8', w: 2 });   // leaking
+    return;
+  }
+  if (k === 'courier') {  // rogue courier: a big four-rotor delivery drone with a parcel slung underneath, flying high
+    const hov = (e.def.hover || 60) - (e.dropT > 0 ? (1 - e.dropT / .9) * 20 : 0) + Math.sin(t * 4 + e.id) * 2, P3 = mframe(e, hov); mshadow(e, 8, 4);
+    const spin = Math.floor(t * 30) & 1;
+    for (const [ax, ay] of [[9, 9], [9, -9], [-9, 9], [-9, -9]]) { iline(P3(0, 0, 5), P3(ax, ay, 5), '#3a3e4a'); const c = P3(ax, ay, 7); iellipse(c[0], c[1], 4.5, 2, spin ? 'rgba(200,204,214,.75)' : 'rgba(122,127,140,.75)'); }
+    if (e.parcel !== false) { iline(P3(0, 0, 0), P3(0, 0, -5), '#2a2d36'); pixBox(e, P3, 0, 8, 8, -12, -5, W('#a08058'), W('#b8946a'), (i, quad) => quad(i, .45, .55, -12, -5, '#e0b040')); }
+    pixBox(e, P3, 0, 12, 10, 0, 6, W('#c8452e'), W('#d85a40'), (i, quad) => { if (i === 0) quad(i, .4, .6, 2, 4, '#1a2028'); quad(i, 0, 1, 0, 1, W('#8a2e20')); });
+    return;
+  }
   if (k === 'vendbot') {   // walking vending machine: a tall box on short legs, a glass front of cans, a coin slot, a solar lid
     const P3 = mframe(e), g = Math.floor(e.walk * 3) & 1; mshadow(e, 8, 4);
     for (const [ly, ph] of [[-3, 0], [3, 1]]) { const up = (ph ^ g) ? 1.5 : 0; pixBox(e, P3, 0, 3, 3, up, 4 + up, W('#2a2d36'), W('#3a3e4a')); }
@@ -142,6 +164,10 @@ function drawZaps() {
 // downed power lines: the cable on the ground, a spark crawling along it, the whole line flaring when it arcs
 function drawHazards() {
   const t = G.time;
+  for (const f of floods) {   // flood water: a dithered pool with ripples; it fades as it drains
+    if (!inView(f.x, f.y, f.r + 20)) continue; const a = Math.min(1, f.t / 3);
+    ctx.globalAlpha = .45 * a; gDither(f.x, f.y, f.r, '#4a7ab0'); ctx.globalAlpha = .22 * a; gDisc(f.x, f.y, f.r * .8, '#6a9ad0'); ctx.globalAlpha = .7 * a; gRing(f.x, f.y, f.r - ((t * 14) % 14), '#a8c8f0'); ctx.globalAlpha = 1;
+  }
   for (const h of hazards) {
     if (!inView((h.x0 + h.x1) / 2, (h.y0 + h.y1) / 2, 80)) continue;
     const a = isoXY(h.x0, h.y0, 0), b = isoXY(h.x1, h.y1, 0), mid = [(a[0] + b[0]) / 2 + 2, (a[1] + b[1]) / 2 + 2];

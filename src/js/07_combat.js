@@ -144,8 +144,18 @@ function kill(e, info) {
   if (e.dead) return; e.dead = true; info = info || {};
   const k = e.kind, byP = info.by === 'player' || (k !== 'civ' && e.lastHitBy === 'player');   // a civilian you once brushed is not your kill when someone else finishes them
   if (e.held || e === (P && P.holding)) { e.held = false; if (P && P.holding === e) dropHeld(); }
+  if (k === 'panels') {   // solar panels shatter: a fan of glass shards that cuts anything in front of them
+    FX.sparks(e.x, e.y, 30, '#c8d8f0', 380); FX.debris(e.x, e.y, 16, '#2f4a7a', 300); sfx('hit', e.x, e.y); shake(.25);
+    for (const o of act) { if (o.dead || o.static || o.prop || o === P) continue; const d = Math.hypot(o.x - e.x, o.y - e.y); if (d < 90 + o.r) { hurt(o, 26 * (1 - d / 120), { by: byP ? 'player' : 'world' }); if (byP) o.lastHitBy = 'player'; } }
+    if (byP) comboHit(); return;
+  }
+  if (k === 'wtank') {    // a water tank bursts and floods the street for a while: machines in the water short out
+    FX.debris(e.x, e.y, 14, '#7a5636', 260); for (let i = 0; i < 30; i++) { const a = rnd(TAU), s = rnd(60, 220); parts.push({ k: 'd', x: e.x, y: e.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rnd(.4, .9), max: .9, col: '#7aa8d8', w: 2.5 }); }
+    sfx('heavy', e.x, e.y); floods.push({ x: e.x, y: e.y, r: 70, t: 18, max: 18 }); if (byP) comboHit(); return;
+  }
   if (MACH[k] || k === 'cell') {   // machines: they break up in sparks; batteries and crawlers go off
     FX.sparks(e.x, e.y, 12, ZAP_COL, 240); FX.debris(e.x, e.y, k === 'loader' ? 14 : 6, '#5a5e6a', 200); FX.smoke(e.x, e.y, 3, '#3a3d48', .8); sfx('hit', e.x, e.y);
+    if (k === 'courier' && e.parcel !== false) explosion(e.x, e.y, 44, 12, byP ? 'player' : 'gang');
     if (k === 'crawler' || k === 'cell') elecBurst(e.x, e.y, k === 'cell' ? 84 : 72, k === 'cell' ? 30 : 22, byP ? 'player' : (info.by || 'gang'));
     if (e.team === 'gang') reward(e, byP); else if (k === 'cell' && byP) comboHit();
     if (k !== 'cell' && Math.random() < (k === 'sweeper' ? .5 : .35)) pickups.push({ x: e.x, y: e.y, vx: rnd(-40, 40), vy: rnd(-40, 40), type: 'en', life: 16 });   // solar cells: a bit of energy

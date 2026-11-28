@@ -15,12 +15,22 @@ Object.assign(DEFS, {
   scanner: { r: 8, m: 1, hp: 22, team: 'gang', rest: .4, grab: 1, xp: 10, speed: 70, hover: 30 },
   mirror:  { r: 9, m: 4, hp: 60, team: 'gang', static: 1, rest: .2, xp: 10 },
   vendbot: { r: 9, m: 4, hp: 40, team: 'bot', rest: .3, grab: 1, speed: 26 },
-  fixer:   { r: 7, m: 1, hp: 20, team: 'bot', rest: .4, grab: 1, speed: 80, hover: 26 }
+  fixer:   { r: 7, m: 1, hp: 20, team: 'bot', rest: .4, grab: 1, speed: 80, hover: 26 },
+  panels:  { r: 14, m: 8, hp: 30, team: 'prop', prop: 1, static: 1, rest: .2 },
+  wtank:   { r: 14, m: 10, hp: 70, team: 'prop', prop: 1, static: 1, rest: .2 },
+  courier: { r: 9, m: 1.2, hp: 26, team: 'gang', rest: .4, grab: 1, xp: 14, speed: 120, hover: 60 }
 });
-const MACH = { sweeper: 1, zapper: 1, crawler: 1, sentry: 1, loader: 1, mite: 1, hive: 1, scanner: 1, mirror: 1, vendbot: 1, fixer: 1 };
+const MACH = { sweeper: 1, zapper: 1, crawler: 1, sentry: 1, loader: 1, mite: 1, hive: 1, scanner: 1, mirror: 1, vendbot: 1, fixer: 1, courier: 1 };
 const ZAP_COL = '#fff2b0', ZAP_HOT = '#ffffff';
 const zaps = [];          // lightning drawn for a moment: { pts, life, max }
 const hazards = [];       // downed power lines: { x0, y0, x1, y1, t, arc, warn }
+const floods = [];        // water from a burst tank: { x, y, r, t, max }. Machines in it short out; electricity in it hits everyone standing in it
+const inFlood = e => floods.some(f => Math.hypot(e.x - f.x, e.y - f.y) < f.r);
+function floodShock(x, y, by) {   // electricity reaching water: everyone standing in that pool gets it
+  for (const f of floods) { if (Math.hypot(x - f.x, y - f.y) > f.r + 30) continue;
+    for (let i = 0; i < 5; i++) { const a = rnd(TAU), r = rnd(0, f.r); zapFx(f.x, f.y, f.x + Math.cos(a) * r, f.y + Math.sin(a) * r, .25); }
+    for (const e of act) if (!e.dead && !e.static && !e.prop && Math.hypot(e.x - f.x, e.y - f.y) < f.r) { if (e.kind === 'player' && by === 'player') continue; hurt(e, 18, { by }); if (e.kind !== 'player' && !e.dead) { e.stun = Math.max(e.stun, 1.2); if (by === 'player') e.lastHitBy = 'player'; } } }
+}
 
 /* ---------- electricity ---------- */
 function boltPts(x0, y0, x1, y1, n = 7, jag = 6) { const pts = [[x0, y0]]; for (let i = 1; i < n; i++) { const k = i / n; pts.push([lerp(x0, x1, k) + rnd(-jag, jag), lerp(y0, y1, k) + rnd(-jag, jag)]); } pts.push([x1, y1]); return pts; }
@@ -30,7 +40,7 @@ function elecBurst(x, y, r, dmg, by) {
   sfx('zap', x, y); sfx('boom', x, y, .5); shake(.4); hitstop(.04);
   FX.flash(x, y, r * 2.4, '#fff0c0', .4, 1); FX.ring(x, y, r, ZAP_COL, .3, 4); FX.sparks(x, y, 26, ZAP_COL, 380); FX.smoke(x, y, 4, '#4a4e58', 1);
   for (let i = 0; i < 6; i++) { const a = rnd(TAU), d = rnd(r * .4, r); zapFx(x, y, x + Math.cos(a) * d, y + Math.sin(a) * d, .22); }
-  decals.push({ x, y, r: r * .4, life: 30, k: 'scorch' });
+  decals.push({ x, y, r: r * .4, life: 30, k: 'scorch' }); floodShock(x, y, by);
   for (const e of act) {
     if (e.dead || e.static || e.held) continue;
     if (e.kind === 'player' && by === 'player') continue;
@@ -154,7 +164,14 @@ function aiMachine(e, dt) {
     if (d < e.r + t.r + 4 && e.cd <= 0) { if (t === P && P.absorbing) absorb(4); else hurt(t, 4, { by: 'gang', src: e }); FX.sparks(t.x, t.y, 4, ZAP_COL, 140); sfx('zap', e.x, e.y, .3); e.cd = .9; e.dartT = .45; const a = rnd(TAU); e.fx = Math.cos(a); e.fy = Math.sin(a); }
     return;
   }
-  if (k === 'loader') { e.tgt = t; aiBrute(e, dt); return; }   // a heavy walker: slams and charges like a brute
+  if (k === 'loader') { e.tgt = t; aiBrute(e, dt); return; }
+  if (k === 'courier') {   // rogue delivery drone: circles high, then marks a spot on you and drops its parcel (a small blast)
+    if (e.dropT > 0) { e.dropT -= dt; steer(e, e.dx - e.x, e.dy - e.y, e.speed * 1.4, dt, 6); if (e.dropT <= 0) { explosion(e.dx, e.dy, 52, 18, 'gang'); e.cd = 3.2; e.parcel = false; later(2.4, () => { if (!e.dead) e.parcel = true; }); } return; }
+    face(e, Math.atan2(dy, dx), dt, 6); e.orb = e.orb || (Math.random() < .5 ? 1 : -1);
+    if (d > 160) chase(e, t, e.speed, dt); else steer(e, -dy * e.orb + dx * .2, dx * e.orb + dy * .2, e.speed * .8, dt);
+    if (e.parcel !== false && d < 220 && e.cd <= 0) { e.dx = t.x + (t.vx || 0) * .5; e.dy = t.y + (t.vy || 0) * .5; e.dropT = .9; warnCircle(e.dx, e.dy, 52, .9, '#ff9a3a'); sfx('charge', e.x, e.y, .4); }
+    return;
+  }   // a heavy walker: slams and charges like a brute
 }
 
 /* ---------- downed power lines ---------- */
@@ -173,6 +190,9 @@ function updateHazards(dt) {
       if (h.arc <= 0) h.t = rnd(2.2, 4.2);
     } else if (h.t <= 0) { h.arc = .9; sfx('zap', (h.x0 + h.x1) / 2, (h.y0 + h.y1) / 2, .7); }
   }
+  for (const f of floods) { f.t -= dt; f.tick = (f.tick || 0) - dt; if (f.tick <= 0) { f.tick = .5; for (const e of act) if (!e.dead && MACH[e.kind] && e.team !== 'bot' && !e.static && Math.hypot(e.x - f.x, e.y - f.y) < f.r && !(e.def.hover)) { hurt(e, 6, { by: e.lastHitBy === 'player' ? 'player' : 'world' }); e.stun = Math.max(e.stun, .6); FX.sparks(e.x, e.y, 4, ZAP_COL, 120); } } }
+  for (let i = floods.length - 1; i >= 0; i--) if (floods[i].t <= 0) floods.splice(i, 1);
+  for (const h of hazards) if (h.arc > 0 && Math.random() < dt * 4) floodShock(h.x1, h.y1, 'world');   // a live cable lying in a flood
   for (const z of zaps) z.life -= dt; for (let i = zaps.length - 1; i >= 0; i--) if (zaps[i].life <= 0) zaps.splice(i, 1);
 }
 
@@ -182,6 +202,12 @@ function populateMachines() {
   for (let d = 0; d < 3; d++) for (let i = 0; i < [6, 4, 7][d]; i++) { const p = randomInDistrict(d, t => t === T.WALK, 10); if (p) mk('sweeper', p.x, p.y, { col: '#e0a030' }); }
   for (let d = 0; d < 3; d++) for (let i = 0; i < [4, 3, 5][d]; i++) { const p = randomInDistrict(d, t => t === T.WALK, 10); if (p) mk('vendbot', p.x, p.y, { col: pick(['#c8452e', '#2e7a5a', '#3a6aa8']), home: p }); }
   for (let d = 0; d < 3; d++) for (let i = 0; i < 2; i++) { const p = randomInDistrict(d, t => t === T.ROAD, 10); if (p) mk('fixer', p.x, p.y, { home: p }); }
+  floods.length = 0;
+  for (const b of blocks) { const r = mulberry(hash2(b.x + 3, b.y + 9)), cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+    if ((b.kind === 'lot' || b.kind === 'yard' || b.kind === 'hide') && r() < .8) { const p = findFree(cx + rnd(-90, 90), b.y + b.h - 50, 40, 16); if (p) mk('panels', p.x, p.y, { ang: r() < .5 ? 0 : Math.PI / 2 }); }   // stacks of spare solar panels standing on edge
+    if ((b.kind === 'park' || b.kind === 'yard' || b.kind === 'court') && r() < .55) { const p = findFree(cx + rnd(-70, 70), cy + rnd(-70, 70), 50, 16); if (p) mk('wtank', p.x, p.y, { ang: 0 }); }   // street water tanks
+  }
+  for (let d = 0; d < 3; d++) for (let i = 0; i < [1, 2, 3][d]; i++) { const p = randomInDistrict(d, t => t === T.ROAD, 10); if (p && dist(p, START) > 500) spawnGang('courier', p.x, p.y, { home: p, terr: 360 }); }   // rogue couriers
   for (const b of blocks) {
     const cx = b.x + b.w / 2, cy = b.y + b.h / 2, d = b.d, home = { x: cx, y: cy };
     if (b.kind === 'yard') {   // the machine yard: a loader and its crawlers
