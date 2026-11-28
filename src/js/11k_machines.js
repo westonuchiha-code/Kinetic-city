@@ -1,81 +1,83 @@
 /* ============================== 11k MACHINES: DRAWING ============================== */
 /* Small hand-placed pixel drawings for the machines in 09c, plus lightning and downed power lines. Each machine is
    drawn around its ground point; flyers hover above a shadow. Hit flash = white. */
-function mr(x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), w, h); }
-function solarLid(x, y, w, h) { mr(x - 1, y - 1, w + 2, h + 2, '#0a0c12'); mr(x, y, w, h, '#1c2e50'); for (let i = 2; i < w; i += 3) mr(x + i, y, 1, h, '#2f4a7a'); mr(x, y, w, 1, '#8aa6d8'); }
+/* All machines are built the same way as the crates, cars and dumpsters: oriented boxes (pixBox) in the iso view, so
+   they turn with the direction they face and sit in the world like everything else. */
+function mframe(e, lift = 0) { const f = propFrame(e); return lift ? (lx, ly, h) => f(lx, ly, h + lift) : f; }
+function mshadow(e, rx, ry) { const c = isoXY(e.x, e.y, 0); ctx.globalAlpha = .35; iellipse(c[0], c[1], rx, ry, '#000'); ctx.globalAlpha = 1; }
+const MCOL = c => c;
+function solarTop(tp, u0 = .08, u1 = .92, v0 = .08, v1 = .92) {   // a solar panel laid on a box's top: dark cells, a lit front edge
+  ipoly([tp(u0, v0), tp(u1, v0), tp(u1, v1), tp(u0, v1)], '#1c2e50');
+  for (let k = 1; k < 4; k++) { const u = lerp(u0, u1, k / 4); iline(tp(u, v0), tp(u, v1), '#2f4a7a'); }
+  iline(tp(u0, v0), tp(u0, v1), '#8aa6d8');
+}
 function drawMachine(e) {
-  const a = isoXY(e.x, e.y, 0), X = Math.round(a[0]), Y = Math.round(a[1]), t = G.time, fl = e.flash > 0, k = e.kind;
-  const sx = Math.cos(e.ang || 0) - Math.sin(e.ang || 0) >= 0 ? 1 : -1;   // facing right or left on screen
-  const W = c => fl ? '#ffffff' : c;
-  if (k === 'cell') {   // battery bank: a chunky case, two terminals, charge bars, a warning label
-    mr(X - 7, Y - 11, 14, 12, '#07080c'); mr(X - 6, Y - 10, 12, 10, W('#3a4a3a')); mr(X - 6, Y - 10, 12, 2, W('#5a6e58')); mr(X + 3, Y - 9, 3, 9, W('#2a362a'));
-    mr(X - 4, Y - 13, 2, 3, '#9aa0aa'); mr(X + 2, Y - 13, 2, 3, '#c8503a');
-    const lvl = 2 + ((t * 1.5 + e.id) % 3 | 0); for (let i = 0; i < 4; i++) mr(X - 4 + i * 2, Y - 6, 1, 3, i < lvl ? '#e0c040' : '#1a2018');
-    mr(X - 4, Y - 3, 6, 1, '#e0b020'); if (e.hp < e.maxhp && Math.random() < .3) FX.sparks(e.x, e.y, 1, ZAP_COL, 90);
+  const t = G.time, fl = e.flash > 0, k = e.kind, W = c => fl ? '#ffffff' : c;
+  if (k === 'cell') {      // battery bank: a squat case, two terminals, charge bars on the side
+    const P3 = mframe(e); mshadow(e, 8, 4);
+    const lvl = 2 + ((t * 1.5 + e.id) % 3 | 0);
+    pixBox(e, P3, 0, 14, 12, 0, 12, W('#4a5c48'), W('#5e7258'), (i, quad, line, kk) => {
+      if (i !== 0 && i !== 1) return;
+      for (let q = 0; q < 4; q++) quad(i, .2 + q * .16, .3 + q * .16, 4, 8, q < lvl ? '#e0c040' : '#1a2018');
+      quad(i, .15, .85, 1.5, 2.6, '#e0b020');
+    }, tp => { ipoly([tp(.25, .2), tp(.4, .2), tp(.4, .35), tp(.25, .35)], '#9aa0aa'); ipoly([tp(.25, .65), tp(.4, .65), tp(.4, .8), tp(.25, .8)], '#c8503a'); });
+    for (const v of [-3, 3]) { const p = P3(2, v, 12), q = P3(2, v, 14.5); iline(p, q, v < 0 ? '#9aa0aa' : '#c8503a'); }
+    if (e.hp < e.maxhp && Math.random() < .3) FX.sparks(e.x, e.y, 1, ZAP_COL, 90);
     return;
   }
-  if (k === 'sweeper') {   // municipal street sweeper: orange body, solar lid, spinning brushes, amber beacon
-    const b = (Math.floor(e.walk * 4) & 1);
-    mr(X - 2, Y - 1, 10, 2, 'rgba(0,0,0,.35)');
-    mr(X - 8, Y - 10, 16, 9, '#07080c'); mr(X - 7, Y - 9, 14, 7, W('#e0a030')); mr(X - 7, Y - 3, 14, 1, W('#a8701c')); mr(X - 7, Y - 9, 14, 1, W('#f0c060'));
-    mr(X - 5 + (sx > 0 ? 6 : 0), Y - 7, 3, 2, '#2a2a32');   // a little window
-    solarLid(X - 6, Y - 13, 12, 3);
-    for (const bx of [X + sx * 7, X + sx * 4]) { mr(bx - 1, Y - 2, 3, 3, '#3a3228'); mr(bx - 1 + b, Y - 2, 1, 1, '#c8b890'); mr(bx + 1 - b, Y, 1, 1, '#c8b890'); }
-    const on = Math.sin(t * 6 + e.id) > 0; mr(X - 1, Y - 15, 2, 2, on ? '#ffb030' : '#6a4a1a'); if (on) iglow(X, Y - 14, 5, '#ffb030', .45);
+  if (k === 'sweeper') {   // street sweeper: a rounded orange cart, a solar lid, two brushes spinning at the front
+    const P3 = mframe(e); mshadow(e, 9, 4.5);
+    const b = Math.floor(e.walk * 4) & 1;
+    for (const v of [-6, 6]) { const c = P3(10, v, 1.5); idisc(c[0], c[1], 2.4, '#3a3228'); ipx(c[0] + (b ? 1 : -1), c[1], '#c8b890'); ipx(c[0], c[1] + (b ? -1 : 1), '#c8b890'); }
+    pixBox(e, P3, -1, 18, 13, 1, 10, W('#e0a030'), W('#f0c060'), (i, quad) => { quad(i, 0, 1, 1, 2.2, W('#a8701c')); if (i === 0) quad(i, .3, .7, 5, 8, '#2a2a32'); }, tp => solarTop(tp));
+    const on = Math.sin(t * 6 + e.id) > 0, bp = P3(-6, 0, 13); iline(P3(-6, 0, 10), bp, '#4a4e5a'); ipx(bp[0], bp[1], on ? '#ffb030' : '#6a4a1a'); if (on) iglow(bp[0], bp[1], 5, '#ffb030', .45);
     return;
   }
-  if (k === 'zapper' || k === 'mite') {   // flyers: hover over a shadow
-    const small = k === 'mite', hov = (e.def.hover || 20) + Math.sin(t * 5 + e.id) * 1.5, hy = Y - Math.round(hov * .5);
-    ctx.globalAlpha = .35; iellipse(X, Y, small ? 3 : 6, small ? 1.5 : 3, '#000'); ctx.globalAlpha = 1;
+  if (k === 'zapper') {    // spark drone: a body box with four rotor arms, solar deck on top, a coil underneath; hovers
+    const hov = (e.def.hover || 22) + Math.sin(t * 5 + e.id) * 1.5, P3 = mframe(e, hov); mshadow(e, 7, 3.5);
+    const spin = Math.floor(t * 30) & 1, arms = [[7, 7], [7, -7], [-7, 7], [-7, -7]];
+    for (const [ax, ay] of arms) { iline(P3(0, 0, 4), P3(ax, ay, 4), '#3a3e4a'); const c = P3(ax, ay, 5.5); iellipse(c[0], c[1], 3.5, 1.5, spin ? 'rgba(200,204,214,.75)' : 'rgba(122,127,140,.75)'); ipx(c[0], c[1], '#2a2d36'); }
+    const ch = e.chargeT > 0 ? 1 - e.chargeT / .75 : 0, coil = P3(0, 0, -1.5);
+    pixBox(e, P3, 0, 10, 10, 0, 7, W('#b8bcc6'), W('#c8ccd6'), (i, quad) => { quad(i, 0, 1, 0, 1.4, W('#6a6e78')); if (i === 0) quad(i, .4, .6, 3.5, 5, '#ff5a3a'); }, tp => solarTop(tp));
+    ipx(coil[0], coil[1], ch > 0 ? (Math.random() < ch ? '#ffffff' : ZAP_COL) : '#5a5040'); ipx(coil[0], coil[1] + 1, ch > 0 ? ZAP_COL : '#3a3428');
+    if (ch > 0) { iglow(coil[0], coil[1], 6 + ch * 8, '#fff0b0', .5 + ch * .4); if (Math.random() < .5) zapFx(e.x, e.y, e.x + rnd(-10, 10), e.y + rnd(-10, 10), .06); }
+    return;
+  }
+  if (k === 'mite') {      // mite: a tiny box with two rotors and a blinking eye
+    const hov = (e.def.hover || 12) + Math.sin(t * 7 + e.id) * 1.2, P3 = mframe(e, hov); mshadow(e, 3, 1.5);
     const spin = Math.floor(t * 30) & 1;
-    if (small) {
-      mr(X - 3, hy - 2, 7, 4, '#07080c'); mr(X - 2, hy - 1, 5, 2, W('#8a8e98')); mr(X - 1, hy - 3, 3, 1, '#1c2e50');
-      mr(X - 4, hy - 3 + spin, 2, 1, '#c8ccd6'); mr(X + 3, hy - 2 - spin, 2, 1, '#c8ccd6'); mr(X, hy + 1, 1, 1, Math.sin(t * 9 + e.id) > 0 ? '#ff5a3a' : '#5a1a10');
-      return;
-    }
-    // spark drone: four rotors on arms, a solar deck on top, a coil underneath that glows as it charges
-    for (const [ox, oy] of [[-8, -4], [8, -4], [-6, 1], [6, 1]]) { mr(X + ox - 3, hy + oy - 1, 6, 1, spin ? '#c8ccd6' : '#7a7f8c'); mr(X + ox, hy + oy, 1, 2, '#3a3e4a'); }
-    mr(X - 7, hy - 3, 14, 1, '#3a3e4a'); mr(X - 5, hy - 5, 10, 8, '#07080c'); mr(X - 4, hy - 4, 8, 6, W('#b8bcc6')); mr(X - 4, hy + 1, 8, 1, W('#6a6e78'));
-    solarLid(X - 4, hy - 7, 8, 2);
-    const ch = e.chargeT > 0 ? 1 - e.chargeT / .75 : 0; mr(X - 1, hy + 2, 3, 3, ch > 0 ? (Math.random() < ch ? '#ffffff' : ZAP_COL) : '#5a5040');
-    if (ch > 0) { iglow(X, hy + 4, 6 + ch * 8, '#fff0b0', .5 + ch * .4); if (Math.random() < .5) zapFx(e.x, e.y, e.x + rnd(-10, 10), e.y + rnd(-10, 10), .06); }
-    mr(X + sx * 3, hy - 2, 1, 1, '#ff5a3a');
+    for (const v of [-4, 4]) { const c = P3(0, v, 4); iellipse(c[0], c[1], 2, 1, spin ? '#c8ccd6' : '#7a7f8c'); }
+    pixBox(e, P3, 0, 6, 5, 0, 4, W('#8a8e98'), W('#9aa0aa'), (i, quad) => { if (i === 0) quad(i, .35, .65, 1.5, 3, Math.sin(t * 9 + e.id) > 0 ? '#ff5a3a' : '#5a1a10'); });
     return;
   }
-  if (k === 'crawler') {   // repo crawler: low body on four legs, a battery pack on its back, one red eye
-    const armed = e.state === 'arm', g = Math.floor(e.walk * 3) & 1;
-    mr(X - 7, Y - 1, 14, 2, 'rgba(0,0,0,.35)');
-    for (const [lx, ph] of [[-6, 0], [-2, 1], [2, 0], [6, 1]]) { const up = (ph ^ g) ? 1 : 0; mr(X + lx, Y - 4 - up, 1, 4 + up, '#2a2d36'); mr(X + lx + (lx < 0 ? -1 : 1), Y - 1, 1, 1, '#2a2d36'); }
-    mr(X - 7, Y - 9, 14, 6, '#07080c'); mr(X - 6, Y - 8, 12, 4, W('#4a5240')); mr(X - 6, Y - 8, 12, 1, W('#6a7458'));
-    mr(X - 4, Y - 11, 8, 3, '#07080c'); mr(X - 3, Y - 10, 6, 2, W(armed && Math.sin(t * 30) > 0 ? '#ffffff' : '#c89a28')); mr(X - 3, Y - 10, 1, 2, '#1a1a1a'); mr(X + 1, Y - 10, 1, 2, '#1a1a1a');
-    mr(X + sx * 6, Y - 7, 1, 1, '#ff3a2a'); if (armed) iglow(X, Y - 8, 14, '#fff0b0', .6);
+  if (k === 'crawler') {   // repo crawler: a low body on four legs, a battery pack on its back
+    const armed = e.state === 'arm', g = Math.floor(e.walk * 3) & 1, P3 = mframe(e); mshadow(e, 9, 4.5);
+    for (const [lx, ly, ph] of [[6, 6, 0], [6, -6, 1], [-6, 6, 1], [-6, -6, 0]]) { const up = (ph ^ g) ? 2 : 0, hip = P3(lx * .6, ly * .6, 6), knee = P3(lx, ly * 1.2, 7 + up), foot = P3(lx * 1.1, ly * 1.3, up * .5); iline(hip, knee, '#2a2d36'); iline(knee, foot, '#2a2d36'); }
+    pixBox(e, P3, 0, 16, 11, 5, 10, W('#4a5240'), W('#6a7458'), (i, quad) => { if (i === 0) quad(i, .42, .58, 7, 8.5, '#ff3a2a'); });
+    pixBox(e, P3, -1, 9, 7, 10, 13, W(armed && Math.sin(t * 30) > 0 ? '#ffffff' : '#c89a28'), W(armed && Math.sin(t * 30) > 0 ? '#ffffff' : '#e0b040'), (i, quad) => { quad(i, .3, .38, 10, 13, '#1a1a1a'); quad(i, .62, .7, 10, 13, '#1a1a1a'); });
+    if (armed) { const c = P3(0, 0, 9); iglow(c[0], c[1], 14, '#fff0b0', .6); }
     return;
   }
-  if (k === 'sentry') {    // sentry post: a tripod, a small solar panel, a turret that swivels
-    mr(X - 6, Y - 1, 12, 1, 'rgba(0,0,0,.35)');
-    for (const lx of [-5, 0, 5]) iline([X, Y - 10], [X + lx, Y], '#3a3e4a');
-    mr(X - 1, Y - 16, 3, 7, '#4a4e5a');
-    const c = Math.cos(e.ang || 0), s = Math.sin(e.ang || 0), gx = c - s, gy = (c + s) / 2, gl = Math.hypot(gx, gy) || 1;
-    mr(X - 4, Y - 20, 9, 6, '#07080c'); mr(X - 3, Y - 19, 7, 4, W('#7a7462')); mr(X - 3, Y - 19, 7, 1, W('#9a9480'));
-    iline([X + .5, Y - 17], [X + gx / gl * 8, Y - 17 + gy / gl * 4], '#202228');
-    solarLid(X - 5, Y - 24, 10, 2);
-    const lit = e.aimT > 0; mr(X, Y - 18, 1, 1, lit ? '#ff4030' : '#5a1a10');
-    if (lit) { const L = 120, ex = e.x + Math.cos(e.ang) * L, ey = e.y + Math.sin(e.ang) * L, p = isoXY(ex, ey, 0); ctx.globalAlpha = .55; iline([X, Y - 17], [p[0], p[1] - 17 * (1 - .9)], '#ff4030'); ctx.globalAlpha = 1; }
-    if (e.hp < e.maxhp) { const bw = 12, bx = X - 6, by = Y - 28; mr(bx - 1, by - 1, bw + 2, 3, 'rgba(0,0,0,.7)'); mr(bx, by, Math.max(0, Math.round(bw * e.hp / e.maxhp)), 1, '#ff3d5a'); }
+  if (k === 'sentry') {    // sentry post: a tripod of steel legs, a column, a turret box that swivels, a solar panel on top
+    const P0 = propFrame({ x: e.x, y: e.y, ang: 0, z: 0 }), P3 = mframe(e); mshadow(e, 8, 4);
+    for (const a of [0, 2.09, 4.19]) iline(P0(0, 0, 12), P0(Math.cos(a) * 8, Math.sin(a) * 8, 0), '#3a3e4a');
+    iline(P0(0, 0, 12), P0(0, 0, 18), '#4a4e5a');
+    pixBox(e, P3, 0, 12, 9, 18, 25, W('#7a7462'), W('#9a9480'), (i, quad) => { if (i === 0) quad(i, .4, .6, 21, 23, e.aimT > 0 ? '#ff4030' : '#5a1a10'); }, tp => solarTop(tp, .15, .85, .1, .9));
+    iline(P3(6, 0, 21.5), P3(14, 0, 21.5), '#202228'); iline(P3(6, 0, 20.5), P3(14, 0, 20.5), '#3a3c44');   // barrel
+    if (e.aimT > 0) { const a2 = isoXY(e.x + Math.cos(e.ang) * 14, e.y + Math.sin(e.ang) * 14, 0), L = isoXY(e.x + Math.cos(e.ang) * 130, e.y + Math.sin(e.ang) * 130, 0), m = P3(14, 0, 21); ctx.globalAlpha = .55; iline(m, [L[0], L[1] - (m[1] - a2[1]) * .2], '#ff4030'); ctx.globalAlpha = 1; }
+    if (e.hp < e.maxhp) { const top = P3(0, 0, 31), bw = 12, bx = Math.round(top[0] - 6), by = Math.round(top[1]); ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(bx - 1, by - 1, bw + 2, 3); ctx.fillStyle = '#ff3d5a'; ctx.fillRect(bx, by, Math.max(0, Math.round(bw * e.hp / e.maxhp)), 1); }
     return;
   }
-  if (k === 'loader') {    // loader mech: a caged cab on two hydraulic legs, big claws, solar panels on its back
-    const g = Math.floor(e.walk * 2) & 1, raise = e.state === 'slamWind' ? -4 : 0, lean = e.state === 'chargeWind' || e.state === 'charging' ? sx * 2 : 0;
-    mr(X - 10, Y - 1, 20, 2, 'rgba(0,0,0,.35)');
-    for (const [lx, ph] of [[-5, 0], [4, 1]]) { const up = (ph ^ g) ? 2 : 0; mr(X + lx - 1, Y - 12 - up, 4, 12 + up, '#07080c'); mr(X + lx, Y - 11 - up, 2, 11 + up, '#5a5e6a'); mr(X + lx - 2, Y - 2, 6, 2, '#2a2d36'); }
-    const cx = X + lean, cy = Y - 26;
-    solarLid(cx - 9 - sx * 2, cy - 5, 14, 3);
-    mr(cx - 9, cy - 2, 18, 15, '#07080c'); mr(cx - 8, cy - 1, 16, 13, W('#d8a838')); mr(cx - 8, cy - 1, 16, 1, W('#f0c860'));
-    for (let i = 0; i < 16; i += 4) { mr(cx - 8 + i, cy + 10, 2, 2, '#1a1608'); }   // hazard stripes
-    mr(cx - 5 + sx * 2, cy + 1, 8, 6, '#1a2028'); mr(cx - 4 + sx * 2, cy + 2, 6, 1, '#4a5868'); mr(cx - 4 + sx * 2, cy + 2, 1, 4, '#2a3440');   // caged window
-    for (const ax of [-1, 1]) { const arm = cx + ax * 11, ay = cy + 4 + raise; mr(arm - 2, ay - 1, 4, 9, '#07080c'); mr(arm - 1, ay, 2, 7, W('#8a8e98')); mr(arm - 3, ay + 7, 6, 3, '#3a3e4a'); mr(arm - 3, ay + 9, 1, 2, '#3a3e4a'); mr(arm + 2, ay + 9, 1, 2, '#3a3e4a'); }
-    const on = Math.sin(t * 5 + e.id) > 0; mr(cx - 1, cy - 7, 2, 2, on ? '#ffb030' : '#6a4a1a');
-    if (e.hp < e.maxhp && (e.sinceHit || 0) < 4) { const bw = 20, bx = X - 10, by = cy - 11; mr(bx - 1, by - 1, bw + 2, 3, 'rgba(0,0,0,.7)'); mr(bx, by, Math.max(0, Math.round(bw * e.hp / e.maxhp)), 1, '#ff3d5a'); }
+  if (k === 'loader') {    // loader mech: two hydraulic legs, a caged cab, two claw arms, solar panels on its back
+    const g = Math.floor(e.walk * 2) & 1, raise = e.state === 'slamWind' ? 6 : 0, lean = e.state === 'chargeWind' || e.state === 'charging' ? 3 : 0, P3 = mframe(e); mshadow(e, 14, 7);
+    for (const [ly, ph] of [[-6, 0], [6, 1]]) { const up = (ph ^ g) ? 3 : 0; pixBox(e, P3, up * .6, 6, 5, 0, 2, W('#2a2d36'), W('#3a3e4a')); pixBox(e, P3, 0, 4, 4, 2 + up, 18, W('#5a5e6a'), W('#6a6e7a')); }
+    pixBox(e, P3, lean, 20, 22, 18, 34, W('#d8a838'), W('#e8c050'), (i, quad) => {
+      quad(i, 0, 1, 18, 20.5, '#1a1608'); for (let q = 0; q < 1; q += .2) quad(i, q, q + .1, 18, 20.5, '#e0b020');   // hazard stripes
+      if (i === 0) { quad(i, .25, .75, 24, 31, '#1a2028'); quad(i, .25, .75, 30, 31, '#4a5868'); quad(i, .48, .52, 24, 31, '#4a5868'); }   // caged window
+    }, tp => solarTop(tp, .3, .95, .1, .9));
+    for (const ay of [-14, 14]) { pixBox(e, P3, lean + 4, 6, 5, 18 + raise, 30 + raise, W('#8a8e98'), W('#9aa0aa')); pixBox(e, P3, lean + 9, 6, 7, 14 + raise, 19 + raise, W('#3a3e4a'), W('#4a4e5a')); }
+    const on = Math.sin(t * 5 + e.id) > 0, bc = P3(-4, 0, 37); iline(P3(-4, 0, 34), bc, '#4a4e5a'); ipx(bc[0], bc[1], on ? '#ffb030' : '#6a4a1a'); if (on) iglow(bc[0], bc[1], 5, '#ffb030', .4);
+    if (e.hp < e.maxhp && (e.sinceHit || 0) < 4) { const top = P3(0, 0, 44), bw = 20, bx = Math.round(top[0] - 10), by = Math.round(top[1]); ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(bx - 1, by - 1, bw + 2, 3); ctx.fillStyle = '#ff3d5a'; ctx.fillRect(bx, by, Math.max(0, Math.round(bw * e.hp / e.maxhp)), 1); }
     e.sinceHit = (e.sinceHit || 0) + 1 / 60;
   }
 }
