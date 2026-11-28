@@ -104,7 +104,7 @@ function aiMachine(e, dt) {
     if (!on || !e.losC) { e.aimT = 0; e.ang += dt * .9; return; }
     e.ang += angDiff(Math.atan2(P.y - e.y, P.x - e.x), e.ang) * Math.min(1, dt * 7);
     if (e.aimT > 0) { e.aimT -= dt; if (e.aimT <= 0) { for (let i = 0; i < 3; i++) later(i * .11, () => { if (!e.dead) shoot(e, e.ang + rnd(-.07, .07), { dmg: 5, speed: 340, col: '#ffd27a' }); }); e.cd = 1.8 + rnd(.6); } }
-    else if (e.cd <= 0) e.aimT = .6;
+    else if (e.cd <= 0 && takeTurn(Object.assign(e, { tgt: P }), 1.2)) e.aimT = .7;
     return;
   }
   if (k === 'hive') {      // a mite hive: a squat solar-topped box that releases mites while you are near
@@ -148,7 +148,7 @@ function aiMachine(e, dt) {
     }
     e.orb = e.orb || (Math.random() < .5 ? 1 : -1); if (Math.random() < dt * .3) e.orb *= -1;
     if (!seen || d > 230) chase(e, t, e.speed, dt); else if (d < 130) steer(e, -dx, -dy, e.speed, dt); else steer(e, -dy * e.orb, dx * e.orb, e.speed * .7, dt);
-    if (seen && d < 240 && e.cd <= 0) { e.chargeT = .75; e.cang = Math.atan2(dy, dx); warnLine(e.x, e.y, e.cang, 250, 8, .75, ZAP_COL); sfx('charge', e.x, e.y, .5); }
+    if (seen && d < 240 && e.cd <= 0 && takeTurn(e, 1.1)) { e.chargeT = .75; e.cang = Math.atan2(dy, dx); warnLine(e.x, e.y, e.cang, 250, 8, .75, ZAP_COL); sfx('charge', e.x, e.y, .5); }
     return;
   }
   if (k === 'crawler') {   // runs at you on four legs; close enough, it arms its battery and bursts
@@ -160,8 +160,16 @@ function aiMachine(e, dt) {
   if (k === 'mite') {      // darts in, nips, darts out
     e.dartT = (e.dartT || 0) - dt;
     if (e.dartT > 0) { steer(e, e.fx, e.fy, e.speed * 1.1, dt, 12); return; }
-    face(e, Math.atan2(dy, dx), dt, 14); steer(e, dx + rnd(-30, 30), dy + rnd(-30, 30), e.speed, dt, 10);
-    if (d < e.r + t.r + 4 && e.cd <= 0) { if (t === P && P.absorbing) absorb(4); else hurt(t, 4, { by: 'gang', src: e }); FX.sparks(t.x, t.y, 4, ZAP_COL, 140); sfx('zap', e.x, e.y, .3); e.cd = .9; e.dartT = .45; const a = rnd(TAU); e.fx = Math.cos(a); e.fy = Math.sin(a); }
+    if (e.lungeT > 0) {   // the tell: it stops, its eye flashes for .4 s, then it lunges in a straight line
+      e.lungeT -= dt; if (e.lungeT > .15) { steer(e, 0, 0, 0, dt, 12); return; }
+      steer(e, e.lx, e.ly, e.speed * 2.2, dt, 14);
+      if (d < e.r + t.r + 4) { if (t === P && P.absorbing) absorb(4); else hurt(t, 5, { by: 'gang', src: e }); FX.sparks(t.x, t.y, 4, ZAP_COL, 140); sfx('zap', e.x, e.y, .3); e.lungeT = 0; e.cd = 1.4; e.dartT = .5; const a = rnd(TAU); e.fx = Math.cos(a); e.fy = Math.sin(a); }
+      if (e.lungeT <= 0 && e.dartT <= 0) { e.cd = 1; e.dartT = .3; e.fx = -e.lx; e.fy = -e.ly; }
+      return;
+    }
+    face(e, Math.atan2(dy, dx), dt, 14);
+    if (d > 70) steer(e, dx + rnd(-30, 30), dy + rnd(-30, 30), e.speed, dt, 10); else steer(e, -dy * (e.id % 2 ? 1 : -1), dx * (e.id % 2 ? 1 : -1), e.speed * .7, dt, 8);   // circles at a little distance
+    if (d < 70 && e.cd <= 0 && takeTurn(e, .8)) { e.lungeT = .55; e.lx = dx / d; e.ly = dy / d; warnLine(e.x, e.y, Math.atan2(dy, dx), 80, 10, .4, ZAP_COL); sfx('charge', e.x, e.y, .25); }
     return;
   }
   if (k === 'loader') { e.tgt = t; aiBrute(e, dt); return; }
@@ -169,7 +177,7 @@ function aiMachine(e, dt) {
     if (e.dropT > 0) { e.dropT -= dt; steer(e, e.dx - e.x, e.dy - e.y, e.speed * 1.4, dt, 6); if (e.dropT <= 0) { explosion(e.dx, e.dy, 52, 18, 'gang'); e.cd = 3.2; e.parcel = false; later(2.4, () => { if (!e.dead) e.parcel = true; }); } return; }
     face(e, Math.atan2(dy, dx), dt, 6); e.orb = e.orb || (Math.random() < .5 ? 1 : -1);
     if (d > 160) chase(e, t, e.speed, dt); else steer(e, -dy * e.orb + dx * .2, dx * e.orb + dy * .2, e.speed * .8, dt);
-    if (e.parcel !== false && d < 220 && e.cd <= 0) { e.dx = t.x + (t.vx || 0) * .5; e.dy = t.y + (t.vy || 0) * .5; e.dropT = .9; warnCircle(e.dx, e.dy, 52, .9, '#ff9a3a'); sfx('charge', e.x, e.y, .4); }
+    if (e.parcel !== false && d < 220 && e.cd <= 0 && takeTurn(e, 1.2)) { e.dx = t.x + (t.vx || 0) * .5; e.dy = t.y + (t.vy || 0) * .5; e.dropT = .9; warnCircle(e.dx, e.dy, 52, .9, '#ff9a3a'); sfx('charge', e.x, e.y, .4); }
     return;
   }   // a heavy walker: slams and charges like a brute
 }

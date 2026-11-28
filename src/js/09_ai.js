@@ -49,6 +49,18 @@ function shoot(e, ang, o = {}) {
   bullets.push({ x: e.x + Math.cos(ang) * (e.r + 5), y: e.y + Math.sin(ang) * (e.r + 5), vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, team: e.team, dmg: o.dmg || 7, life: o.life || 2.2, col: o.col || (e.team === 'police' ? '#8fc0ff' : '#ffcf5a'), r: o.r || 3, by: e.kind, fire: o.fire });
   if (!o.quiet) { sfx(o.fire ? 'zap' : 'shot', e.x, e.y, .7); FX.flash(e.x + Math.cos(ang) * (e.r + 8), e.y + Math.sin(ang) * (e.r + 8), 46, o.col || '#ffd27a', .07, .9); }
 }
+/* ---------- attack turns ----------
+   Fights are a rhythm, not a pile-on: only a few enemies may wind up an attack on you at the same moment (bosses and
+   anything not aimed at you are exempt). An enemy that cannot get a turn keeps moving and tries again shortly. Every
+   attack also has a tell you can read: an aim laser, a warning shape on the ground, a flash or a crouch. */
+const MAX_TURNS = 2, turns = [];
+function takeTurn(e, dur) {
+  if (e.kind === 'boss' || e.tgt !== P) return true;
+  const now = G.time; for (let i = turns.length - 1; i >= 0; i--) if (turns[i].until < now || turns[i].e.dead || turns[i].e.stun > 0) turns.splice(i, 1);
+  if (turns.some(t => t.e === e)) return true;
+  if (turns.length >= MAX_TURNS) { e.cd = Math.max(e.cd, rnd(.3, .7)); return false; }
+  turns.push({ e, until: now + dur }); return true;
+}
 function warnLine(x, y, ang, len, w, life, col = '#ff3355') { warns.push({ k: 'line', x, y, ang, len, w, life, max: life, col }); }
 function warnCircle(x, y, r, life, col = '#ff3355') { warns.push({ k: 'circle', x, y, r, life, max: life, col }); }
 
@@ -104,7 +116,7 @@ function aiGunman(e, dt) {
   if (!seen || d > pref + 50) chase(e, t, e.speed, dt);
   else if (d < pref - 70) steer(e, -nx, -ny, e.speed * .8, dt);
   else steer(e, -ny * e.strafeDir, nx * e.strafeDir, e.speed * .6, dt);
-  if (seen && d < 400 && e.cd <= 0) { e.aimT = .42; }
+  if (seen && d < 400 && e.cd <= 0 && takeTurn(e, 1.1)) { e.aimT = .55; }   // the aim laser is the tell
 }
 function aiBrute(e, dt) {
   const t = e.tgt, dx = t.x - e.x, dy = t.y - e.y, d = Math.hypot(dx, dy) || 1;
@@ -125,8 +137,8 @@ function aiBrute(e, dt) {
   }
   face(e, Math.atan2(dy, dx), dt, 7);
   chase(e, t, e.speed, dt);
-  if (d < e.r + t.r + 22 && e.cd <= 0) { e.state = 'slamWind'; e.stateT = .45; warnCircle(e.x, e.y, 70, .45); }
-  else if (d > 120 && d < 330 && e.cd2 <= 0 && seesTarget(e)) { e.state = 'chargeWind'; e.stateT = .6; e.cang = Math.atan2(dy, dx); e.cd2 = 4.5; warnLine(e.x, e.y, e.cang, 300, e.r * 2, .6); sfx('charge', e.x, e.y); }
+  if (d < e.r + t.r + 22 && e.cd <= 0 && takeTurn(e, 1)) { e.state = 'slamWind'; e.stateT = .6; warnCircle(e.x, e.y, 70, .6); }
+  else if (d > 120 && d < 330 && e.cd2 <= 0 && seesTarget(e) && takeTurn(e, 1.4)) { e.state = 'chargeWind'; e.stateT = .6; e.cang = Math.atan2(dy, dx); e.cd2 = 4.5; warnLine(e.x, e.y, e.cang, 300, e.r * 2, .6); sfx('charge', e.x, e.y); }
 }
 function slamAt(e, R, dmg, by) {
   FX.ring(e.x, e.y, R, '#ffae60', .3, 4); FX.dust(e.x, e.y, 12); sfx('heavy', e.x, e.y); shake(.35);
@@ -141,13 +153,13 @@ function aiSuper(e, dt) {
   face(e, Math.atan2(dy, dx), dt, 12);
   e.dashT = (e.dashT || 0) - dt; e.cd2 = (e.cd2 === undefined ? 1.6 : e.cd2) - dt;
   if (e.dashT > 0) { e.vx = e.dvx; e.vy = e.dvy; parts.push({ k: 'g', x: e.x, y: e.y, ang: e.ang, life: .25, max: .25, col: '#b66bff', sup: 1 }); return; }
-  if (e.cd2 <= 0 && d < 420 && seen) {
+  if (e.cd2 <= 0 && d < 420 && seen && takeTurn(e, 1)) {
     const s = Math.random() < .5 ? 1 : -1; e.dvx = (-dy / d * s * .8 + dx / d * .3) * 480; e.dvy = (dx / d * s * .8 + dy / d * .3) * 480; e.dashT = .26; e.cd2 = 2.8; sfx('dash', e.x, e.y, .6);
-    later(.32, () => {
-      if (e.dead || e.stun > 0 || !e.tgt) return; const a0 = Math.atan2(e.tgt.y - e.y, e.tgt.x - e.x);
+    later(.6, () => {   // the fan comes .6 s after the dash, with its warning cone shown the whole time
+      if (e.dead || e.stun > 0 || !e.tgt) return; const a0 = e.fanAng !== undefined ? e.fanAng : Math.atan2(e.tgt.y - e.y, e.tgt.x - e.x);
       for (let i = -2; i <= 2; i++) shoot(e, a0 + i * .17, { dmg: 7, speed: 250, col: '#d9a6ff', r: 4, quiet: i !== 0 });
     });
-    later(.06, () => { if (!e.dead && e.tgt) warnLine(e.x, e.y, Math.atan2(e.tgt.y - e.y, e.tgt.x - e.x), 260, 40, .26, '#c080ff'); });
+    later(.28, () => { if (!e.dead && e.tgt) { e.fanAng = Math.atan2(e.tgt.y - e.y, e.tgt.x - e.x); warnLine(e.x, e.y, e.fanAng, 260, 70, .32, '#c080ff'); } });
     return;
   }
   if (d > 230 || !seen) chase(e, t, e.speed, dt); else steer(e, -dy, dx, e.speed * .7, dt);
@@ -200,7 +212,8 @@ function aiBoss(e, dt) {
     const pull = 330 * dt; P.vx -= dx / d * pull * 2.4; P.vy -= dy / d * pull * 2.4;
     for (const o of act) if (o.prop && !o.held && dist(o, e) < 340) { o.vx += (e.x - o.x) / (dist(o, e) || 1) * 500 * dt; o.vy += (e.y - o.y) / (dist(o, e) || 1) * 500 * dt; }
     if (Math.random() < .7) { const a = rnd(TAU), r = rnd(80, 220); parts.push({ k: 'd', x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r, vx: -Math.cos(a) * 260, vy: -Math.sin(a) * 260, life: .4, max: .4, col: '#c9a6ff', w: 2 }); }
-    if (e.actT <= 0) { e.act = ''; radial(e, ph2 ? 22 : 16, 230, '#c9a6ff'); }
+    if (e.actT <= .5 && !e.pullWarned) { e.pullWarned = true; warnCircle(e.x, e.y, 120, .5, '#c9a6ff'); }   // the burst at the end of the pull is signalled
+    if (e.actT <= 0) { e.act = ''; e.pullWarned = false; radial(e, ph2 ? 22 : 16, 230, '#c9a6ff'); }
     return;
   }
   if (e.act === 'hurl' || e.act === 'volley') {
@@ -210,12 +223,16 @@ function aiBoss(e, dt) {
       o.vx = (e.x + Math.cos(a) * rr - o.x) * 10; o.vy = (e.y + Math.sin(a) * rr - o.y) * 10; o.z = 20;
     }
     if (e.actT <= 0) {
-      const o = e.lifted.shift();
-      if (o && !o.dead) {
-        o.bossHeld = null; o.held = false; const a = Math.atan2(P.y + P.vy * .3 - o.y, P.x + P.vx * .3 - o.x), sp = e.did === 2 ? 560 : 520;
-        o.vx = Math.cos(a) * sp; o.vy = Math.sin(a) * sp; o.thrower = 'boss'; o.thrownT = 1.6; o.spin = rnd(-10, 10); sfx('throw', o.x, o.y); warnLine(o.x, o.y, a, 360, o.r * 2, .25, '#ff3355');
+      const o = e.lifted[0];
+      if (o && !o.dead && !o.aimed) {   // the tell: a warning line from the object to where it will go, for .45 s, then the throw
+        o.aimed = true; o.aimA = Math.atan2(P.y + P.vy * .3 - o.y, P.x + P.vx * .3 - o.x); warnLine(o.x, o.y, o.aimA, 360, o.r * 2, .45, '#ff3355'); e.actT = .45; return;
       }
-      if (e.lifted.length) e.actT = e.did === 2 ? .45 : .6; else e.act = '';
+      e.lifted.shift();
+      if (o && !o.dead) {
+        o.bossHeld = null; o.held = false; o.aimed = false; const a = o.aimA, sp = e.did === 2 ? 560 : 520;
+        o.vx = Math.cos(a) * sp; o.vy = Math.sin(a) * sp; o.thrower = 'boss'; o.thrownT = 1.6; o.spin = rnd(-10, 10); sfx('throw', o.x, o.y);
+      }
+      if (e.lifted.length) e.actT = e.did === 2 ? .35 : .5; else e.act = '';
     }
     return;
   }
@@ -258,7 +275,8 @@ function aiBoss(e, dt) {
     if (p) {
       for (let i = 0; i < 6; i++) parts.push({ k: 'g', x: lerp(e.x, p.x, i / 6), y: lerp(e.y, p.y, i / 6), ang: e.ang, life: .4, max: .4, col: e.col, boss: 1 });
       FX.flash(e.x, e.y, 120, '#b06bff', .3); e.x = p.x; e.y = p.y; e.vx = e.vy = 0; FX.flash(e.x, e.y, 120, '#b06bff', .3); sfx('zap', e.x, e.y);
-      later(.35, () => { if (!e.dead && e.stagger <= 0) { const a0 = Math.atan2(P.y - e.y, P.x - e.x); for (let i = -2; i <= 2; i++) shoot(e, a0 + i * .2, { speed: 280, col: '#d9a6ff', dmg: 8, r: 4, quiet: i !== 0 }); } });
+      const a0b = Math.atan2(P.y - e.y, P.x - e.x); warnLine(e.x, e.y, a0b, 280, 90, .55, '#c080ff');   // a warning cone where the fan will go
+      later(.55, () => { if (!e.dead && e.stagger <= 0) { for (let i = -2; i <= 2; i++) shoot(e, a0b + i * .2, { speed: 280, col: '#d9a6ff', dmg: 8, r: 4, quiet: i !== 0 }); } });
     }
   }
 }
@@ -392,7 +410,7 @@ function aiTower(e, dt) {
   if (lk.aimT > 0) {
     lk.aimT -= dt;
     if (lk.aimT <= 0) { shoot(e, Math.atan2(P.y - e.y, P.x - e.x) + rnd(-.06, .06), { dmg: 7 }); e.cd = 1.4 + rnd(.9); }
-  } else if (e.cd <= 0) lk.aimT = .42;
+  } else if (e.cd <= 0 && takeTurn({ kind: 'tower', tgt: P, dead: e.dead, stun: 0, cd: 0 }, 1)) lk.aimT = .55;
 }
 
 /* ---------- per tick ---------- */

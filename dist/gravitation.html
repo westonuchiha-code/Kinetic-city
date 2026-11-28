@@ -1838,6 +1838,18 @@ function shoot(e, ang, o = {}) {
   bullets.push({ x: e.x + Math.cos(ang) * (e.r + 5), y: e.y + Math.sin(ang) * (e.r + 5), vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, team: e.team, dmg: o.dmg || 7, life: o.life || 2.2, col: o.col || (e.team === 'police' ? '#8fc0ff' : '#ffcf5a'), r: o.r || 3, by: e.kind, fire: o.fire });
   if (!o.quiet) { sfx(o.fire ? 'zap' : 'shot', e.x, e.y, .7); FX.flash(e.x + Math.cos(ang) * (e.r + 8), e.y + Math.sin(ang) * (e.r + 8), 46, o.col || '#ffd27a', .07, .9); }
 }
+/* ---------- attack turns ----------
+   Fights are a rhythm, not a pile-on: only a few enemies may wind up an attack on you at the same moment (bosses and
+   anything not aimed at you are exempt). An enemy that cannot get a turn keeps moving and tries again shortly. Every
+   attack also has a tell you can read: an aim laser, a warning shape on the ground, a flash or a crouch. */
+const MAX_TURNS = 2, turns = [];
+function takeTurn(e, dur) {
+  if (e.kind === 'boss' || e.tgt !== P) return true;
+  const now = G.time; for (let i = turns.length - 1; i >= 0; i--) if (turns[i].until < now || turns[i].e.dead || turns[i].e.stun > 0) turns.splice(i, 1);
+  if (turns.some(t => t.e === e)) return true;
+  if (turns.length >= MAX_TURNS) { e.cd = Math.max(e.cd, rnd(.3, .7)); return false; }
+  turns.push({ e, until: now + dur }); return true;
+}
 function warnLine(x, y, ang, len, w, life, col = '#ff3355') { warns.push({ k: 'line', x, y, ang, len, w, life, max: life, col }); }
 function warnCircle(x, y, r, life, col = '#ff3355') { warns.push({ k: 'circle', x, y, r, life, max: life, col }); }
 
@@ -1893,7 +1905,7 @@ function aiGunman(e, dt) {
   if (!seen || d > pref + 50) chase(e, t, e.speed, dt);
   else if (d < pref - 70) steer(e, -nx, -ny, e.speed * .8, dt);
   else steer(e, -ny * e.strafeDir, nx * e.strafeDir, e.speed * .6, dt);
-  if (seen && d < 400 && e.cd <= 0) { e.aimT = .42; }
+  if (seen && d < 400 && e.cd <= 0 && takeTurn(e, 1.1)) { e.aimT = .55; }   // the aim laser is the tell
 }
 function aiBrute(e, dt) {
   const t = e.tgt, dx = t.x - e.x, dy = t.y - e.y, d = Math.hypot(dx, dy) || 1;
@@ -1914,8 +1926,8 @@ function aiBrute(e, dt) {
   }
   face(e, Math.atan2(dy, dx), dt, 7);
   chase(e, t, e.speed, dt);
-  if (d < e.r + t.r + 22 && e.cd <= 0) { e.state = 'slamWind'; e.stateT = .45; warnCircle(e.x, e.y, 70, .45); }
-  else if (d > 120 && d < 330 && e.cd2 <= 0 && seesTarget(e)) { e.state = 'chargeWind'; e.stateT = .6; e.cang = Math.atan2(dy, dx); e.cd2 = 4.5; warnLine(e.x, e.y, e.cang, 300, e.r * 2, .6); sfx('charge', e.x, e.y); }
+  if (d < e.r + t.r + 22 && e.cd <= 0 && takeTurn(e, 1)) { e.state = 'slamWind'; e.stateT = .6; warnCircle(e.x, e.y, 70, .6); }
+  else if (d > 120 && d < 330 && e.cd2 <= 0 && seesTarget(e) && takeTurn(e, 1.4)) { e.state = 'chargeWind'; e.stateT = .6; e.cang = Math.atan2(dy, dx); e.cd2 = 4.5; warnLine(e.x, e.y, e.cang, 300, e.r * 2, .6); sfx('charge', e.x, e.y); }
 }
 function slamAt(e, R, dmg, by) {
   FX.ring(e.x, e.y, R, '#ffae60', .3, 4); FX.dust(e.x, e.y, 12); sfx('heavy', e.x, e.y); shake(.35);
@@ -1930,13 +1942,13 @@ function aiSuper(e, dt) {
   face(e, Math.atan2(dy, dx), dt, 12);
   e.dashT = (e.dashT || 0) - dt; e.cd2 = (e.cd2 === undefined ? 1.6 : e.cd2) - dt;
   if (e.dashT > 0) { e.vx = e.dvx; e.vy = e.dvy; parts.push({ k: 'g', x: e.x, y: e.y, ang: e.ang, life: .25, max: .25, col: '#b66bff', sup: 1 }); return; }
-  if (e.cd2 <= 0 && d < 420 && seen) {
+  if (e.cd2 <= 0 && d < 420 && seen && takeTurn(e, 1)) {
     const s = Math.random() < .5 ? 1 : -1; e.dvx = (-dy / d * s * .8 + dx / d * .3) * 480; e.dvy = (dx / d * s * .8 + dy / d * .3) * 480; e.dashT = .26; e.cd2 = 2.8; sfx('dash', e.x, e.y, .6);
-    later(.32, () => {
-      if (e.dead || e.stun > 0 || !e.tgt) return; const a0 = Math.atan2(e.tgt.y - e.y, e.tgt.x - e.x);
+    later(.6, () => {   // the fan comes .6 s after the dash, with its warning cone shown the whole time
+      if (e.dead || e.stun > 0 || !e.tgt) return; const a0 = e.fanAng !== undefined ? e.fanAng : Math.atan2(e.tgt.y - e.y, e.tgt.x - e.x);
       for (let i = -2; i <= 2; i++) shoot(e, a0 + i * .17, { dmg: 7, speed: 250, col: '#d9a6ff', r: 4, quiet: i !== 0 });
     });
-    later(.06, () => { if (!e.dead && e.tgt) warnLine(e.x, e.y, Math.atan2(e.tgt.y - e.y, e.tgt.x - e.x), 260, 40, .26, '#c080ff'); });
+    later(.28, () => { if (!e.dead && e.tgt) { e.fanAng = Math.atan2(e.tgt.y - e.y, e.tgt.x - e.x); warnLine(e.x, e.y, e.fanAng, 260, 70, .32, '#c080ff'); } });
     return;
   }
   if (d > 230 || !seen) chase(e, t, e.speed, dt); else steer(e, -dy, dx, e.speed * .7, dt);
@@ -1989,7 +2001,8 @@ function aiBoss(e, dt) {
     const pull = 330 * dt; P.vx -= dx / d * pull * 2.4; P.vy -= dy / d * pull * 2.4;
     for (const o of act) if (o.prop && !o.held && dist(o, e) < 340) { o.vx += (e.x - o.x) / (dist(o, e) || 1) * 500 * dt; o.vy += (e.y - o.y) / (dist(o, e) || 1) * 500 * dt; }
     if (Math.random() < .7) { const a = rnd(TAU), r = rnd(80, 220); parts.push({ k: 'd', x: e.x + Math.cos(a) * r, y: e.y + Math.sin(a) * r, vx: -Math.cos(a) * 260, vy: -Math.sin(a) * 260, life: .4, max: .4, col: '#c9a6ff', w: 2 }); }
-    if (e.actT <= 0) { e.act = ''; radial(e, ph2 ? 22 : 16, 230, '#c9a6ff'); }
+    if (e.actT <= .5 && !e.pullWarned) { e.pullWarned = true; warnCircle(e.x, e.y, 120, .5, '#c9a6ff'); }   // the burst at the end of the pull is signalled
+    if (e.actT <= 0) { e.act = ''; e.pullWarned = false; radial(e, ph2 ? 22 : 16, 230, '#c9a6ff'); }
     return;
   }
   if (e.act === 'hurl' || e.act === 'volley') {
@@ -1999,12 +2012,16 @@ function aiBoss(e, dt) {
       o.vx = (e.x + Math.cos(a) * rr - o.x) * 10; o.vy = (e.y + Math.sin(a) * rr - o.y) * 10; o.z = 20;
     }
     if (e.actT <= 0) {
-      const o = e.lifted.shift();
-      if (o && !o.dead) {
-        o.bossHeld = null; o.held = false; const a = Math.atan2(P.y + P.vy * .3 - o.y, P.x + P.vx * .3 - o.x), sp = e.did === 2 ? 560 : 520;
-        o.vx = Math.cos(a) * sp; o.vy = Math.sin(a) * sp; o.thrower = 'boss'; o.thrownT = 1.6; o.spin = rnd(-10, 10); sfx('throw', o.x, o.y); warnLine(o.x, o.y, a, 360, o.r * 2, .25, '#ff3355');
+      const o = e.lifted[0];
+      if (o && !o.dead && !o.aimed) {   // the tell: a warning line from the object to where it will go, for .45 s, then the throw
+        o.aimed = true; o.aimA = Math.atan2(P.y + P.vy * .3 - o.y, P.x + P.vx * .3 - o.x); warnLine(o.x, o.y, o.aimA, 360, o.r * 2, .45, '#ff3355'); e.actT = .45; return;
       }
-      if (e.lifted.length) e.actT = e.did === 2 ? .45 : .6; else e.act = '';
+      e.lifted.shift();
+      if (o && !o.dead) {
+        o.bossHeld = null; o.held = false; o.aimed = false; const a = o.aimA, sp = e.did === 2 ? 560 : 520;
+        o.vx = Math.cos(a) * sp; o.vy = Math.sin(a) * sp; o.thrower = 'boss'; o.thrownT = 1.6; o.spin = rnd(-10, 10); sfx('throw', o.x, o.y);
+      }
+      if (e.lifted.length) e.actT = e.did === 2 ? .35 : .5; else e.act = '';
     }
     return;
   }
@@ -2047,7 +2064,8 @@ function aiBoss(e, dt) {
     if (p) {
       for (let i = 0; i < 6; i++) parts.push({ k: 'g', x: lerp(e.x, p.x, i / 6), y: lerp(e.y, p.y, i / 6), ang: e.ang, life: .4, max: .4, col: e.col, boss: 1 });
       FX.flash(e.x, e.y, 120, '#b06bff', .3); e.x = p.x; e.y = p.y; e.vx = e.vy = 0; FX.flash(e.x, e.y, 120, '#b06bff', .3); sfx('zap', e.x, e.y);
-      later(.35, () => { if (!e.dead && e.stagger <= 0) { const a0 = Math.atan2(P.y - e.y, P.x - e.x); for (let i = -2; i <= 2; i++) shoot(e, a0 + i * .2, { speed: 280, col: '#d9a6ff', dmg: 8, r: 4, quiet: i !== 0 }); } });
+      const a0b = Math.atan2(P.y - e.y, P.x - e.x); warnLine(e.x, e.y, a0b, 280, 90, .55, '#c080ff');   // a warning cone where the fan will go
+      later(.55, () => { if (!e.dead && e.stagger <= 0) { for (let i = -2; i <= 2; i++) shoot(e, a0b + i * .2, { speed: 280, col: '#d9a6ff', dmg: 8, r: 4, quiet: i !== 0 }); } });
     }
   }
 }
@@ -2181,7 +2199,7 @@ function aiTower(e, dt) {
   if (lk.aimT > 0) {
     lk.aimT -= dt;
     if (lk.aimT <= 0) { shoot(e, Math.atan2(P.y - e.y, P.x - e.x) + rnd(-.06, .06), { dmg: 7 }); e.cd = 1.4 + rnd(.9); }
-  } else if (e.cd <= 0) lk.aimT = .42;
+  } else if (e.cd <= 0 && takeTurn({ kind: 'tower', tgt: P, dead: e.dead, stun: 0, cd: 0 }, 1)) lk.aimT = .55;
 }
 
 /* ---------- per tick ---------- */
@@ -2507,7 +2525,7 @@ function aiMachine(e, dt) {
     if (!on || !e.losC) { e.aimT = 0; e.ang += dt * .9; return; }
     e.ang += angDiff(Math.atan2(P.y - e.y, P.x - e.x), e.ang) * Math.min(1, dt * 7);
     if (e.aimT > 0) { e.aimT -= dt; if (e.aimT <= 0) { for (let i = 0; i < 3; i++) later(i * .11, () => { if (!e.dead) shoot(e, e.ang + rnd(-.07, .07), { dmg: 5, speed: 340, col: '#ffd27a' }); }); e.cd = 1.8 + rnd(.6); } }
-    else if (e.cd <= 0) e.aimT = .6;
+    else if (e.cd <= 0 && takeTurn(Object.assign(e, { tgt: P }), 1.2)) e.aimT = .7;
     return;
   }
   if (k === 'hive') {      // a mite hive: a squat solar-topped box that releases mites while you are near
@@ -2551,7 +2569,7 @@ function aiMachine(e, dt) {
     }
     e.orb = e.orb || (Math.random() < .5 ? 1 : -1); if (Math.random() < dt * .3) e.orb *= -1;
     if (!seen || d > 230) chase(e, t, e.speed, dt); else if (d < 130) steer(e, -dx, -dy, e.speed, dt); else steer(e, -dy * e.orb, dx * e.orb, e.speed * .7, dt);
-    if (seen && d < 240 && e.cd <= 0) { e.chargeT = .75; e.cang = Math.atan2(dy, dx); warnLine(e.x, e.y, e.cang, 250, 8, .75, ZAP_COL); sfx('charge', e.x, e.y, .5); }
+    if (seen && d < 240 && e.cd <= 0 && takeTurn(e, 1.1)) { e.chargeT = .75; e.cang = Math.atan2(dy, dx); warnLine(e.x, e.y, e.cang, 250, 8, .75, ZAP_COL); sfx('charge', e.x, e.y, .5); }
     return;
   }
   if (k === 'crawler') {   // runs at you on four legs; close enough, it arms its battery and bursts
@@ -2563,8 +2581,16 @@ function aiMachine(e, dt) {
   if (k === 'mite') {      // darts in, nips, darts out
     e.dartT = (e.dartT || 0) - dt;
     if (e.dartT > 0) { steer(e, e.fx, e.fy, e.speed * 1.1, dt, 12); return; }
-    face(e, Math.atan2(dy, dx), dt, 14); steer(e, dx + rnd(-30, 30), dy + rnd(-30, 30), e.speed, dt, 10);
-    if (d < e.r + t.r + 4 && e.cd <= 0) { if (t === P && P.absorbing) absorb(4); else hurt(t, 4, { by: 'gang', src: e }); FX.sparks(t.x, t.y, 4, ZAP_COL, 140); sfx('zap', e.x, e.y, .3); e.cd = .9; e.dartT = .45; const a = rnd(TAU); e.fx = Math.cos(a); e.fy = Math.sin(a); }
+    if (e.lungeT > 0) {   // the tell: it stops, its eye flashes for .4 s, then it lunges in a straight line
+      e.lungeT -= dt; if (e.lungeT > .15) { steer(e, 0, 0, 0, dt, 12); return; }
+      steer(e, e.lx, e.ly, e.speed * 2.2, dt, 14);
+      if (d < e.r + t.r + 4) { if (t === P && P.absorbing) absorb(4); else hurt(t, 5, { by: 'gang', src: e }); FX.sparks(t.x, t.y, 4, ZAP_COL, 140); sfx('zap', e.x, e.y, .3); e.lungeT = 0; e.cd = 1.4; e.dartT = .5; const a = rnd(TAU); e.fx = Math.cos(a); e.fy = Math.sin(a); }
+      if (e.lungeT <= 0 && e.dartT <= 0) { e.cd = 1; e.dartT = .3; e.fx = -e.lx; e.fy = -e.ly; }
+      return;
+    }
+    face(e, Math.atan2(dy, dx), dt, 14);
+    if (d > 70) steer(e, dx + rnd(-30, 30), dy + rnd(-30, 30), e.speed, dt, 10); else steer(e, -dy * (e.id % 2 ? 1 : -1), dx * (e.id % 2 ? 1 : -1), e.speed * .7, dt, 8);   // circles at a little distance
+    if (d < 70 && e.cd <= 0 && takeTurn(e, .8)) { e.lungeT = .55; e.lx = dx / d; e.ly = dy / d; warnLine(e.x, e.y, Math.atan2(dy, dx), 80, 10, .4, ZAP_COL); sfx('charge', e.x, e.y, .25); }
     return;
   }
   if (k === 'loader') { e.tgt = t; aiBrute(e, dt); return; }
@@ -2572,7 +2598,7 @@ function aiMachine(e, dt) {
     if (e.dropT > 0) { e.dropT -= dt; steer(e, e.dx - e.x, e.dy - e.y, e.speed * 1.4, dt, 6); if (e.dropT <= 0) { explosion(e.dx, e.dy, 52, 18, 'gang'); e.cd = 3.2; e.parcel = false; later(2.4, () => { if (!e.dead) e.parcel = true; }); } return; }
     face(e, Math.atan2(dy, dx), dt, 6); e.orb = e.orb || (Math.random() < .5 ? 1 : -1);
     if (d > 160) chase(e, t, e.speed, dt); else steer(e, -dy * e.orb + dx * .2, dx * e.orb + dy * .2, e.speed * .8, dt);
-    if (e.parcel !== false && d < 220 && e.cd <= 0) { e.dx = t.x + (t.vx || 0) * .5; e.dy = t.y + (t.vy || 0) * .5; e.dropT = .9; warnCircle(e.dx, e.dy, 52, .9, '#ff9a3a'); sfx('charge', e.x, e.y, .4); }
+    if (e.parcel !== false && d < 220 && e.cd <= 0 && takeTurn(e, 1.2)) { e.dx = t.x + (t.vx || 0) * .5; e.dy = t.y + (t.vy || 0) * .5; e.dropT = .9; warnCircle(e.dx, e.dy, 52, .9, '#ff9a3a'); sfx('charge', e.x, e.y, .4); }
     return;
   }   // a heavy walker: slams and charges like a brute
 }
@@ -7090,10 +7116,11 @@ function drawWarns() {
       ctx.globalAlpha = .18 + .2 * k; gDither(w.x, w.y, w.r, col);
       ctx.globalAlpha = blink ? 1 : .6; gRing(w.x, w.y, w.r, col); gRing(w.x, w.y, w.r * k, mix(col, '#ffffff', .4));
     } else {
-      const c = Math.cos(w.ang), s = Math.sin(w.ang), nx = -s * w.w / 2, ny = c * w.w / 2;
-      const quad = len => [isoXY(w.x + nx, w.y + ny), isoXY(w.x + c * len + nx, w.y + s * len + ny), isoXY(w.x + c * len - nx, w.y + s * len - ny), isoXY(w.x - nx, w.y - ny)];
-      ctx.globalAlpha = .22; ipoly(quad(w.len), col); ctx.globalAlpha = .45 + .2 * k; ipoly(quad(w.len * k), col);
-      ctx.globalAlpha = blink ? 1 : .6; const q = quad(w.len); for (let i = 0; i < 4; i++) iline(q[i], q[(i + 1) % 4], col);
+      // a thin laser-pointer line from the attacker, not a band on the ground (the user finds big floor markings gaudy).
+      // It draws out from the attacker as the wind-up runs and blinks faster just before the attack.
+      const c = Math.cos(w.ang), s = Math.sin(w.ang), L = w.len * Math.min(1, .35 + k * .9), a0 = isoXY(w.x, w.y, 8), a1 = isoXY(w.x + c * L, w.y + s * L, 8);
+      const fast = k > .7 ? Math.sin(G.time * 60) > 0 : blink;
+      ctx.globalAlpha = fast ? .95 : .55; iline(a0, a1, col); ipx(a1[0], a1[1], '#ffffff');
     }
     ctx.globalAlpha = 1;
   }
@@ -8536,7 +8563,7 @@ function drawMachine(e) {
     const hov = (e.def.hover || 12) + Math.sin(t * 7 + e.id) * 1.2, P3 = mframe(e, hov); mshadow(e, 3, 1.5);
     const spin = Math.floor(t * 30) & 1;
     for (const v of [-4, 4]) { const c = P3(0, v, 4); iellipse(c[0], c[1], 2, 1, spin ? '#c8ccd6' : '#7a7f8c'); }
-    pixBox(e, P3, 0, 6, 5, 0, 4, W('#8a8e98'), W('#9aa0aa'), (i, quad) => { if (i === 0) quad(i, .35, .65, 1.5, 3, Math.sin(t * 9 + e.id) > 0 ? '#ff5a3a' : '#5a1a10'); });
+    const tell = e.lungeT > .15; pixBox(e, P3, 0, 6, 5, 0, 4, W(tell ? '#ffffff' : '#8a8e98'), W(tell ? '#ffffff' : '#9aa0aa'), (i, quad) => { if (i === 0) quad(i, .35, .65, 1.5, 3, tell || Math.sin(t * 9 + e.id) > 0 ? '#ff5a3a' : '#5a1a10'); }); if (tell) { const c = P3(0, 0, 2); iglow(c[0], c[1], 6, '#fff0b0', .6); }
     return;
   }
   if (k === 'crawler') {   // repo crawler: a low body on four legs, a battery pack on its back

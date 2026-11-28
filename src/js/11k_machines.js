@@ -47,7 +47,7 @@ function drawMachine(e) {
     const hov = (e.def.hover || 12) + Math.sin(t * 7 + e.id) * 1.2, P3 = mframe(e, hov); mshadow(e, 3, 1.5);
     const spin = Math.floor(t * 30) & 1;
     for (const v of [-4, 4]) { const c = P3(0, v, 4); iellipse(c[0], c[1], 2, 1, spin ? '#c8ccd6' : '#7a7f8c'); }
-    pixBox(e, P3, 0, 6, 5, 0, 4, W('#8a8e98'), W('#9aa0aa'), (i, quad) => { if (i === 0) quad(i, .35, .65, 1.5, 3, Math.sin(t * 9 + e.id) > 0 ? '#ff5a3a' : '#5a1a10'); });
+    const tell = e.lungeT > .15; pixBox(e, P3, 0, 6, 5, 0, 4, W(tell ? '#ffffff' : '#8a8e98'), W(tell ? '#ffffff' : '#9aa0aa'), (i, quad) => { if (i === 0) quad(i, .35, .65, 1.5, 3, tell || Math.sin(t * 9 + e.id) > 0 ? '#ff5a3a' : '#5a1a10'); }); if (tell) { const c = P3(0, 0, 2); iglow(c[0], c[1], 6, '#fff0b0', .6); }
     return;
   }
   if (k === 'crawler') {   // repo crawler: a low body on four legs, a battery pack on its back

@@ -63,10 +63,11 @@ function drawWarns() {
       ctx.globalAlpha = .18 + .2 * k; gDither(w.x, w.y, w.r, col);
       ctx.globalAlpha = blink ? 1 : .6; gRing(w.x, w.y, w.r, col); gRing(w.x, w.y, w.r * k, mix(col, '#ffffff', .4));
     } else {
-      const c = Math.cos(w.ang), s = Math.sin(w.ang), nx = -s * w.w / 2, ny = c * w.w / 2;
-      const quad = len => [isoXY(w.x + nx, w.y + ny), isoXY(w.x + c * len + nx, w.y + s * len + ny), isoXY(w.x + c * len - nx, w.y + s * len - ny), isoXY(w.x - nx, w.y - ny)];
-      ctx.globalAlpha = .22; ipoly(quad(w.len), col); ctx.globalAlpha = .45 + .2 * k; ipoly(quad(w.len * k), col);
-      ctx.globalAlpha = blink ? 1 : .6; const q = quad(w.len); for (let i = 0; i < 4; i++) iline(q[i], q[(i + 1) % 4], col);
+      // a thin laser-pointer line from the attacker, not a band on the ground (the user finds big floor markings gaudy).
+      // It draws out from the attacker as the wind-up runs and blinks faster just before the attack.
+      const c = Math.cos(w.ang), s = Math.sin(w.ang), L = w.len * Math.min(1, .35 + k * .9), a0 = isoXY(w.x, w.y, 8), a1 = isoXY(w.x + c * L, w.y + s * L, 8);
+      const fast = k > .7 ? Math.sin(G.time * 60) > 0 : blink;
+      ctx.globalAlpha = fast ? .95 : .55; iline(a0, a1, col); ipx(a1[0], a1[1], '#ffffff');
     }
     ctx.globalAlpha = 1;
   }
