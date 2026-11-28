@@ -133,7 +133,7 @@ function streamPopulation(dt) {
   for (const e of ents) {
     if (e.dead) continue;
     const d = Math.hypot(e.x - P.x, e.y - P.y);
-    if (e.kind === 'civ') { if (d > 1000 && e.state !== 'wounded') e.dead = true; else if (d < 650) peds++; }
+    if (e.kind === 'civ') { if (e.fixed) continue; if (d > 1000 && e.state !== 'wounded') e.dead = true; else if (d < 650) peds++; }
     else if (e.kind === 'car' && (e.driving || e.curb)) {
       // only cars inside the simulated area move, so only those count as traffic; a driver who leaves it is gone (well out of view)
       const live = Math.abs(e.x - P.x) < ACTIVE_R && Math.abs(e.y - P.y) < ACTIVE_R;
@@ -163,10 +163,10 @@ function spawnPedNear() {
     if (!b || districtAt(b.x + 144) !== districtAt(P.x) && !gatesOpen[Math.min(districtAt(b.x + 144), districtAt(P.x))]) continue;
     if (viaDoor && b.doors && b.doors.length) {
       const dr = pick(b.doors); if (dist(dr, P) < 90) continue;
-      const c = spawnCiv(dr.x, dr.y); c.blk = b; c.s = dr.s; c.dir = Math.random() < .5 ? 1 : -1; c.street = 'exit'; c.goal = ringPt(b, dr.s); c.fadeIn = .35; return;
+      const c = giveRole(spawnCiv(dr.x, dr.y), pickWalkerRole()); c.blk = b; c.s = dr.s; c.dir = Math.random() < .5 ? 1 : -1; c.street = 'exit'; c.goal = ringPt(b, dr.s); c.fadeIn = .35; return;
     }
     const s = rnd(RING), p = ringPt(b, s);
     if (dist(p, P) < 330 || !walkable(p.x, p.y, 8)) continue;
-    const c = spawnCiv(p.x, p.y); c.blk = b; c.s = s; c.dir = Math.random() < .5 ? 1 : -1; c.street = 'walk'; return;
+    const c = giveRole(spawnCiv(p.x, p.y), pickWalkerRole()); c.blk = b; c.s = s; c.dir = Math.random() < .5 ? 1 : -1; c.street = 'walk'; return;
   }
 }

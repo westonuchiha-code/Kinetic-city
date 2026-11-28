@@ -269,6 +269,7 @@ function render(dt) {
   for (const t of trees) if (inView(t.x, t.y, 60)) addPt(t.x, t.y, t.x + t.y, t.r + 4, t.h * ISO_KZ + t.r * 2 + 6, drawIsoTree, t);
   for (const d of decos) if (inView(d.x, d.y, 60)) addPt(d.x, d.y, d.x + d.y, 14, 40, drawIsoHoop, d);
   for (const sg of streetSignals()) if (inView(sg.x, sg.y, 30)) addPt(sg.x, sg.y, sg.x + sg.y, 4, 24, drawIsoSignal, sg);
+  for (const e of _vis) if (e.role === 'vendor' && e.cart && !e.dead) addPt(e.cart.x, e.cart.y + 6, e.cart.x + e.cart.y + 6, 18, 40, drawVendorCart, e.cart);
   for (const f of streetFurniture()) if (inView(f.x, f.y, 40)) addPt(f.x + 10, f.y + 4, f.x + f.y + 14, 16, 34, drawFurniture, f);
   for (const l of lamps) if (inView(l.x, l.y, 40)) addPt(l.x, l.y, l.x + l.y, 3, 20, drawIsoLamp, l);
   for (const p of pickups) if (inView(p.x, p.y, 30)) addPt(p.x, p.y, p.x + p.y, 8, 12, pp => { uprightT(pp.x, pp.y); drawPickup(pp); }, p);

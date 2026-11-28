@@ -67,17 +67,20 @@ function aiCivilian(e, dt) {
     let thr = null, td = 1e9;
     for (const o of act) {
       if (o === e || o.dead) continue; let danger = false; const d = dist2(o, e);
-      if (o.team === 'gang' && !o.static && d < 150 * 150 && (o.tgt || o.kind !== 'grunt')) danger = true;
-      else if (o.prop && Math.hypot(o.vx, o.vy) > 200 && d < 130 * 130) danger = true;
-      else if (o.kind === 'player' && (G.karma < -25 || G.heat >= 1 || o.dashT > 0 || o.absorbing) && d < 120 * 120) danger = true;
-      else if (o.kind === 'cop' && !o.ally && G.heat >= 1 && d < 110 * 110) danger = true;
+      const F = roleFear(e), r1 = 150 * F, r2 = 130 * F, r3 = 120 * F, r4 = 110 * F;
+      if (o.team === 'gang' && !o.static && d < r1 * r1 && (o.tgt || o.kind !== 'grunt') && o.team !== 'bot') danger = true;
+      else if (o.prop && Math.hypot(o.vx, o.vy) > 200 && d < r2 * r2) danger = true;
+      else if (o.kind === 'player' && (G.karma < -25 || G.heat >= 1 || o.dashT > 0 || o.absorbing) && d < r3 * r3) danger = true;
+      else if (o.kind === 'cop' && !o.ally && G.heat >= 1 && d < r4 * r4) danger = true;
       if (danger && d < td) { td = d; thr = o; }
     }
-    if (thr) { e.state = 'flee'; e.stateT = 2; e.fx = e.x - thr.x; e.fy = e.y - thr.y; }
+    if (thr) { e.state = 'flee'; e.stateT = 2; e.fx = e.x - thr.x; e.fy = e.y - thr.y; e.pauseT = 0; e.filming = false; if (Math.random() < .4) civSay(e, '!', 1); }
   }
   if (e.state === 'flee') { e.stateT -= dt; steer(e, e.fx, e.fy, 128, dt, 10); face(e, Math.atan2(e.fy, e.fx), dt, 12); e.walk += dt * 9; if (e.stateT <= 0) e.state = ''; return; }
   if (e.state === 'cheer') { e.stateT -= dt; steer(e, 0, 0, 0, dt); face(e, Math.atan2(P.y - e.y, P.x - e.x), dt); if (Math.random() < dt * 2.5) parts.push({ k: 'd', x: e.x, y: e.y - 8, vx: rnd(-12, 12), vy: -40, life: .8, max: .8, col: pick(['#ff7aa8', '#7affea', '#ffd23c']), w: 2 }); if (e.stateT <= 0) e.state = ''; return; }
   if (G.karma > 25 && G.heat < 1 && dist2(e, P) < 90 * 90 && Math.random() < dt * .5) { e.state = 'cheer'; e.stateT = 2.5; return; }
+  if (roleTick(e, dt)) return;
+  if (e.fixed) { const h = e.home; if (dist(e, h) > 8) { steer(e, h.x - e.x, h.y - e.y, 50, dt); face(e, Math.atan2(h.y - e.y, h.x - e.x), dt, 8); e.walk += dt * 4; } else steer(e, 0, 0, 0, dt); return; }   // a placed person heads back to their spot after a scare
   walkStreet(e, dt);
   if (Math.hypot(e.vx, e.vy) > 8) e.walk += dt * Math.hypot(e.vx, e.vy) * .07;
 }
