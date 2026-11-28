@@ -7113,8 +7113,11 @@ function drawWarns() {
   for (const w of warns) {
     const k = 1 - w.life / w.max, blink = Math.sin(G.time * 30) > 0, col = w.col;
     if (w.k === 'circle') {
-      ctx.globalAlpha = .18 + .2 * k; gDither(w.x, w.y, w.r, col);
-      ctx.globalAlpha = blink ? 1 : .6; gRing(w.x, w.y, w.r, col); gRing(w.x, w.y, w.r * k, mix(col, '#ffffff', .4));
+      // no filled area on the ground: just a thin outline of the reach, blinking faster as the attack lands; a small
+      // dark spot grows at the centre (like the shadow of something about to arrive)
+      const fast = k > .7 ? Math.sin(G.time * 60) > 0 : blink;
+      ctx.globalAlpha = fast ? .8 : .4; gRing(w.x, w.y, w.r, col);
+      ctx.globalAlpha = .18 + .3 * k; gDisc(w.x, w.y, Math.max(2, w.r * .22 * k), '#000000');
     } else {
       // a thin laser-pointer line from the attacker, not a band on the ground (the user finds big floor markings gaudy).
       // It draws out from the attacker as the wind-up runs and blinks faster just before the attack.

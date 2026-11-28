@@ -32,7 +32,7 @@ const { open } = require('./tour_lib');
         if (e.dead) continue;
         if (!isFinite(e.x) || !isFinite(e.y) || !isFinite(e.vx) || !isFinite(e.vy)) { note(e.kind + ' with a non-number position'); continue; }
         if (e.x < -30 || e.y < -30 || e.x > WORLD_W + 30 || e.y > WORLD_H + 30) note(e.kind + ' outside the world');
-        if (e.kind === 'hideout' || e.kind === 'tower' || e.held || e.bossHeld || (e.z || 0) > 3) { stuckFor.delete(e); continue; }
+        if (e.kind === 'hideout' || e.kind === 'tower' || e.kind === 'fixer' || e.held || e.bossHeld || (e.z || 0) > 3) { stuckFor.delete(e); continue; }   // repair drones fly over the roofs on purpose
         if (!walkable(e.x, e.y, 1)) { const n = (stuckFor.get(e) || 0) + 1; stuckFor.set(e, n); if (n === 4) { note(e.kind + ' stuck inside a wall for 4 s'); if (stuckLog.length < 8) stuckLog.push(e.kind + (e.driving ? ' (driving)' : '') + (e.state ? ' ' + e.state : '') + ' at ' + Math.round(e.x) + ',' + Math.round(e.y) + ' tile ' + tileOf(e.x, e.y) + ' block ' + ((blockAt(e.x, e.y) || {}).kind)); } } else stuckFor.delete(e);
       }
       if (P.holding && P.holding.dead) note('holding a dead object');
