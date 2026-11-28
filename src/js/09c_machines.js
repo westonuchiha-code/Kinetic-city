@@ -10,9 +10,12 @@ Object.assign(DEFS, {
   sentry:  { r: 10, m: 4, hp: 70, team: 'gang', static: 1, rest: .2, xp: 15 },
   loader:  { r: 16, m: 9, hp: 170, team: 'gang', rest: .15, xp: 35, speed: 66 },
   mite:    { r: 5, m: .5, hp: 9, team: 'gang', rest: .5, grab: 1, xp: 4, speed: 190, hover: 12 },
-  cell:    { r: 10, m: 3, hp: 20, team: 'prop', prop: 1, grab: 1, rest: .35, fric: .93, elec: 1 }
+  cell:    { r: 10, m: 3, hp: 20, team: 'prop', prop: 1, grab: 1, rest: .35, fric: .93, elec: 1 },
+  hive:    { r: 13, m: 6, hp: 90, team: 'gang', static: 1, rest: .2, xp: 25 },
+  scanner: { r: 8, m: 1, hp: 22, team: 'gang', rest: .4, grab: 1, xp: 10, speed: 70, hover: 30 },
+  mirror:  { r: 9, m: 4, hp: 60, team: 'gang', static: 1, rest: .2, xp: 10 }
 });
-const MACH = { sweeper: 1, zapper: 1, crawler: 1, sentry: 1, loader: 1, mite: 1 };
+const MACH = { sweeper: 1, zapper: 1, crawler: 1, sentry: 1, loader: 1, mite: 1, hive: 1, scanner: 1, mirror: 1 };
 const ZAP_COL = '#fff2b0', ZAP_HOT = '#ffffff';
 const zaps = [];          // lightning drawn for a moment: { pts, life, max }
 const hazards = [];       // downed power lines: { x0, y0, x1, y1, t, arc, warn }
@@ -63,6 +66,28 @@ function aiMachine(e, dt) {
     e.ang += angDiff(Math.atan2(P.y - e.y, P.x - e.x), e.ang) * Math.min(1, dt * 7);
     if (e.aimT > 0) { e.aimT -= dt; if (e.aimT <= 0) { for (let i = 0; i < 3; i++) later(i * .11, () => { if (!e.dead) shoot(e, e.ang + rnd(-.07, .07), { dmg: 5, speed: 340, col: '#ffd27a' }); }); e.cd = 1.8 + rnd(.6); } }
     else if (e.cd <= 0) e.aimT = .6;
+    return;
+  }
+  if (k === 'hive') {      // a mite hive: a squat solar-topped box that releases mites while you are near
+    const near = P && dist(P, e) < 300 && G.mode !== 'dead'; let n = 0; for (const o of act) if (!o.dead && o.kind === 'mite' && o.hiveOf === e.id) n++;
+    if (near && n < 6 && e.cd <= 0) { e.cd = 1.4; const a = rnd(TAU), m = spawnGang('mite', e.x + Math.cos(a) * 16, e.y + Math.sin(a) * 16, { home: { x: e.x, y: e.y }, terr: 320, hiveOf: e.id }); m.tgt = P; m.provT = 8; FX.sparks(m.x, m.y, 4, ZAP_COL, 90); }
+    return;
+  }
+  if (k === 'mirror') {    // heliostat: a mirror on a post that bounces sunlight into a burning spot that tracks you (not at night)
+    if (LIGHT.name === 'night' || !P || dist(P, e) > 300 || G.mode === 'dead' || !los(e, P)) { e.beam = null; e.ang += dt * .3; return; }
+    if (!e.beam) e.beam = { x: P.x, y: P.y, heat: 0 };
+    const bm = e.beam; bm.x += (P.x - bm.x) * Math.min(1, dt * 1.2); bm.y += (P.y - bm.y) * Math.min(1, dt * 1.2); e.ang = Math.atan2(bm.y - e.y, bm.x - e.x);
+    bm.heat = Math.min(1, bm.heat + dt * .6);
+    if (bm.heat >= 1) { bm.tick = (bm.tick || 0) - dt; if (bm.tick <= 0) { bm.tick = .3; for (const o of act) if (!o.dead && !o.static && !o.prop && o.team !== 'bot' && Math.hypot(o.x - bm.x, o.y - bm.y) < 20 + o.r) { hurt(o, 5, { by: 'gang' }); FX.embers(o.x, o.y, 2); } } }
+    return;
+  }
+  if (k === 'scanner') {   // corporate scanner: drifts on a patrol; when its cone finds you, everything nearby comes for you
+    e.ang += angDiff(e.sweep || 0, e.ang) * Math.min(1, dt * 3); e.sweepT = (e.sweepT || 0) - dt; if (e.sweepT <= 0) { e.sweepT = rnd(1.2, 2.4); e.sweep = rnd(TAU); }
+    wander(e, dt, e.speed * .6);
+    const d = P ? dist(P, e) : 1e9, inCone = d < 170 && Math.abs(angDiff(Math.atan2(P.y - e.y, P.x - e.x), e.ang)) < .45 && G.mode !== 'dead' && los(e, P);
+    e.spot = Math.max(0, Math.min(1, (e.spot || 0) + (inCone ? dt * 1.6 : -dt)));
+    if (inCone) e.ang += angDiff(Math.atan2(P.y - e.y, P.x - e.x), e.ang) * Math.min(1, dt * 6);
+    if (e.spot >= 1 && e.cd <= 0) { e.cd = 6; sfx('siren', e.x, e.y, .4); toast('Scanner alert', '#ff9a3a'); for (const o of act) if (!o.dead && o.team === 'gang' && !o.static && dist(o, e) < 420) { o.tgt = P; o.provT = 10; o.sight = Math.max(o.sight, 500); } }
     return;
   }
   const t = machTarget(e);
@@ -138,6 +163,12 @@ function populateMachines() {
     }
   }
   for (let d = 0; d < 3; d++) for (let i = 0; i < [3, 3, 2][d]; i++) { const p = randomInDistrict(d, t => t === T.WALK || t === T.PLAZA, 12); if (p) mk('cell', p.x, p.y, { ang: rnd(TAU) }); }
+  for (const b of blocks) {
+    const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+    if (b.kind === 'park' && (b.d === 1 || hash2(b.x, b.y) % 3 === 0)) { const p = findFree(cx + 50, cy + 50, 40, 14); if (p) spawnGang('hive', p.x, p.y, { home: p, terr: 300 }); }   // mite hives in overgrown parks
+    if (b.kind === 'court' || (b.kind === 'boss' && b.d === 2)) for (const [ox, oy] of [[-120, -120], [120, 120]]) { const p = findFree(cx + ox, cy + oy, 30, 10); if (p) spawnGang('mirror', p.x, p.y, { home: p, terr: 300 }); }   // heliostats round open courts
+  }
+  for (let d = 0; d < 3; d++) for (let i = 0; i < [2, 1, 4][d]; i++) { const p = randomInDistrict(d, t => t === T.ROAD || t === T.WALK, 10); if (p && dist(p, START) > 400) spawnGang('scanner', p.x, p.y, { home: p, terr: 600 }); }   // scanners patrol, most in the Tower
   // downed power lines: a lamp knocked over, its cable live on the ground (mostly in the Slums)
   const pool = lamps.filter(l => l.d === 1 || Math.random() < .25); for (let i = 0; i < 9 && pool.length; i++) {
     const l = pool.splice((Math.random() * pool.length) | 0, 1)[0], a = rnd(TAU), x1 = l.x + Math.cos(a) * 46, y1 = l.y + Math.sin(a) * 46;

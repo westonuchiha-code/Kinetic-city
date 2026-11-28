@@ -68,6 +68,36 @@ function drawMachine(e) {
     if (e.hp < e.maxhp) { const top = P3(0, 0, 31), bw = 12, bx = Math.round(top[0] - 6), by = Math.round(top[1]); ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(bx - 1, by - 1, bw + 2, 3); ctx.fillStyle = '#ff3d5a'; ctx.fillRect(bx, by, Math.max(0, Math.round(bw * e.hp / e.maxhp)), 1); }
     return;
   }
+  if (k === 'hive') {      // mite hive: a hexagonal-ish stack of boxes, a solar lid, mites' doorways that glow
+    const P3 = mframe(e); mshadow(e, 13, 6.5);
+    pixBox(e, P3, 0, 22, 22, 0, 10, W('#5a5e4a'), W('#6a6e58'), (i, quad) => { for (let q = .15; q < .9; q += .25) quad(i, q, q + .1, 3, 7, '#0e0e0a'); quad(i, 0, 1, 0, 1.4, '#2a2c22'); });
+    pixBox(e, P3, 0, 16, 16, 10, 18, W('#6a6e58'), W('#7a7e66'), (i, quad) => { quad(i, .4, .6, 12, 16, Math.sin(t * 4 + e.id) > 0 ? ZAP_COL : '#3a3828'); }, tp => solarTop(tp));
+    for (let q = 0; q < 3; q++) { const a = t * 2 + q * 2.1 + e.id, c = P3(Math.cos(a) * 14, Math.sin(a) * 14, 20 + Math.sin(t * 5 + q) * 3); ipx(c[0], c[1], '#8a8e98'); }
+    if (e.hp < e.maxhp) { const top = P3(0, 0, 28), bw = 14, bx = Math.round(top[0] - 7), by = Math.round(top[1]); ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(bx - 1, by - 1, bw + 2, 3); ctx.fillStyle = '#ff3d5a'; ctx.fillRect(bx, by, Math.max(0, Math.round(bw * e.hp / e.maxhp)), 1); }
+    return;
+  }
+  if (k === 'scanner') {   // scanner drone: a slim white body under one big rotor, a lens, and the scan cone on the ground
+    const hov = (e.def.hover || 30) + Math.sin(t * 4 + e.id) * 1.5, P3 = mframe(e, hov); mshadow(e, 6, 3);
+    const sp = e.spot || 0, cc = sp >= 1 ? '#ff4030' : sp > 0 ? '#ffb030' : '#e8e0c0';
+    { const n = 9, pts = [isoXY(e.x, e.y, 0)]; for (let q = 0; q <= n; q++) { const a = e.ang - .45 + q * .9 / n; pts.push(isoXY(e.x + Math.cos(a) * 170, e.y + Math.sin(a) * 170, 0)); } ctx.globalAlpha = .1 + sp * .12; ipoly(pts, cc); ctx.globalAlpha = .45; for (let q = 1; q < pts.length; q++) ipx(pts[q][0], pts[q][1], cc); ctx.globalAlpha = 1; }
+    const spin = Math.floor(t * 30) & 1, rc = P3(0, 0, 9); iellipse(rc[0], rc[1], 7, 3, spin ? 'rgba(200,204,214,.6)' : 'rgba(122,127,140,.6)'); iline(P3(0, 0, 6), rc, '#3a3e4a');
+    pixBox(e, P3, 0, 11, 7, 0, 6, W('#e8e8ee'), W('#f4f4f8'), (i, quad) => { if (i === 0) { quad(i, .3, .7, 1.5, 4.5, '#1a1e28'); quad(i, .42, .58, 2.5, 3.5, cc); } quad(i, 0, 1, 0, 1, W('#9aa0aa')); });
+    return;
+  }
+  if (k === 'mirror') {    // heliostat: a post with a tilting mirror; by day it throws a burning sun-spot that follows you
+    const P0 = propFrame({ x: e.x, y: e.y, ang: 0, z: 0 }), P3 = mframe(e); mshadow(e, 7, 3.5);
+    pixBox({ ang: 0 }, P0, 0, 6, 6, 0, 2, W('#3a3e4a'), W('#4a4e5a'));
+    iline(P0(0, 0, 2), P0(0, 0, 22), '#5a5e6a');
+    const q = [P3(-1, -8, 30), P3(-1, 8, 30), P3(3, 8, 18), P3(3, -8, 18)]; ipoly(q.map(p => [p[0] + 1, p[1] + 1]), '#0a0c12'); ipoly(q, fl ? '#fff' : '#b8d0e0'); iline(q[0], q[1], '#ffffff'); iline(q[3], q[2], '#7a90a0');
+    const bm = e.beam;
+    if (bm) {
+      const h = bm.heat, top = P3(1, 0, 24), g = isoXY(bm.x, bm.y, 0);
+      ctx.globalAlpha = .25 + h * .3; iline(top, g, '#fff6d0'); ctx.globalAlpha = 1;
+      ctx.globalAlpha = .25 + h * .35; gDither(bm.x, bm.y, 20, h >= 1 ? '#ffb040' : '#fff0b0'); ctx.globalAlpha = 1; gRing(bm.x, bm.y, 20 - (1 - h) * 8, h >= 1 ? '#ff8030' : '#fff0b0');
+      if (h >= 1) iglow(g[0], g[1], 18, '#ffb040', .5);
+    }
+    return;
+  }
   if (k === 'loader') {    // loader mech: two hydraulic legs, a caged cab, two claw arms, solar panels on its back
     const g = Math.floor(e.walk * 2) & 1, raise = e.state === 'slamWind' ? 6 : 0, lean = e.state === 'chargeWind' || e.state === 'charging' ? 3 : 0, P3 = mframe(e); mshadow(e, 14, 7);
     for (const [ly, ph] of [[-6, 0], [6, 1]]) { const up = (ph ^ g) ? 3 : 0; pixBox(e, P3, up * .6, 6, 5, 0, 2, W('#2a2d36'), W('#3a3e4a')); pixBox(e, P3, 0, 4, 4, 2 + up, 18, W('#5a5e6a'), W('#6a6e7a')); }
